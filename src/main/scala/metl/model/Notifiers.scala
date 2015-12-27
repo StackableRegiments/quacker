@@ -1,0 +1,310 @@
+package metl.model
+
+import org.apache.commons.io.IOUtils
+import net.liftweb._
+import net.liftweb.actor._
+import net.liftweb.common._
+import http._
+import util._
+import Helpers._
+import net.liftweb.http.SHtml._
+import java.util.Date
+import collection.JavaConverters._
+import net.liftweb.common.Logger
+import net.liftweb.util.TimeHelpers
+//file writer
+import java.io._
+
+import metl.comet._
+
+import scala.xml._
+
+abstract class ServiceCheckMode
+case object STAGING extends ServiceCheckMode
+case object PRODUCTION extends ServiceCheckMode
+case object TEST extends ServiceCheckMode
+case object DEVELOPMENT extends ServiceCheckMode
+
+object ServiceCheckMode {
+	def parse(s:String):ServiceCheckMode = s.toLowerCase.trim  match {
+		case "staging" => STAGING
+		case "production" => PRODUCTION
+		case "test" => TEST
+		case "development" => DEVELOPMENT
+		case _ => TEST
+	}
+}
+
+case class CheckResult(id:String,label:String,service:String,server:String,when:Date,why:String,lastUp:Box[Date],detail:String,mode:ServiceCheckMode,success:Boolean,data:Map[String,Any] = Map.empty[String,Any])
+
+abstract class ErrorActor(name:String) extends LiftActor {
+	protected def outputAction(cr:CheckResult) = {
+		cr.success match {
+			case false => registerFailure(cr)
+			case true => registerSuccess(cr)
+		}
+	}
+	protected val filterAction:(CheckResult)=>Boolean = (c:CheckResult) => true
+	override def messageHandler = {
+		case c:CheckResult if filterAction(c) => outputAction(c)
+		case _ => {}
+	}
+	protected def registerFailure(cr:CheckResult):Unit
+	protected def registerSuccess(cr:CheckResult):Unit
+}
+
+abstract class LogEveryErrorActor(name:String) extends ErrorActor(name) {
+}
+
+abstract class LogChangesErrorActor(name:String) extends ErrorActor(name) {
+	protected val initialInterval:Long = 5000L
+	protected val exponentialFactor:Int = 2
+	protected val maximumInterval:Long = 3600000L
+	private val recentActions = new scala.collection.mutable.HashMap[String,Map[String,Tuple2[Long,Long]]]{
+		override def default(who:String) = {
+			Map.empty[String,Tuple2[Long,Long]]
+		}
+	}
+	private def updateRecentActions(who:String,why:String,when:Long):Unit = {
+		val interval = tryo(recentActions(who)(why)._2).openOr(initialInterval)
+		recentActions.update(who,recentActions(who).updated(why,(when,Math.min(interval*exponentialFactor,maximumInterval))))
+	}
+	private def shouldFail(who:String,why:String,when:Long):Boolean = {
+		val lastMail = tryo(recentActions(who)(why)).openOr((0L,initialInterval))
+		((when - lastMail._1) > lastMail._2) 
+	}
+	override def registerFailure(cr:CheckResult):Unit = {
+		val who = cr.label
+		val serviceName = cr.service
+		val serverName = cr.server
+		val why = cr.why
+		val date = cr.when
+		val detail = cr.detail
+		val lastUp = cr.lastUp.map(lu => lu.toString).openOr("NEVER")
+		val mode = cr.mode
+		val when = date.getTime
+		if (shouldFail(who,why,when)){
+			doFailureAction(who,serviceName,serverName,why,detail,date,lastUp,mode)
+			updateRecentActions(who,why,when)
+		}
+	}
+	override def registerSuccess(cr:CheckResult):Unit = {
+		val who = cr.label
+		val serviceName = cr.service
+		val serverName = cr.server
+		val date = cr.when
+		val lastUp = cr.lastUp.map(lu => lu.toString).openOr("NEVER")
+		val mode = cr.mode
+		if (recentActions(who).keys.toList.length > 0){
+			doSuccessAction(who,serviceName,serverName,date,lastUp,mode)
+			recentActions.update(who,Map.empty[String,Tuple2[Long,Long]])
+		}	
+	}
+	protected def doSuccessAction(who:String,serviceName:String,serverName:String,date:Date,lastUp:String,mode:ServiceCheckMode):Unit = {}
+	protected def doFailureAction(who:String,serviceName:String,serverName:String,why:String,detail:String,date:Date,lastUp:String,mode:ServiceCheckMode):Unit = {}
+}
+
+class AppendableFile(filename:String) {
+	private var box:Box[FileWriter] = Empty
+	private def setupBox = {
+		box = box match {
+			case Empty => {
+				try { 
+					Full(new FileWriter(filename,true)) 
+				} catch {
+					case i:java.io.IOException => {
+						println("failed to create filewriter with expected IOException: %s".format(i.getMessage.toString))
+						Empty 
+					}
+					case e:Throwable => {
+						println("failed to create filewriter with unexpected exception: %s".format(e.getMessage.toString))
+						Empty 
+					}
+				}
+			}
+			case Full(fw) => {
+				try {
+					fw.close
+					Full(new FileWriter(filename,true))
+				} catch {
+					case i:java.io.IOException => {
+						println("failed to close filewriter with expected IOException: %s".format(i.getMessage.toString))
+						Empty 
+					}
+					case e:Throwable => {
+						println("failed to close filewriter with unexpected exception: %s".format(e.getMessage.toString))
+						Empty 
+					}
+				}
+			}
+			case other => {
+				println("other error on box: %s".format(other))
+				Empty
+			}
+		}
+	}
+	def writeLine(s:String) = {
+		setupBox
+		box.map(fw => {
+			fw.write(s + "\r\n")
+			fw.close
+		})
+	}
+}
+
+class ErrorDiskLogger(name:String,filename:String) extends LogEveryErrorActor(name) {
+	private val file = new AppendableFile(filename)
+	override def registerFailure(cr:CheckResult) = writeMessage(cr)
+	override def registerSuccess(cr:CheckResult) = writeMessage(cr)
+	def writeMessage(input:CheckResult):Unit = {
+		List(
+			"label : %s".format(input.label),
+			"when : %s".format(input.when.toString),
+			"result : %s".format(input.success.toString),
+			"why : %s".format(input.why),
+			"lastUp : %s".format(input.lastUp.map(lu => lu.toString).openOr("NEVER")),
+			"detail : %s".format(input.detail),
+			"---"					
+		).foreach(l => file.writeLine(l))
+	} 
+}
+
+case class SimpleMailer(smtp:String,port:Int,ssl:Boolean,username:String,password:String) extends net.liftweb.util.Mailer {
+  import net.liftweb.util.Mailer._
+	customProperties = Map(
+		"mail.smtp.starttls.enable" -> ssl.toString,
+		"mail.smtp.host" -> smtp,
+		"mail.smtp.port" -> port.toString,
+		"mail.smtp.auth" -> "true"
+	)
+	authenticator = Full(new javax.mail.Authenticator {
+		override def getPasswordAuthentication = new javax.mail.PasswordAuthentication(username,password)
+	})
+	def sendMailMessage(to:String,who:String,subject:String,message:String):Unit = {
+		try {
+			sendMail(From("Service.Monitor@stackableregiments.com"),Subject(subject),PlainMailBodyType(message) :: List(To(to)):_*)
+		}
+		catch {
+			case e:Throwable => {
+				println("exception while sending mail: %s -> %s".format(e,e.getMessage))
+			}
+		}
+	}
+}
+
+class ErrorMailer(name:String,smtp:String,port:Int,username:String,password:String) extends LogChangesErrorActor(name){
+	protected val ssl:Boolean = true
+	protected lazy val mailer = SimpleMailer(smtp,port,ssl,username,password)
+	protected val messagePrefix:String = ""
+	protected val messageSuffix:String = ""
+	protected val messageSubject:String = "alert"
+	protected val interestedParties:List[String] = List.empty[String]
+	protected val shortcutHost:String = ""
+
+	protected def successSubject(mode:ServiceCheckMode,serviceName:String):String = "%s %s %s".format(modeContractor(mode),messageSubject,serviceName).take(30).toString 
+	protected def failureSubject(mode:ServiceCheckMode,serviceName:String):String = "%s %s %s".format(modeContractor(mode),messageSubject,serviceName).take(30).toString
+
+	protected def modeContractor(mode:ServiceCheckMode):String = mode match {
+		case PRODUCTION => "PRD"
+		case STAGING => "QAT"
+		case DEVELOPMENT => "DEV"
+		case TEST => "TST"
+		case _ => ""
+	}
+
+	override def doSuccessAction(who:String,serviceName:String,serverName:String,date:Date,lastUp:String,mode:ServiceCheckMode):Unit = {
+		val successMessage = """%s%s : %s 
+SUCCESS: '%s'  [%s].
+
+%s/?expandedServices=%s&expandedChecks=%s
+
+%s Detection time.
+%s Last known uptime.
+%s""".format(messagePrefix,serviceName,serverName,who,mode.toString,shortcutHost,urlEncode(serviceName),urlEncode(who),date,lastUp,messageSuffix)
+		sendMailMessage(who,successSubject(mode,serviceName),successMessage)	
+	}
+	override def doFailureAction(who:String,serviceName:String,serverName:String,why:String,detail:String,date:Date,lastUp:String,mode:ServiceCheckMode):Unit = {
+		val failMessage = """%s%s : %s
+FAIL: '%s'  [%s].
+Error message: '%s'.
+
+%s/?expandedServices=%s&expandedChecks=%s
+
+%s Detection time.
+%s Last known uptime.
+
+Error detail: '%s'.
+
+%s""".format(messagePrefix,serviceName,serverName,who,mode.toString,why,shortcutHost,urlEncode(serviceName),urlEncode(who),date,lastUp,detail,messageSuffix)
+		sendMailMessage(who,failureSubject(mode,serviceName),failMessage)
+	}
+	protected def sendMailMessage(who:String,subject:String,message:String):Unit = interestedParties.foreach(emailAddress => mailer.sendMailMessage(emailAddress,who,subject,message))
+}
+
+object ErrorRecorder extends LiftActor with ConfigFileReader {
+	var mailers = List.empty[LiftActor]
+	def clear = {
+		mailers = List.empty[LiftActor]
+	}
+	def configureFromXml(xml:Node):List[String] = {
+		val diskLoggers = (xml \\ "diskLogger").map(n => {
+			val name = getText(n,"name").getOrElse("")
+			val file = getText(n,"file").getOrElse(throw new Exception("no file name specified for disklogger: %s".format(n.toString)))
+			val level = getNodes(n,"levels").headOption.getOrElse(<error>No suitable levels found</error>)
+			val servicePermissions:List[ServicePermission] = getNodes(n,"servicePermissions").map(spNodes => getNodes(spNodes,"service").map(sp => ServicePermission.configureFromXml(sp))).flatten.toList
+			val restrictions = UserAccessRestriction(name,servicePermissions)
+			val filterFunc = (cr:CheckResult) => restrictions.permit(cr)
+			val edl = new ErrorDiskLogger(name,file){
+				override val filterAction = (cr:CheckResult) => filterFunc(cr)
+			}
+			println("creating ErrorDiskLogger: %s (%s)".format(name,edl))
+			edl
+		}).toList
+		val emailLoggers = (xml \\ "mailer").map(n => {
+			val name = getText(n,"name").getOrElse("")
+			val smtp = getText(n, "smtp").getOrElse("")
+			val port = getInt(n, "port").getOrElse(0)
+			val configSsl = getBool(n, "ssl").getOrElse(false)
+			val username = getText(n, "username").getOrElse("")
+			val password = getText(n, "password").getOrElse("")
+			val xmlInterval = getLong(n,"initialInterval").map(i => i.toInt.toLong).getOrElse(5000L)
+			val xmlGrowthFactor = getInt(n,"exponentialFactor").map(i => i.toInt).getOrElse(2)
+			val xmlMaxInterval = getLong(n,"maximumInterval").getOrElse(3600000L)
+			val shortcutLinkServerName = getText(n,"shortcutHost").getOrElse("")
+			val xmlMessageSubject = getText(n,"mailSubject").getOrElse("")
+			val xmlMessagePrefix = getText(n,"mailMessageBodyPrefix").getOrElse("")
+			val xmlMessageSuffix = getText(n,"mailMessageBodySuffix").getOrElse("")
+			val xmlInterestedParties = getNodes(n,"recipients").map(rNode => getNodes(rNode,"emailAddress").map(eNode => eNode.text.toString).filterNot(emailAddress => emailAddress == "")).flatten.toList
+			val servicePermissions:List[ServicePermission] = getNodes(n,"servicePermissions").map(spNodes => getNodes(spNodes,"service").map(sp => ServicePermission.configureFromXml(sp))).flatten.toList
+			val restrictions = UserAccessRestriction(name,servicePermissions)
+			val filterFunc = (cr:CheckResult) => restrictions.permit(cr)
+			val em = new ErrorMailer(name,smtp,port,username,password){
+				override val shortcutHost = shortcutLinkServerName
+				override val interestedParties:List[String] = xmlInterestedParties
+				override val filterAction = (cr:CheckResult) => filterFunc(cr)
+				override val initialInterval:Long = xmlInterval
+				override val exponentialFactor:Int = xmlGrowthFactor
+				override val maximumInterval:Long = xmlMaxInterval
+				override val messagePrefix:String = xmlMessagePrefix
+				override val messageSuffix:String = xmlMessageSuffix
+				override val messageSubject:String = xmlMessageSubject
+				override val ssl:Boolean = configSsl
+			}
+			em
+		}).toList
+		val newNotifiers = (diskLoggers ::: emailLoggers)
+		newNotifiers.foreach(mailer => mailers = mailer :: mailers)
+		//println("All notifiers: %s".format(mailers))
+		newNotifiers.length match {
+			case 0 => List.empty[String]
+			case other => List("loaded %s notifiers".format(other))
+		}
+	}
+	override def messageHandler = {
+		case c:CheckResult => {
+			mailers.foreach(_ ! c)
+		}
+	}
+}
+
+
