@@ -24,8 +24,11 @@ javaOptions in container ++= Seq(
   "-Dquacker.configDirectoryLocation=../stackableMonitoringDefinitions",
   "-Dlogback.configurationFile=config/logback.xml",
   "-XX:+UseConcMarkSweepGC",
-  "-XX:+CMSClassUnloadingEnabled"
+  "-XX:+CMSClassUnloadingEnabled",
+  "-Xmx256m",
+  "-Xms256m"
 )
+
 
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.+"
 
@@ -135,8 +138,6 @@ timingFormat := {
 
 testOptions in Test += Tests.Argument("-eI")
 
-// add a JVM option to use when forking a JVM for 'run'
-javaOptions += "-Xmx2G"
 
 // don't aggregate clean (See FullConfiguration for aggregation details)
 aggregate in clean := false
