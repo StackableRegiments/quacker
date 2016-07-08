@@ -40,7 +40,7 @@ libraryDependencies ++= {
   Seq(
     /* Monitoring*/
    /*oracle*/
-    "com.oracle" % "ojdbc6" % "11.2.0.4",
+//    "com.oracle" % "ojdbc6" % "11.2.0.4",
     /*telnet & munin*/
     "commons-net" % "commons-net" % "2.0",
     /*snmp*/
