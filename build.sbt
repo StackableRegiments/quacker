@@ -9,7 +9,8 @@ scalaVersion := scalaVersionString
 resolvers ++= Seq(
   "snapshots"     at "http://oss.sonatype.org/content/repositories/snapshots",
   "releases"        at "http://oss.sonatype.org/content/repositories/releases",
-  "mavenCentral"  at  "http://mvnrepository.com/artifact"
+  "mavenCentral"  at  "http://mvnrepository.com/artifact",
+  "oosnmp" at "https://oosnmp.net/dist/release"
 )
 
 unmanagedResourceDirectories in Test <+= (baseDirectory) { _ / "src/main/webapp" }
@@ -59,7 +60,8 @@ libraryDependencies ++= {
     /*http*/
     "org.apache.httpcomponents" % "httpcore" % "4.1.2",
     /*memcached*/
-    "spy" % "spymemcached" % "2.6",
+    //"spy" % "spymemcached" % "2.6",
+    "net.spy" % "spymemcached" % "2.12.1",
     /*h2*/
     "com.h2database" % "h2" % "1.4.187",
     /*xmpp*/
