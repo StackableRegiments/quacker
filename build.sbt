@@ -45,7 +45,7 @@ libraryDependencies ++= {
     /*telnet & munin*/
     "commons-net" % "commons-net" % "2.0",
     /*snmp*/
-    "org.snmp4j" % "snmp4j" % "1.11.3",
+    "org.snmp4j" % "snmp4j" % "1.11.5",
     /*mongo*/
     "org.mongodb" % "mongo-java-driver" % "2.6.3",
     /*html-cleaner for html parsing*/
