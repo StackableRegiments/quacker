@@ -2,7 +2,7 @@ package metl.model
 
 import net.liftweb.http._
 import net.liftweb.common._
-import net.liftweb.utils._
+import net.liftweb.util._
 import net.liftweb.util.Helpers._
 import scala.xml._
 import scala.collection.mutable.{HashMap, SynchronizedMap, ListBuffer}
@@ -11,7 +11,7 @@ import com.mongodb.BasicDBObject
 import com.metl.liftAuthenticator._
 import com.metl.cas._
 
-import collections.javaConverters._
+import scala.collection.JavaConverters._
 
 object EnvVariable {
   protected val environmentVariables:Map[String,String] = System.getenv.asScala.toMap;
