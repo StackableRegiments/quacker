@@ -18,7 +18,7 @@ if [[ $# -ne 1 ]] ; then
     exit 1
 fi
 RELEASE=${1}
-PROJECT=quacker-1362
+PROJECT=quacker-csc
 REPOSITORY=quacker
 TAG=gcr.io/$PROJECT/$REPOSITORY:$RELEASE
 VERSION=csc/$REPOSITORY:$RELEASE
