@@ -1696,13 +1696,11 @@ case class ResultStorer(key:String) extends EnvironmentMutator {
 }
 case class MetaDataStorer(key:String,headerName:String) extends EnvironmentMutator {
   override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
-    println("looking up metadata: %s".format(result.metaData))
     result.metaData.get(headerName).map(newValue => environment.updated(key,newValue)).getOrElse(environment)
   }
 }
 case class StatusCodeStorer(key:String) extends EnvironmentMutator {
   override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
-    println("looking up statusCode: %s :: %s".format(result.statusCode,result.metaData))
     environment.updated(key,result.statusCode.toString)
   }
 }
@@ -1726,7 +1724,6 @@ case class RegexFromResult(key:String,regex:String) extends EnvironmentMutator {
         mutatedEnvironment = mutatedEnvironment.updated(key,onlyMatch)
       }
       case other => {
-        //println("regex failed: %s => %s".format(Pattern,other))
         throw new DashboardException("Pattern didn't find a valid value: %s ".format(regex),other.toString)
       }
     }
@@ -1740,7 +1737,6 @@ case class XPathFromResult(key:String,xPath:String) extends EnvironmentMutator {
     var mutatedEnvironment = environment
     val cleaned = new HtmlCleaner().clean(result.body)
     val matches = cleaned.evaluateXPath(xPath).toList.map(_.toString)
-    //println("found xpath matches: %s => %s".format(interpolator.interpolate(xPath,environment),matches))
     matches.headOption.foreach(firstMatch => {
       mutatedEnvironment = mutatedEnvironment.updated(key,firstMatch)
     })
@@ -1809,11 +1805,9 @@ class ScriptEngine(interpolator:Interpolator) {
     sequence.foldLeft((ScriptStepResult(""),0.0,Map.empty[String,String]))((acc,i) => {
       i.act(acc._1,acc._2,acc._3,interpolator) match {
         case Left(e) => {
-          println("failed at: %s, with exception %s".format(acc,e.getMessage))
           throw e
         }
         case Right(fcr) => {
-          //println("STEP executed: %s => %s".format(i,fcr))
           (fcr.result,fcr.duration,fcr.updatedEnvironment)
         }
       }
@@ -1826,7 +1820,6 @@ case class ScriptedCheck(serviceCheckMode:ServiceCheckMode,incomingLabel:String,
   val scriptEngine = new ScriptEngine(interpolator)
   def status = {
     val (finalResult,totalDuration,finalEnvironment) = scriptEngine.execute(sequence)
-    println("checkCompleted: %s\r\n%s=>%s".format(finalResult.body,finalResult.metaData,finalEnvironment))
     (finalResult,Full(totalDuration))
   }
   override def performCheck = succeed(status._1.body,status._2)
