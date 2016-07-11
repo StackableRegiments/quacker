@@ -59,7 +59,7 @@ import org.apache.commons.net.telnet._
 import jcifs.smb._
 import java.net.URI
 
-case class DashboardException(reason:String,detail:String) extends Exception(reason)
+case class DashboardException(reason:String,detail:String,exceptions:List[Exception] = Nil) extends Exception(reason)
 case object Check
 case object StartPinger
 case object StopPinger
@@ -516,7 +516,7 @@ abstract class Pinger(incomingLabel:String, incomingMode:ServiceCheckMode) exten
 		HistoryServer ! CheckResult(id,label,getServiceName,getServerName,now,why,lastUptime,detail,mode,wasSuccessful,information) 
 	}
   override protected def exceptionHandler:PartialFunction[Throwable,Unit] = {
-		case DashboardException(reason,detail) => {
+		case DashboardException(reason,detail,innerExceptions) => {
 			fail(reason,detail)
 			internalResetEnvironment
 			schedule()	
@@ -1103,7 +1103,10 @@ object OracleSetup {
 	def initialize = {}
 }
 
-class CombinedExceptionsException(exceptions:List[Throwable]) extends DashboardException("multiple exceptions thrown",exceptions.map(e => e.getMessage).mkString("\r\n"))
+class CombinedExceptionsException(exceptions:List[Throwable]) extends DashboardException("multiple exceptions thrown",exceptions.map(e => e.getMessage).mkString("\r\n"),exceptions.flatMap(_ match {
+  case e:Exception => Some(e)
+  case _ => None
+}))
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
@@ -1160,7 +1163,7 @@ case class PingOracle(serviceCheckMode:ServiceCheckMode, incomingLabel:String,ur
 			})),Duration(connectionCreationTimeout,"millis")) 
     } catch {
       case e:TimeoutException => {
-        errors = errors ::: List(new DashboardException("SQL Connection failed","oracle failed to create a connection within the timeout"))
+        errors = errors ::: List(new DashboardException("SQL Connection failed","oracle failed to create a connection within the timeout",List(e)))
       }
     }
 		if (errors.length == 1) {
@@ -1506,4 +1509,140 @@ case class MatcherCheck(serviceCheckMode:ServiceCheckMode,incomingLabel:String,m
 	failureTolerance = 3
 	def status = "%s is %s".format(matcher.describe,matcher.verify(true).toString)
 	override def performCheck = succeed(status)
+}
+
+case class FunctionalCheckReturn(result:String,duration:Double,updatedEnvironment:Map[String,String])
+
+abstract class FunctionalCheck {
+  protected def innerAct(previousResult:String,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator):FunctionalCheckReturn 
+  def act(previousResult:String,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator):Either[Exception,FunctionalCheckReturn] = try {
+    Right(innerAct(previousResult,totalDuration,environment,interpolator))
+  } catch {
+    case e:Exception => Left(e)
+  }
+}
+
+case class HttpFunctionalCheck(client:IMeTLHttpClient, method:String,url:String,parameters:List[Tuple2[String,String]] = Nil,headers:Map[String,String] = Map.empty[String,String],matcher:HTTPResponseMatcher = HTTPResponseMatchers.empty) extends FunctionalCheck {
+  override protected def innerAct(previousResult:String,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+    var client = Http.getClient
+    val interpolatedHeaders = headers.map(h => (h._1,interpolator.interpolate(h._2,environment)))
+    interpolatedHeaders.foreach(h => client.addHttpHeader(h._1,interpolator.interpolate(h._2,environment)))
+    val interpolatedUrl = interpolator.interpolate(url,environment)
+    val interpolatedParameters = parameters.map(p => (p._1,interpolator.interpolate(p._2,environment)))
+    val innerResponse = method.trim.toLowerCase match {
+      case "get" => client.getExpectingHTTPResponse(interpolatedUrl)
+      case "post" => client.postFormExpectingHTTPResponse(interpolatedUrl,interpolatedParameters)
+      case unsupportedMethod => throw new DashboardException("HTTP method not supported","%s [%s => %s] ([%s => %s],%s)".format(unsupportedMethod,url,interpolatedUrl,parameters,interpolatedParameters,headers))
+    }
+    val response = client.respondToResponse(innerResponse)
+    val verificationResponse = matcher.verify(response)
+    if (!verificationResponse.success){
+      throw new DashboardException("HTTP Verification failed",verificationResponse.errors.mkString("\r\n"))
+    }
+    FunctionalCheckReturn(response.toString,totalDuration + response.duration,environment)
+  }
+}
+
+case class EnvironmentValidator(validateEnvironment:Map[String,String] => Boolean) extends FunctionalCheck {
+  override protected def innerAct(previousResult:String,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+    if (validateEnvironment(environment)){
+      FunctionalCheckReturn(previousResult,duration,environment)
+    } else {
+      throw new DashboardException("Environment failed validation",environment.toString)
+    }
+  }
+}
+abstract class EnvironmentMutator extends FunctionalCheck {
+  protected def mutate(result:String,environment:Map[String,String],interpolator:Interpolator):Map[String,String]
+  override protected def innerAct(previousResult:String,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+    FunctionalCheckReturn(previousResult,duration,mutate(previousResult,environment,interpolator))
+  }
+}
+abstract class ResultMutator extends FunctionalCheck {
+  protected def mutate(result:String,environment:Map[String,String],interpolator:Interpolator):String
+  override protected def innerAct(previousResult:String,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+    FunctionalCheckReturn(mutate(previousResult,environment,interpolator),duration,environment)
+  }
+}
+
+case class KeySetter(key:String,value:String) extends EnvironmentMutator {
+  override protected def mutate(result:String,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = environment.updated(key,value)
+}
+
+case class KeyDeleter(key:String) extends EnvironmentMutator {
+  override protected def mutate(result:String,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = environment - key
+}
+
+case class ResultStorer(key:String) extends EnvironmentMutator {
+  override protected def mutate(result:String,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = environment.updated(key,result)
+}
+
+case class RegexFromResult(key:String,regex:String) extends EnvironmentMutator {
+  val Pattern = regex.r
+  override protected def mutate(result:String,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    val newVar = result match {
+      case Pattern(firstMatch) => firstMatch
+      case _ => throw new DashboardException("Pattern didn't find a valid value",regex)
+    }
+    environment.updated(key,newVar)
+  }
+}
+
+case class ResultSetter(seed:String) extends ResultMutator {
+  override protected def mutate(result:String,environment:Map[String,String],interpolator:Interpolator):String = interpolator.interpolate(seed,environment)
+}
+
+abstract class Interpolator {
+  def interpolate(in:String,values:Map[String,String]):String
+}
+
+abstract class CharKeyedStringInterpolator extends Interpolator {
+  protected val KeyStartTag = ""
+  protected val KeyEndTag = ""
+  def interpolate(in:String,values:Map[String,String]):String = {
+    val (partialResult,possibleStartTag,possibleKey,possibleEndTag) = in.foldLeft(("","","",""))((acc,item) => {
+      (acc,item) match {
+        case ((soFar,KeyStartTag,key,partialEndTag),item) if partialEndTag + item == KeyEndTag => (soFar + values.get(key).getOrElse(KeyStartTag + key + partialEndTag + item),"","","") //end tag complete, commit interpolation
+        case ((soFar,KeyStartTag,key,partialEndTag),item) if KeyEndTag.startsWith(partialEndTag + item) => (soFar,KeyStartTag,key,partialEndTag + item) //end tag still building
+        case ((soFar,KeyStartTag,key,partialEndTag),item) => (soFar,KeyStartTag,key + partialEndTag + item,"") //start tag complete, key building
+        case ((soFar,partialStartTag,key,""),item) if KeyStartTag.startsWith(partialStartTag + item) => (soFar,partialStartTag + item,"","") //start tag still building
+        case ((soFar,partialStartTag,key,partialEndTag),item) => (soFar + partialStartTag + key + partialEndTag + item,"","","") //not matched, just adding to the base
+      }
+    })
+    partialResult + possibleStartTag + possibleKey + possibleEndTag
+  }
+}
+class SimpleInterpolator extends CharKeyedStringInterpolator {
+  override protected val KeyStartTag = "%%"
+  override protected val KeyEndTag = "%%"
+}
+
+class ScriptEngine {
+  protected val interpolator:Interpolator = new SimpleInterpolator
+  def execute(sequence:List[FunctionalCheck]):Tuple3[String,Double,Map[String,String]] = {
+    var state:Map[String,String] = Map.empty[String,String]
+    var totalDuration:Double = 0.0
+    var finalResult:String = ""
+    sequence.foreach(i => {
+      i.act(finalResult,totalDuration,state,interpolator) match {
+        case Left(e) => throw e
+        case Right(fcr) => {
+          state = fcr.updatedEnvironment
+          totalDuration = fcr.duration
+          finalResult = fcr.result
+        }
+      }
+    })
+    (finalResult,totalDuration,state)
+  }
+}
+      
+case class ScriptedCheck(serviceCheckMode:ServiceCheckMode,incomingLabel:String,sequence:List[FunctionalCheck],time:TimeSpan) extends Pinger(incomingLabel,serviceCheckMode){
+  override val pollInterval = time
+  val scriptEngine = new ScriptEngine
+  def status = {
+    val (finalResult,totalDuration,finalEnvironment) = scriptEngine.execute(sequence)
+    (finalResult,Full(totalDuration))
+  }
+  override def performCheck = succeed(status._1,status._2)
 }
