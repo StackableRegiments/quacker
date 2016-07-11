@@ -15,6 +15,7 @@ import scala.collection.JavaConverters._
 
 object EnvVariable {
   protected val environmentVariables:Map[String,String] = System.getenv.asScala.toMap;
+  println(environmentVariables)
   protected def trimSystemProp(in:String):Box[String] = {
     try {
       var value = in.trim
@@ -31,7 +32,9 @@ object EnvVariable {
   }
   def getProp(systemEnvName:String,javaPropName:String):Box[String] = {
     environmentVariables.get(systemEnvName).filterNot(v => v == null || v == "").map(v => trimSystemProp(v)).getOrElse({
-      Props.get(javaPropName)
+      val value = net.liftweb.util.Props.get(javaPropName).map(v => Full(v)).openOr(Full(System.getProperty(javaPropName)))
+      println("getting from java prop: %s => %s".format(javaPropName,value))
+      value
     })
   }
 }
@@ -39,7 +42,11 @@ object EnvVariable {
 object Globals{
   //Globals for the system
   var configDirectoryLocation = "config"
-  EnvVariable.getProp("QUACKER_CONFIG_DIRECTORY_LOCATION","quacker.configDirectoryLocation").map(qcdl => configDirectoryLocation = qcdl).openOr({
+  EnvVariable.getProp("QUACKER_CONFIG_DIRECTORY_LOCATION","quacker.configDirectoryLocation").map(qcdl => {
+    println("setting config directory location to: %s".format(qcdl))
+    configDirectoryLocation = qcdl
+    qcdl
+  }).openOr({
     throw new Exception("no config directory location passed")
   })
   var isDevMode = false

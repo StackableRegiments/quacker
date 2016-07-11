@@ -399,6 +399,11 @@ object ServiceCheckConfigurator extends ConfigFileReader {
               }).getOrElse(NullCheck)
             }).headOption.getOrElse(NullCheck)
 					}
+          case "script" => {
+            val interpolator = Interpolator.configureFromXml( <interpolators>{getImmediateNodes(sc,"interpolator")}</interpolators> )
+            val sequence = FunctionalCheck.configureFromXml( <steps>{getImmediateNodes(sc,"step")}</steps> )
+            ScriptedCheck(mode,label,sequence,interpolator.getOrElse(EmptyInterpolator),period)  
+          }
 					case other => {
 						failed = true
 						errors = "unknown type" :: errors
@@ -1511,7 +1516,96 @@ case class MatcherCheck(serviceCheckMode:ServiceCheckMode,incomingLabel:String,m
 	override def performCheck = succeed(status)
 }
 
-case class FunctionalCheckReturn(result:String,duration:Double,updatedEnvironment:Map[String,String])
+case class FunctionalCheckReturn(result:String,duration:Double,updatedEnvironment:Map[String,String]){
+  protected def safeDisplay(in:String):String = {
+    in match {
+      case null => ""
+      case s:String if s.length > 100 => s.take(100)
+      case s:String => s
+    }
+  }
+  override def toString = {
+    "StepResult(%s,%s,%s)".format(safeDisplay(result),duration,updatedEnvironment.map(t => (t._1,safeDisplay(t._2))))
+  }
+}
+
+object FunctionalCheck extends ConfigFileReader {
+  def configureFromXml(n:Node):List[FunctionalCheck] = {
+    lazy val httpClient = Http.getClient 
+		getNodes(n,"step").flatMap(mn => {
+			getAttr(mn,"type").getOrElse("unknown") match {
+				case "http" => {
+          for (
+            url <- getAttr(mn,"url");
+            method <- getAttr(mn,"method");
+            params = getNodes(mn,"parameter").flatMap(pn => {
+              for (
+                key <- getAttr(pn,"key");
+                value <- getAttr(pn,"value")
+              ) yield {
+                (key,value)
+              }
+            });
+            headers = Map(getNodes(mn,"header").flatMap(hn => {
+              for (
+                key <- getAttr(hn,"key");
+                value <- getAttr(hn,"value")
+              ) yield {
+                (key,value)
+              } 
+            }):_*);
+						matcher:HTTPResponseMatcher = HTTPResponseMatchers.configureFromXml(<thresholdsPacket>{getNodes(mn,"thresholds")}</thresholdsPacket>)
+          ) yield HttpFunctionalCheck(httpClient,method,url,params,headers,matcher)
+        }
+        case "setKey" => {
+          for (
+            key <- getAttr(mn,"key");
+            value <- getAttr(mn,"value")
+          ) yield {
+            KeySetter(key,value)
+          }
+        }
+        case "deleteKey" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            KeyDeleter(key)
+          }
+        }
+        case "storeResult" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            ResultStorer(key)
+          }
+        }
+        case "regexResult" => {
+          for (
+            key <- getAttr(mn,"key");
+            regex <- getAttr(mn,"regex")
+          ) yield {
+            RegexFromResult(key,regex)
+          }
+        }
+        case "liftFormExtractor" => {
+          for (
+            prefix <- getAttr(mn,"prefix")
+          ) yield {
+            LiftFormExtractor(prefix)
+          }
+        }
+        case "setResult" => {
+          for (
+            result <- getAttr(mn,"result")
+          ) yield {
+            ResultSetter(result)
+          }
+        }
+				case _ => None
+			}
+		})
+	}
+}
 
 abstract class FunctionalCheck {
   protected def innerAct(previousResult:String,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator):FunctionalCheckReturn 
@@ -1539,7 +1633,7 @@ case class HttpFunctionalCheck(client:IMeTLHttpClient, method:String,url:String,
     if (!verificationResponse.success){
       throw new DashboardException("HTTP Verification failed",verificationResponse.errors.mkString("\r\n"))
     }
-    FunctionalCheckReturn(response.toString,totalDuration + response.duration,environment)
+    FunctionalCheckReturn(response.responseAsString,totalDuration + response.duration,environment)
   }
 }
 
@@ -1578,13 +1672,34 @@ case class ResultStorer(key:String) extends EnvironmentMutator {
 }
 
 case class RegexFromResult(key:String,regex:String) extends EnvironmentMutator {
-  val Pattern = regex.r
+  val Pattern = regex.r.unanchored
   override protected def mutate(result:String,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
-    val newVar = result match {
-      case Pattern(firstMatch) => firstMatch
-      case _ => throw new DashboardException("Pattern didn't find a valid value",regex)
+    var mutatedEnvironment = environment
+    result match {
+      case Pattern(matches @ _*) => {
+        matches.headOption.foreach(firstMatch => {
+          mutatedEnvironment = mutatedEnvironment.updated(key,firstMatch)
+        })
+        if (matches.length > 0){
+          matches.zipWithIndex.foreach(m => {
+            mutatedEnvironment = mutatedEnvironment.updated("%s_%s".format(key,m._2),m._1)
+          })
+        }
+      }
+      case Pattern(onlyMatch) => {
+        mutatedEnvironment = mutatedEnvironment.updated(key,onlyMatch)
+      }
+      case other => {
+        //println("regex failed: %s => %s".format(Pattern,other))
+        throw new DashboardException("Pattern didn't find a valid value: %s ".format(regex),other.toString)
+      }
     }
-    environment.updated(key,newVar)
+    mutatedEnvironment
+  }
+}
+case class LiftFormExtractor(prefix:String) extends EnvironmentMutator {
+  override protected def mutate(result:String,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment
   }
 }
 
@@ -1595,10 +1710,27 @@ case class ResultSetter(seed:String) extends ResultMutator {
 abstract class Interpolator {
   def interpolate(in:String,values:Map[String,String]):String
 }
-
-abstract class CharKeyedStringInterpolator extends Interpolator {
-  protected val KeyStartTag = ""
-  protected val KeyEndTag = ""
+case object EmptyInterpolator extends Interpolator {
+  override def interpolate(in:String,values:Map[String,String]):String = in
+}
+object Interpolator extends ConfigFileReader {
+  def configureFromXml(n:Node):Option[Interpolator] = {
+		getNodes(n,"interpolator").headOption.flatMap(mn => {
+			getAttr(mn,"type").getOrElse("unknown") match {
+				case "charKeyedStringInterpolator" => {
+          (for (
+            startTag <- getAttr(mn,"startTag");
+            endTag <- getAttr(mn,"endTag")
+          ) yield CharKeyedStringInterpolator(startTag,endTag))
+        }
+				case _ => None
+			}
+		})
+	}
+}
+case class CharKeyedStringInterpolator(startTag:String,endTag:String) extends Interpolator {
+  protected val KeyStartTag = startTag
+  protected val KeyEndTag = endTag
   def interpolate(in:String,values:Map[String,String]):String = {
     val (partialResult,possibleStartTag,possibleKey,possibleEndTag) = in.foldLeft(("","","",""))((acc,item) => {
       (acc,item) match {
@@ -1612,13 +1744,10 @@ abstract class CharKeyedStringInterpolator extends Interpolator {
     partialResult + possibleStartTag + possibleKey + possibleEndTag
   }
 }
-class SimpleInterpolator extends CharKeyedStringInterpolator {
-  override protected val KeyStartTag = "%%"
-  override protected val KeyEndTag = "%%"
+class SimpleInterpolator extends CharKeyedStringInterpolator("%%","%%") {
 }
 
-class ScriptEngine {
-  protected val interpolator:Interpolator = new SimpleInterpolator
+class ScriptEngine(interpolator:Interpolator) {
   def execute(sequence:List[FunctionalCheck]):Tuple3[String,Double,Map[String,String]] = {
     var state:Map[String,String] = Map.empty[String,String]
     var totalDuration:Double = 0.0
@@ -1627,6 +1756,7 @@ class ScriptEngine {
       i.act(finalResult,totalDuration,state,interpolator) match {
         case Left(e) => throw e
         case Right(fcr) => {
+          println("STEP executed: %s => %s".format(i,fcr))
           state = fcr.updatedEnvironment
           totalDuration = fcr.duration
           finalResult = fcr.result
@@ -1637,9 +1767,9 @@ class ScriptEngine {
   }
 }
       
-case class ScriptedCheck(serviceCheckMode:ServiceCheckMode,incomingLabel:String,sequence:List[FunctionalCheck],time:TimeSpan) extends Pinger(incomingLabel,serviceCheckMode){
+case class ScriptedCheck(serviceCheckMode:ServiceCheckMode,incomingLabel:String,sequence:List[FunctionalCheck],interpolator:Interpolator,time:TimeSpan) extends Pinger(incomingLabel,serviceCheckMode){
   override val pollInterval = time
-  val scriptEngine = new ScriptEngine
+  val scriptEngine = new ScriptEngine(interpolator)
   def status = {
     val (finalResult,totalDuration,finalEnvironment) = scriptEngine.execute(sequence)
     (finalResult,Full(totalDuration))
