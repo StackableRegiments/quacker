@@ -1516,7 +1516,9 @@ case class MatcherCheck(serviceCheckMode:ServiceCheckMode,incomingLabel:String,m
 	override def performCheck = succeed(status)
 }
 
-case class FunctionalCheckReturn(result:String,duration:Double,updatedEnvironment:Map[String,String]){
+case class ScriptStepResult(body:String,metaData:Map[String,String] = Map.empty[String,String],statusCode:Int = 0,duration:Double = 0.0)
+
+case class FunctionalCheckReturn(result:ScriptStepResult,duration:Double,updatedEnvironment:Map[String,String]){
   protected def safeDisplay(in:String):String = {
     in match {
       case null => ""
@@ -1525,7 +1527,7 @@ case class FunctionalCheckReturn(result:String,duration:Double,updatedEnvironmen
     }
   }
   override def toString = {
-    "StepResult(%s,%s,%s)".format(safeDisplay(result),duration,updatedEnvironment.map(t => (t._1,safeDisplay(t._2))))
+    "StepResult(%s,%s,%s)".format(safeDisplay(result.body),duration,updatedEnvironment.map(t => (t._1,safeDisplay(t._2))))
   }
 }
 
@@ -1579,6 +1581,29 @@ object FunctionalCheck extends ConfigFileReader {
             ResultStorer(key)
           }
         }
+        case "storeMetaData" => {
+          for (
+            key <- getAttr(mn,"key");
+            metaDataKey <- getAttr(mn,"metaDataKey")
+          ) yield {
+            MetaDataStorer(key,metaDataKey)
+          }
+        }
+        case "storeStatusCode" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            StatusCodeStorer(key)
+          }
+        }
+        case "xPathResult" => {
+          for (
+            key <- getAttr(mn,"key");
+            xPath <- getAttr(mn,"xPath")
+          ) yield {
+            XPathFromResult(key,xPath)
+          }
+        }
         case "regexResult" => {
           for (
             key <- getAttr(mn,"key");
@@ -1608,8 +1633,8 @@ object FunctionalCheck extends ConfigFileReader {
 }
 
 abstract class FunctionalCheck {
-  protected def innerAct(previousResult:String,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator):FunctionalCheckReturn 
-  def act(previousResult:String,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator):Either[Exception,FunctionalCheckReturn] = try {
+  protected def innerAct(previousResult:ScriptStepResult,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator):FunctionalCheckReturn 
+  def act(previousResult:ScriptStepResult,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator):Either[Exception,FunctionalCheckReturn] = try {
     Right(innerAct(previousResult,totalDuration,environment,interpolator))
   } catch {
     case e:Exception => Left(e)
@@ -1617,12 +1642,12 @@ abstract class FunctionalCheck {
 }
 
 case class HttpFunctionalCheck(client:IMeTLHttpClient, method:String,url:String,parameters:List[Tuple2[String,String]] = Nil,headers:Map[String,String] = Map.empty[String,String],matcher:HTTPResponseMatcher = HTTPResponseMatchers.empty) extends FunctionalCheck {
-  override protected def innerAct(previousResult:String,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+  override protected def innerAct(previousResult:ScriptStepResult,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator) = {
     var client = Http.getClient
     val interpolatedHeaders = headers.map(h => (h._1,interpolator.interpolate(h._2,environment)))
     interpolatedHeaders.foreach(h => client.addHttpHeader(h._1,interpolator.interpolate(h._2,environment)))
     val interpolatedUrl = interpolator.interpolate(url,environment)
-    val interpolatedParameters = parameters.map(p => (p._1,interpolator.interpolate(p._2,environment)))
+    val interpolatedParameters = parameters.map(p => (interpolator.interpolate(p._1,environment),interpolator.interpolate(p._2,environment)))
     val innerResponse = method.trim.toLowerCase match {
       case "get" => client.getExpectingHTTPResponse(interpolatedUrl)
       case "post" => client.postFormExpectingHTTPResponse(interpolatedUrl,interpolatedParameters)
@@ -1633,12 +1658,12 @@ case class HttpFunctionalCheck(client:IMeTLHttpClient, method:String,url:String,
     if (!verificationResponse.success){
       throw new DashboardException("HTTP Verification failed",verificationResponse.errors.mkString("\r\n"))
     }
-    FunctionalCheckReturn(response.responseAsString,totalDuration + response.duration,environment)
+    FunctionalCheckReturn(ScriptStepResult(response.responseAsString,response.headers,response.statusCode,response.duration.toDouble),totalDuration + response.duration,environment)
   }
 }
 
 case class EnvironmentValidator(validateEnvironment:Map[String,String] => Boolean) extends FunctionalCheck {
-  override protected def innerAct(previousResult:String,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+  override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
     if (validateEnvironment(environment)){
       FunctionalCheckReturn(previousResult,duration,environment)
     } else {
@@ -1647,35 +1672,44 @@ case class EnvironmentValidator(validateEnvironment:Map[String,String] => Boolea
   }
 }
 abstract class EnvironmentMutator extends FunctionalCheck {
-  protected def mutate(result:String,environment:Map[String,String],interpolator:Interpolator):Map[String,String]
-  override protected def innerAct(previousResult:String,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+  protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String]
+  override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
     FunctionalCheckReturn(previousResult,duration,mutate(previousResult,environment,interpolator))
   }
 }
 abstract class ResultMutator extends FunctionalCheck {
-  protected def mutate(result:String,environment:Map[String,String],interpolator:Interpolator):String
-  override protected def innerAct(previousResult:String,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+  protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):ScriptStepResult
+  override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
     FunctionalCheckReturn(mutate(previousResult,environment,interpolator),duration,environment)
   }
 }
 
 case class KeySetter(key:String,value:String) extends EnvironmentMutator {
-  override protected def mutate(result:String,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = environment.updated(key,value)
+  override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = environment.updated(key,value)
 }
 
 case class KeyDeleter(key:String) extends EnvironmentMutator {
-  override protected def mutate(result:String,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = environment - key
+  override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = environment - key
 }
 
 case class ResultStorer(key:String) extends EnvironmentMutator {
-  override protected def mutate(result:String,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = environment.updated(key,result)
+  override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = environment.updated(key,result.body)
+}
+case class MetaDataStorer(key:String,headerName:String) extends EnvironmentMutator {
+  override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    println("looking up metadata: %s".format(result.metaData))
+    result.metaData.get(headerName).map(newValue => environment.updated(key,newValue)).getOrElse(environment)
+  }
+}
+case class StatusCodeStorer(key:String) extends EnvironmentMutator {
+  override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = environment.updated(key,result.statusCode.toString)
 }
 
 case class RegexFromResult(key:String,regex:String) extends EnvironmentMutator {
   val Pattern = regex.r.unanchored
-  override protected def mutate(result:String,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+  override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
     var mutatedEnvironment = environment
-    result match {
+    result.body match {
       case Pattern(matches @ _*) => {
         matches.headOption.foreach(firstMatch => {
           mutatedEnvironment = mutatedEnvironment.updated(key,firstMatch)
@@ -1697,14 +1731,35 @@ case class RegexFromResult(key:String,regex:String) extends EnvironmentMutator {
     mutatedEnvironment
   }
 }
+
+case class XPathFromResult(key:String,xPath:String) extends EnvironmentMutator {
+  import org.htmlcleaner._
+  override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    var mutatedEnvironment = environment
+    val cleaned = new HtmlCleaner().clean(result.body)
+    val matches = cleaned.evaluateXPath(xPath).toList.map(_.toString)
+    println("found xpath matches: %s => %s".format(interpolator.interpolate(xPath,environment),matches))
+    matches.headOption.foreach(firstMatch => {
+      mutatedEnvironment = mutatedEnvironment.updated(key,firstMatch)
+    })
+    if (matches.length > 0){
+      matches.zipWithIndex.foreach(m => {
+        mutatedEnvironment = mutatedEnvironment.updated("%s_%s".format(key,m._2),m._1)
+      })
+    }
+    mutatedEnvironment
+  }
+}
+
 case class LiftFormExtractor(prefix:String) extends EnvironmentMutator {
-  override protected def mutate(result:String,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+  import org.htmlcleaner._
+  override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
     environment
   }
 }
 
 case class ResultSetter(seed:String) extends ResultMutator {
-  override protected def mutate(result:String,environment:Map[String,String],interpolator:Interpolator):String = interpolator.interpolate(seed,environment)
+  override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):ScriptStepResult = ScriptStepResult(interpolator.interpolate(seed,environment))
 }
 
 abstract class Interpolator {
@@ -1748,22 +1803,16 @@ class SimpleInterpolator extends CharKeyedStringInterpolator("%%","%%") {
 }
 
 class ScriptEngine(interpolator:Interpolator) {
-  def execute(sequence:List[FunctionalCheck]):Tuple3[String,Double,Map[String,String]] = {
-    var state:Map[String,String] = Map.empty[String,String]
-    var totalDuration:Double = 0.0
-    var finalResult:String = ""
-    sequence.foreach(i => {
-      i.act(finalResult,totalDuration,state,interpolator) match {
+  def execute(sequence:List[FunctionalCheck]):Tuple3[ScriptStepResult,Double,Map[String,String]] = {
+    sequence.foldLeft((ScriptStepResult(""),0.0,Map.empty[String,String]))((acc,i) => {
+      i.act(acc._1,acc._2,acc._3,interpolator) match {
         case Left(e) => throw e
         case Right(fcr) => {
           println("STEP executed: %s => %s".format(i,fcr))
-          state = fcr.updatedEnvironment
-          totalDuration = fcr.duration
-          finalResult = fcr.result
+          (fcr.result,fcr.duration,fcr.updatedEnvironment)
         }
       }
     })
-    (finalResult,totalDuration,state)
   }
 }
       
@@ -1774,5 +1823,5 @@ case class ScriptedCheck(serviceCheckMode:ServiceCheckMode,incomingLabel:String,
     val (finalResult,totalDuration,finalEnvironment) = scriptEngine.execute(sequence)
     (finalResult,Full(totalDuration))
   }
-  override def performCheck = succeed(status._1,status._2)
+  override def performCheck = succeed(status._1.body,status._2)
 }
