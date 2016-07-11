@@ -1641,9 +1641,8 @@ abstract class FunctionalCheck {
   }
 }
 
-case class HttpFunctionalCheck(client:IMeTLHttpClient, method:String,url:String,parameters:List[Tuple2[String,String]] = Nil,headers:Map[String,String] = Map.empty[String,String],matcher:HTTPResponseMatcher = HTTPResponseMatchers.empty) extends FunctionalCheck {
+case class HttpFunctionalCheck(client:CleanHttpClient, method:String,url:String,parameters:List[Tuple2[String,String]] = Nil,headers:Map[String,String] = Map.empty[String,String],matcher:HTTPResponseMatcher = HTTPResponseMatchers.empty) extends FunctionalCheck {
   override protected def innerAct(previousResult:ScriptStepResult,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator) = {
-    var client = Http.getClient
     val interpolatedHeaders = headers.map(h => (h._1,interpolator.interpolate(h._2,environment)))
     interpolatedHeaders.foreach(h => client.addHttpHeader(h._1,interpolator.interpolate(h._2,environment)))
     val interpolatedUrl = interpolator.interpolate(url,environment)
@@ -1702,7 +1701,10 @@ case class MetaDataStorer(key:String,headerName:String) extends EnvironmentMutat
   }
 }
 case class StatusCodeStorer(key:String) extends EnvironmentMutator {
-  override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = environment.updated(key,result.statusCode.toString)
+  override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    println("looking up statusCode: %s :: %s".format(result.statusCode,result.metaData))
+    environment.updated(key,result.statusCode.toString)
+  }
 }
 
 case class RegexFromResult(key:String,regex:String) extends EnvironmentMutator {
@@ -1738,7 +1740,7 @@ case class XPathFromResult(key:String,xPath:String) extends EnvironmentMutator {
     var mutatedEnvironment = environment
     val cleaned = new HtmlCleaner().clean(result.body)
     val matches = cleaned.evaluateXPath(xPath).toList.map(_.toString)
-    println("found xpath matches: %s => %s".format(interpolator.interpolate(xPath,environment),matches))
+    //println("found xpath matches: %s => %s".format(interpolator.interpolate(xPath,environment),matches))
     matches.headOption.foreach(firstMatch => {
       mutatedEnvironment = mutatedEnvironment.updated(key,firstMatch)
     })
@@ -1806,9 +1808,12 @@ class ScriptEngine(interpolator:Interpolator) {
   def execute(sequence:List[FunctionalCheck]):Tuple3[ScriptStepResult,Double,Map[String,String]] = {
     sequence.foldLeft((ScriptStepResult(""),0.0,Map.empty[String,String]))((acc,i) => {
       i.act(acc._1,acc._2,acc._3,interpolator) match {
-        case Left(e) => throw e
+        case Left(e) => {
+          println("failed at: %s, with exception %s".format(acc,e.getMessage))
+          throw e
+        }
         case Right(fcr) => {
-          println("STEP executed: %s => %s".format(i,fcr))
+          //println("STEP executed: %s => %s".format(i,fcr))
           (fcr.result,fcr.duration,fcr.updatedEnvironment)
         }
       }
@@ -1821,6 +1826,7 @@ case class ScriptedCheck(serviceCheckMode:ServiceCheckMode,incomingLabel:String,
   val scriptEngine = new ScriptEngine(interpolator)
   def status = {
     val (finalResult,totalDuration,finalEnvironment) = scriptEngine.execute(sequence)
+    println("checkCompleted: %s\r\n%s=>%s".format(finalResult.body,finalResult.metaData,finalEnvironment))
     (finalResult,Full(totalDuration))
   }
   override def performCheck = succeed(status._1.body,status._2)
