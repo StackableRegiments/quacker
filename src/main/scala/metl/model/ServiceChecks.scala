@@ -1846,31 +1846,31 @@ abstract class ResultMutator extends FunctionalCheck {
 }
 
 case class KeySetter(key:String,value:String) extends EnvironmentMutator {
-  override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = environment.updated(key,value)
+  override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = environment.updated(interpolator.interpolate(key,environment),interpolator.interpolate(value,environment))
 }
 
 case class KeyDeleter(key:String) extends EnvironmentMutator {
-  override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = environment - key
+  override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = environment - interpolator.interpolate(key,environment)
 }
 
 case class ResultStorer(key:String) extends EnvironmentMutator {
-  override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = environment.updated(key,result.body)
+  override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = environment.updated(interpolator.interpolate(key,environment),result.body)
 }
 case class MetaDataStorer(key:String,headerName:String) extends EnvironmentMutator {
   override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
-    result.metaData.get(headerName).map(newValue => environment.updated(key,newValue)).getOrElse(environment)
+    result.metaData.get(headerName).map(newValue => environment.updated(interpolator.interpolate(key,environment),newValue)).getOrElse(environment)
   }
 }
 case class StatusCodeStorer(key:String) extends EnvironmentMutator {
   override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
-    environment.updated(key,result.statusCode.toString)
+    environment.updated(interpolator.interpolate(key,environment),result.statusCode.toString)
   }
 }
 
 case class Cond(key:String,value:String,thenFuncs:List[FunctionalCheck],elseFuncs:List[FunctionalCheck]) extends FunctionalCheck {
   override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
     var state:Either[Exception,FunctionalCheckReturn] = Right(FunctionalCheckReturn(previousResult,duration,environment))
-    if (environment.get(key).exists(_ == value)){
+    if (environment.get(interpolator.interpolate(key,environment)).exists(_ == interpolator.interpolate(value,environment))){
       thenFuncs.foreach(tf => {
         state.right.toOption.map(s => {
           state = tf.act(s.result,s.duration,s.updatedEnvironment,interpolator)
@@ -1890,7 +1890,7 @@ case class Cond(key:String,value:String,thenFuncs:List[FunctionalCheck],elseFunc
 case class WhileLoop(key:String,value:String,funcs:List[FunctionalCheck]) extends FunctionalCheck {
   override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
     var state:Either[Exception,FunctionalCheckReturn] = Right(FunctionalCheckReturn(previousResult,duration,environment))
-    while (state.right.toOption.exists(s => s.updatedEnvironment.get(key).exists(_ == value))){
+    while (state.right.toOption.exists(s => s.updatedEnvironment.get(interpolator.interpolate(key,s.updatedEnvironment)).exists(_ == interpolator.interpolate(value,s.updatedEnvironment)))){
       funcs.foreach(tf => {
         state.right.toOption.map(s => {
           state = tf.act(s.result,s.duration,s.updatedEnvironment,interpolator)
@@ -1907,7 +1907,7 @@ case class ForLoop(key:String,start:Int,end:Int,incrementing:Boolean,funcs:List[
     var state:Either[Exception,FunctionalCheckReturn] = Right(FunctionalCheckReturn(previousResult,duration,environment.updated(key,counter.toString)))
     if ((incrementing && start < end) || ((!incrementing) && start > end)){
       while (counter != end){
-        state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment.updated(key,counter.toString)))
+        state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment.updated(interpolator.interpolate(key,s.updatedEnvironment),counter.toString)))
         funcs.foreach(tf => {
           state.right.toOption.map(s => {
             state = tf.act(s.result,s.duration,s.updatedEnvironment,interpolator)
@@ -1920,7 +1920,7 @@ case class ForLoop(key:String,start:Int,end:Int,incrementing:Boolean,funcs:List[
         }
       } 
     }
-    state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment - key))
+    state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment - interpolator.interpolate(key,s.updatedEnvironment)))
     state.left.map(e => throw e).right.toOption.get
   }
 }
@@ -1932,7 +1932,7 @@ case class ForeachRegexFromResult(key:String,regex:String,funcs:List[FunctionalC
     previousResult.body match {
       case Pattern(matches @ _*) => {
         matches.foreach(m => {
-          state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment.updated(key,m)))
+          state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment.updated(interpolator.interpolate(key,s.updatedEnvironment),m)))
           funcs.foreach(tf => {
             state.right.toOption.map(s => {
               state = tf.act(s.result,s.duration,s.updatedEnvironment,interpolator)
@@ -1942,7 +1942,7 @@ case class ForeachRegexFromResult(key:String,regex:String,funcs:List[FunctionalC
       }
       case _ => {}
     }
-    state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment - key))
+    state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment - interpolator.interpolate(key,s.updatedEnvironment)))
     state.left.map(e => throw e).right.toOption.get
   }
 }
@@ -1954,16 +1954,16 @@ case class RegexFromResult(key:String,regex:String) extends EnvironmentMutator {
     result.body match {
       case Pattern(matches @ _*) => {
         matches.headOption.foreach(firstMatch => {
-          mutatedEnvironment = mutatedEnvironment.updated(key,firstMatch)
+          mutatedEnvironment = mutatedEnvironment.updated(interpolator.interpolate(key,mutatedEnvironment),firstMatch)
         })
         if (matches.length > 0){
           matches.zipWithIndex.foreach(m => {
-            mutatedEnvironment = mutatedEnvironment.updated("%s_%s".format(key,m._2),m._1)
+            mutatedEnvironment = mutatedEnvironment.updated("%s_%s".format(interpolator.interpolate(key,mutatedEnvironment),m._2),m._1)
           })
         }
       }
       case Pattern(onlyMatch) => {
-        mutatedEnvironment = mutatedEnvironment.updated(key,onlyMatch)
+        mutatedEnvironment = mutatedEnvironment.updated(interpolator.interpolate(key,mutatedEnvironment),onlyMatch)
       }
       case other => {
         throw new DashboardException("Pattern didn't find a valid value: %s ".format(regex),other.toString)
@@ -1992,14 +1992,14 @@ case class ForeachXPathFromResult(key:String,xPath:String,funcs:List[FunctionalC
     val cleaned = new HtmlCleaner().clean(previousResult.body)
     val matches = cleaned.evaluateXPath(xPath).toList.map(_.toString)
     matches.foreach(m => {
-      state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment.updated(key,m)))
+      state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment.updated(interpolator.interpolate(key,s.updatedEnvironment),m)))
       funcs.foreach(tf => {
         state.right.toOption.map(s => {
           state = tf.act(s.result,s.duration,s.updatedEnvironment,interpolator)
         })
       })
     })
-    state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment - key))
+    state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment - interpolator.interpolate(key,s.updatedEnvironment)))
     state.left.map(e => throw e).right.toOption.get
   }
 }
@@ -2011,11 +2011,11 @@ case class XPathFromResult(key:String,xPath:String) extends EnvironmentMutator {
     val cleaned = new HtmlCleaner().clean(result.body)
     val matches = cleaned.evaluateXPath(xPath).toList.map(_.toString)
     matches.headOption.foreach(firstMatch => {
-      mutatedEnvironment = mutatedEnvironment.updated(key,firstMatch)
+      mutatedEnvironment = mutatedEnvironment.updated(interpolator.interpolate(key,mutatedEnvironment),firstMatch)
     })
     if (matches.length > 0){
       matches.zipWithIndex.foreach(m => {
-        mutatedEnvironment = mutatedEnvironment.updated("%s_%s".format(key,m._2),m._1)
+        mutatedEnvironment = mutatedEnvironment.updated("%s_%s".format(interpolator.interpolate(key,mutatedEnvironment),m._2),m._1)
       })
     }
     mutatedEnvironment
