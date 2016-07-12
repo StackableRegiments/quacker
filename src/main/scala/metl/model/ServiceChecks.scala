@@ -440,7 +440,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
 	}
 }
 
-abstract class Pinger(incomingLabel:String, incomingMode:ServiceCheckMode) extends LiftActor with VisualElement with metl.comet.CheckRenderHelper {
+abstract class Pinger(incomingLabel:String, incomingMode:ServiceCheckMode) extends LiftActor with VisualElement with metl.comet.CheckRenderHelper with Logger {
 	val mode = incomingMode
 	override val label = incomingLabel
 	override def template = Templates.getServiceTemplate
@@ -609,13 +609,13 @@ abstract class Pinger(incomingLabel:String, incomingMode:ServiceCheckMode) exten
     }
 		case StopPinger => {
 			if (!isStopped){
-				println("stopping pinger: %s:%s (%s)".format(label,mode,id))
+				debug("stopping pinger: %s:%s (%s)".format(label,mode,id))
 				isStopped = true
 			}
 		}
 		case StartPinger => {
 			if (isStopped){
-				println("starting pinger: %s:%s (%s)".format(label,mode,id))
+				debug("starting pinger: %s:%s (%s)".format(label,mode,id))
 				isStopped = false
 				resetEnvironment
 				schedule(2 seconds)
@@ -721,19 +721,19 @@ class PingMunin(serviceCheckMode:ServiceCheckMode, incomingLabel:String, host:St
 			val updatedValue = (po(ink),input(ink)) match {
 				case (p:scala.Double,i:scala.Double) if (i < p) => {
 					// this is the counter reset behaviour.  I do believe that counters occasionally reset themselves to zero in munin
-					//println("possibleOverflow: %s (%s -> %s)".format(ink,p,i))
+					debug("possibleOverflow: %s (%s -> %s)".format(ink,p,i))
 					val out = i
 					po.put(ink,0.0)
 					out
 				}
 				case (p:scala.Double,i:scala.Double) => {
-					//println("correct counter behaviour: %s (%s -> %s)".format(ink,p,i))
+					debug("correct counter behaviour: %s (%s -> %s)".format(ink,p,i))
 					val out = i - p
 					po.put(ink,i)
 					out
 				}
 				case other => {
-					//println("resetting to zero: %s (%s)".format(ink,other))
+					debug("resetting to zero: %s (%s)".format(ink,other))
 					val out = 0.0
 					po.put(ink,0.0)
 					out
@@ -1195,7 +1195,7 @@ case class PingMySQL(serviceCheckMode:ServiceCheckMode, incomingLabel:String,uri
       Await.result(Future(Some(DriverManager.getConnection("jdbc:mysql://%s/%s".format(uri,database),username,password))),Duration(connectionCreationTimeout,"millis"))
     } catch {
       case e:TimeoutException => {
-        println("mysql failed to create a connection within the timeout")
+        error("mysql failed to create a connection within the timeout",e)
         None
       }
     }
@@ -1558,6 +1558,21 @@ object FunctionalCheck extends ConfigFileReader {
 						matcher:HTTPResponseMatcher = HTTPResponseMatchers.configureFromXml(<thresholdsPacket>{getNodes(mn,"thresholds")}</thresholdsPacket>)
           ) yield HttpFunctionalCheck(method,url,params,headers,matcher)
         }
+        case "icmp" => {
+          for (
+            host <- getAttr(mn,"host");
+            ipv6 = getAttr(mn,"ipv6").map(_.toBoolean).getOrElse(false)
+          ) yield ICMPFunctionalCheck(host,ipv6)
+        }
+        case "attachHttpBasicAuth" => {
+          for (
+            domain <- getAttr(mn,"domain");
+            username <- getAttr(mn,"username");
+            password <- getAttr(mn,"password")
+          ) yield {
+            HttpAddBasicAuthorization(domain,username,password)
+          }
+        }
         case "setKey" => {
           for (
             key <- getAttr(mn,"key");
@@ -1687,14 +1702,14 @@ object FunctionalCheck extends ConfigFileReader {
 	}
 }
 
-abstract class FunctionalCheck {
+abstract class FunctionalCheck extends Logger {
   protected var see:Option[ScriptExecutionEnvironment] = None
   def attachScriptExecutionEnvironment(newSee:ScriptExecutionEnvironment) = {
     see = Some(newSee)
   }
   protected def innerAct(previousResult:ScriptStepResult,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator):FunctionalCheckReturn 
   def act(previousResult:ScriptStepResult,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator):Either[Exception,FunctionalCheckReturn] = try {
-    //println("STEP: %s \r\n (env: %s)".format(this,environment))
+    debug("STEP: %s \r\n (env: %s)".format(this,environment))
     Right(innerAct(previousResult,totalDuration,environment,interpolator))
   } catch {
     case e:Exception => Left(e)
@@ -1707,6 +1722,81 @@ case class HttpAddBasicAuthorization(domain:String,username:String,password:Stri
       s.httpClient.addAuthorization(interpolator.interpolate(domain,environment),interpolator.interpolate(username,environment),interpolator.interpolate(password,environment))   
     })
     FunctionalCheckReturn(previousResult,duration,environment)
+  }
+}
+case class ICMPFunctionalCheck(uri:String,ipv6:Boolean = false) extends FunctionalCheck {
+		//pinging is done via ipv4 at present.  ipv6 in some networks results in unexpected results for some subnets
+   protected def pingCmd(url:String) = {
+     ((ServiceConfigurator.isWindows,ServiceConfigurator.isLinux,ServiceConfigurator.isOSX,ipv6) match {
+       case (true,false,false,false) => "ping -4 -n 1 "
+       case (true,false,false,true) => "ping -6 -n 1 "
+       case (false,true,false,false) => "ping -c 1 "
+       case (false,true,false,true) => "ping6 -c 1 "
+       case (false,false,true,false) => "ping -c 1 "
+       case (false,false,true,true) => "ping6 -c 1 "
+       case _ => "ping -c 1 "
+     }) + url	
+   }
+	 private val pingTimeExtractor:String=>Box[Double] = (ServiceConfigurator.isWindows,ServiceConfigurator.isLinux,ServiceConfigurator.isOSX) match {
+		case (true,false,false) => (output:String) => {
+			val reg = """time([=<])([0-9]+)ms""".r
+			reg.findFirstMatchIn(output) match {
+				case Some(timeMatch) => {
+					val timeString = timeMatch.group(2)
+					timeMatch.group(1) match {
+						case "=" => tryo(timeString.toLong)
+					//approximating time to 0.95 of time, if the ping response read "time<1ms" instead of "time=1ms"
+						case "<" => tryo(timeString.toLong * 0.95)
+					}
+				}
+				case _ => Empty
+			}
+		}
+		case (false,true,false) => (output:String) => {
+			val reg = """time[=<]([0-9.]+) ms""".r
+			reg.findFirstMatchIn(output) match {
+				case Some(timeMatch) => {
+					val timeString = timeMatch.group(1)
+					tryo(timeString.toDouble)
+				}
+				case _ => Empty
+			}
+		}
+		case (false,false,true) => (output:String) => {
+			val reg = """time[=<]([0-9.]+) ms""".r
+			reg.findFirstMatchIn(output) match {
+				case Some(timeMatch) => {
+					val timeString = timeMatch.group(1)
+					tryo(timeString.toDouble)
+				}
+				case _ => Empty
+			}
+		}
+		case _ => (output:String) => Empty
+	}	
+  override protected def innerAct(previousResult:ScriptStepResult,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+    val pingProcess = Runtime.getRuntime().exec(pingCmd(interpolator.interpolate(uri,environment)))
+    val inputStream = new BufferedInputStream(pingProcess.getInputStream)
+    val errorStream = new BufferedInputStream(pingProcess.getErrorStream)
+    var output = ""
+    pingProcess.waitFor
+    while (errorStream.available > 0 || inputStream.available > 0 )
+    {
+      while (inputStream.available > 0)
+        output += inputStream.read.asInstanceOf[Char]
+      while (errorStream.available > 0)
+        output += errorStream.read.asInstanceOf[Char]
+    }
+    pingProcess.destroy
+    if (output.length == 0)
+      throw new DashboardException("Ping failed","ping command failed - no response from OS")
+    if (output.contains("cannot resolve") || output.contains("Unknown host") || output.contains("could not find host"))
+      throw new DashboardException("Ping failed","Unknown host: "+output)
+    if (!(output.contains(" 0% packet loss") || output.contains("(0% loss)")))
+      throw new DashboardException("Ping failed","Packet loss recognised: "+output)
+    val stringOutput = output.toString
+    val timeTaken = pingTimeExtractor(stringOutput)
+    FunctionalCheckReturn(ScriptStepResult(body = stringOutput,duration = timeTaken.openOr(0)),totalDuration + timeTaken.openOr(0.0),environment)
   }
 }
 
