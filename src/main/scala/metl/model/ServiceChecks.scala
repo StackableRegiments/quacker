@@ -1626,6 +1626,44 @@ object FunctionalCheck extends ConfigFileReader {
             ResultSetter(result)
           }
         }
+        case "if" => {
+          for (
+            key <- getAttr(mn,"key");
+            value <- getAttr(mn,"value");
+            thenFuncs = getImmediateNodes(mn,"then").flatMap(tn => {
+              configureFromXml(tn)
+            });
+            elseFuncs = getImmediateNodes(mn,"else").flatMap(tn => {
+              configureFromXml(tn)
+            })
+          ) yield {
+            Cond(key,value,thenFuncs,elseFuncs)  
+          }
+        }
+        case "while" => {
+          for (
+            key <- getAttr(mn,"key");
+            value <- getAttr(mn,"value");
+            funcs = getImmediateNodes(mn,"do").flatMap(tn => {
+              configureFromXml(tn)
+            })
+          ) yield {
+            WhileLoop(key,value,funcs)  
+          }
+        }
+        case "for" => {
+          for (
+            key <- getAttr(mn,"key");
+            start <- getAttr(mn,"start").map(_.toInt);
+            end <- getAttr(mn,"end").map(_.toInt);
+            incrementing = getAttr(mn,"incrementing").map(_.trim.toLowerCase == "true").getOrElse(true);
+            funcs = getImmediateNodes(mn,"do").flatMap(tn => {
+              configureFromXml(tn)
+            })
+          ) yield {
+            ForLoop(key,start,end,incrementing,funcs)
+          }
+        }
 				case _ => None
 			}
 		})
@@ -1702,6 +1740,64 @@ case class MetaDataStorer(key:String,headerName:String) extends EnvironmentMutat
 case class StatusCodeStorer(key:String) extends EnvironmentMutator {
   override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
     environment.updated(key,result.statusCode.toString)
+  }
+}
+
+case class Cond(key:String,value:String,thenFuncs:List[FunctionalCheck],elseFuncs:List[FunctionalCheck]) extends FunctionalCheck {
+  override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+    var state:Either[Exception,FunctionalCheckReturn] = Right(FunctionalCheckReturn(previousResult,duration,environment))
+    if (environment.get(key).exists(_ == value)){
+      thenFuncs.foreach(tf => {
+        state.right.toOption.map(s => {
+          state = tf.act(s.result,s.duration,s.updatedEnvironment,interpolator)
+        })
+      })
+    } else {
+      elseFuncs.foreach(tf => {
+        state.right.toOption.map(s => {
+          state = tf.act(s.result,s.duration,s.updatedEnvironment,interpolator)
+        })
+      })
+    }
+    state.left.map(e => throw e).right.toOption.get
+  }
+}
+
+case class WhileLoop(key:String,value:String,funcs:List[FunctionalCheck]) extends FunctionalCheck {
+  override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+    var state:Either[Exception,FunctionalCheckReturn] = Right(FunctionalCheckReturn(previousResult,duration,environment))
+    while (environment.get(key).exists(_ == value)){
+      funcs.foreach(tf => {
+        state.right.toOption.map(s => {
+          state = tf.act(s.result,s.duration,s.updatedEnvironment,interpolator)
+        })
+      })
+    } 
+    state.left.map(e => throw e).right.toOption.get
+  }
+}
+
+case class ForLoop(key:String,start:Int,end:Int,incrementing:Boolean,funcs:List[FunctionalCheck]) extends FunctionalCheck {
+  override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+    var counter = start
+    var state:Either[Exception,FunctionalCheckReturn] = Right(FunctionalCheckReturn(previousResult,duration,environment.updated(key,counter.toString)))
+    if ((incrementing && start < end) || ((!incrementing) && start > end)){
+      while (counter != end){
+        state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment.updated(key,counter.toString)))
+        funcs.foreach(tf => {
+          state.right.toOption.map(s => {
+            state = tf.act(s.result,s.duration,s.updatedEnvironment,interpolator)
+          })
+        })
+        if (incrementing){
+          counter += 1
+        } else {
+          counter -= 1
+        }
+      } 
+    }
+    state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment - key))
+    state.left.map(e => throw e).right.toOption.get
   }
 }
 
