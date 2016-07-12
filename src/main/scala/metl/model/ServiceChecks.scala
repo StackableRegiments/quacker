@@ -1604,12 +1604,30 @@ object FunctionalCheck extends ConfigFileReader {
             XPathFromResult(key,xPath)
           }
         }
+        case "foreachXPathResult" => {
+          for (
+            key <- getAttr(mn,"key");
+            xPath <- getAttr(mn,"xPath");
+            funcs = getImmediateNodes(mn,"do").flatMap(tn => configureFromXml(tn))
+          ) yield {
+            ForeachXPathFromResult(key,xPath,funcs)
+          }
+        }
         case "regexResult" => {
           for (
             key <- getAttr(mn,"key");
             regex <- getAttr(mn,"regex")
           ) yield {
             RegexFromResult(key,regex)
+          }
+        }
+        case "foreachRegexResult" => {
+          for (
+            key <- getAttr(mn,"key");
+            regex <- getAttr(mn,"regex");
+            funcs = getImmediateNodes(mn,"do").flatMap(tn => configureFromXml(tn))
+          ) yield {
+            ForeachRegexFromResult(key,regex,funcs)
           }
         }
         case "liftFormExtractor" => {
@@ -1630,12 +1648,8 @@ object FunctionalCheck extends ConfigFileReader {
           for (
             key <- getAttr(mn,"key");
             value <- getAttr(mn,"value");
-            thenFuncs = getImmediateNodes(mn,"then").flatMap(tn => {
-              configureFromXml(tn)
-            });
-            elseFuncs = getImmediateNodes(mn,"else").flatMap(tn => {
-              configureFromXml(tn)
-            })
+            thenFuncs = getImmediateNodes(mn,"then").flatMap(tn => configureFromXml(tn));
+            elseFuncs = getImmediateNodes(mn,"else").flatMap(tn => configureFromXml(tn))
           ) yield {
             Cond(key,value,thenFuncs,elseFuncs)  
           }
@@ -1644,9 +1658,7 @@ object FunctionalCheck extends ConfigFileReader {
           for (
             key <- getAttr(mn,"key");
             value <- getAttr(mn,"value");
-            funcs = getImmediateNodes(mn,"do").flatMap(tn => {
-              configureFromXml(tn)
-            })
+            funcs = getImmediateNodes(mn,"do").flatMap(tn => configureFromXml(tn))
           ) yield {
             WhileLoop(key,value,funcs)  
           }
@@ -1657,9 +1669,7 @@ object FunctionalCheck extends ConfigFileReader {
             start <- getAttr(mn,"start").map(_.toInt);
             end <- getAttr(mn,"end").map(_.toInt);
             incrementing = getAttr(mn,"incrementing").map(_.trim.toLowerCase == "true").getOrElse(true);
-            funcs = getImmediateNodes(mn,"do").flatMap(tn => {
-              configureFromXml(tn)
-            })
+            funcs = getImmediateNodes(mn,"do").flatMap(tn => configureFromXml(tn))
           ) yield {
             ForLoop(key,start,end,incrementing,funcs)
           }
@@ -1801,6 +1811,28 @@ case class ForLoop(key:String,start:Int,end:Int,incrementing:Boolean,funcs:List[
   }
 }
 
+case class ForeachRegexFromResult(key:String,regex:String,funcs:List[FunctionalCheck]) extends FunctionalCheck {
+  val Pattern = regex.r.unanchored
+  override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+    var state:Either[Exception,FunctionalCheckReturn] = Right(FunctionalCheckReturn(previousResult,duration,environment))
+    previousResult.body match {
+      case Pattern(matches @ _*) => {
+        matches.foreach(m => {
+          state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment.updated(key,m)))
+          funcs.foreach(tf => {
+            state.right.toOption.map(s => {
+              state = tf.act(s.result,s.duration,s.updatedEnvironment,interpolator)
+            })
+          })
+        })
+      }
+      case _ => {}
+    }
+    state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment - key))
+    state.left.map(e => throw e).right.toOption.get
+  }
+}
+
 case class RegexFromResult(key:String,regex:String) extends EnvironmentMutator {
   val Pattern = regex.r.unanchored
   override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
@@ -1824,6 +1856,25 @@ case class RegexFromResult(key:String,regex:String) extends EnvironmentMutator {
       }
     }
     mutatedEnvironment
+  }
+}
+
+case class ForeachXPathFromResult(key:String,xPath:String,funcs:List[FunctionalCheck]) extends FunctionalCheck {
+  import org.htmlcleaner._
+  override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+    var state:Either[Exception,FunctionalCheckReturn] = Right(FunctionalCheckReturn(previousResult,duration,environment))
+    val cleaned = new HtmlCleaner().clean(previousResult.body)
+    val matches = cleaned.evaluateXPath(xPath).toList.map(_.toString)
+    matches.foreach(m => {
+      state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment.updated(key,m)))
+      funcs.foreach(tf => {
+        state.right.toOption.map(s => {
+          state = tf.act(s.result,s.duration,s.updatedEnvironment,interpolator)
+        })
+      })
+    })
+    state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment - key))
+    state.left.map(e => throw e).right.toOption.get
   }
 }
 
