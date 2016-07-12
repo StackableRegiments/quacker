@@ -1533,7 +1533,7 @@ case class FunctionalCheckReturn(result:ScriptStepResult,duration:Double,updated
 
 object FunctionalCheck extends ConfigFileReader {
   def configureFromXml(n:Node):List[FunctionalCheck] = {
-		getNodes(n,"step").flatMap(mn => {
+		getImmediateNodes(n,"step").flatMap(mn => {
 			getAttr(mn,"type").getOrElse("unknown") match {
 				case "http" => {
           for (
@@ -1673,6 +1673,14 @@ object FunctionalCheck extends ConfigFileReader {
             ForLoop(key,start,end,incrementing,funcs)
           }
         }
+        case "delay" => {
+          for (
+            delay <- getAttr(mn,"delay").map(_.toLong);
+            random = getAttr(mn,"random").map(_.trim.toLowerCase == "true").getOrElse(false)
+          ) yield {
+            Delay(delay,random)
+          }
+        }
 				case _ => None
 			}
 		})
@@ -1686,6 +1694,7 @@ abstract class FunctionalCheck {
   }
   protected def innerAct(previousResult:ScriptStepResult,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator):FunctionalCheckReturn 
   def act(previousResult:ScriptStepResult,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator):Either[Exception,FunctionalCheckReturn] = try {
+    //println("STEP: %s \r\n (env: %s)".format(this,environment))
     Right(innerAct(previousResult,totalDuration,environment,interpolator))
   } catch {
     case e:Exception => Left(e)
@@ -1791,7 +1800,7 @@ case class Cond(key:String,value:String,thenFuncs:List[FunctionalCheck],elseFunc
 case class WhileLoop(key:String,value:String,funcs:List[FunctionalCheck]) extends FunctionalCheck {
   override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
     var state:Either[Exception,FunctionalCheckReturn] = Right(FunctionalCheckReturn(previousResult,duration,environment))
-    while (environment.get(key).exists(_ == value)){
+    while (state.right.toOption.exists(s => s.updatedEnvironment.get(key).exists(_ == value))){
       funcs.foreach(tf => {
         state.right.toOption.map(s => {
           state = tf.act(s.result,s.duration,s.updatedEnvironment,interpolator)
