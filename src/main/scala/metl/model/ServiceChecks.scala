@@ -1533,7 +1533,6 @@ case class FunctionalCheckReturn(result:ScriptStepResult,duration:Double,updated
 
 object FunctionalCheck extends ConfigFileReader {
   def configureFromXml(n:Node):List[FunctionalCheck] = {
-    lazy val httpClient = Http.getClient 
 		getNodes(n,"step").flatMap(mn => {
 			getAttr(mn,"type").getOrElse("unknown") match {
 				case "http" => {
@@ -1557,7 +1556,7 @@ object FunctionalCheck extends ConfigFileReader {
               } 
             }):_*);
 						matcher:HTTPResponseMatcher = HTTPResponseMatchers.configureFromXml(<thresholdsPacket>{getNodes(mn,"thresholds")}</thresholdsPacket>)
-          ) yield HttpFunctionalCheck(httpClient,method,url,params,headers,matcher)
+          ) yield HttpFunctionalCheck(method,url,params,headers,matcher)
         }
         case "setKey" => {
           for (
@@ -1681,6 +1680,10 @@ object FunctionalCheck extends ConfigFileReader {
 }
 
 abstract class FunctionalCheck {
+  protected var see:Option[ScriptExecutionEnvironment] = None
+  def attachScriptExecutionEnvironment(newSee:ScriptExecutionEnvironment) = {
+    see = Some(newSee)
+  }
   protected def innerAct(previousResult:ScriptStepResult,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator):FunctionalCheckReturn 
   def act(previousResult:ScriptStepResult,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator):Either[Exception,FunctionalCheckReturn] = try {
     Right(innerAct(previousResult,totalDuration,environment,interpolator))
@@ -1689,8 +1692,20 @@ abstract class FunctionalCheck {
   }
 }
 
-case class HttpFunctionalCheck(client:CleanHttpClient, method:String,url:String,parameters:List[Tuple2[String,String]] = Nil,headers:Map[String,String] = Map.empty[String,String],matcher:HTTPResponseMatcher = HTTPResponseMatchers.empty) extends FunctionalCheck {
+case class HttpAddBasicAuthorization(domain:String,username:String,password:String) extends FunctionalCheck {
+  override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+    see.foreach(s => {
+      s.httpClient.addAuthorization(interpolator.interpolate(domain,environment),interpolator.interpolate(username,environment),interpolator.interpolate(password,environment))   
+    })
+    FunctionalCheckReturn(previousResult,duration,environment)
+  }
+}
+
+case class HttpFunctionalCheck(method:String,url:String,parameters:List[Tuple2[String,String]] = Nil,headers:Map[String,String] = Map.empty[String,String],matcher:HTTPResponseMatcher = HTTPResponseMatchers.empty) extends FunctionalCheck {
   override protected def innerAct(previousResult:ScriptStepResult,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+    val client = see.map(_.httpClient).getOrElse({
+      throw new Exception("no available httpClient")
+    })
     val interpolatedHeaders = headers.map(h => (h._1,interpolator.interpolate(h._2,environment)))
     interpolatedHeaders.foreach(h => client.addHttpHeader(h._1,interpolator.interpolate(h._2,environment)))
     val interpolatedUrl = interpolator.interpolate(url,environment)
@@ -1862,7 +1877,7 @@ case class RegexFromResult(key:String,regex:String) extends EnvironmentMutator {
 case class Delay(delay:Long,randomize:Boolean = false) extends FunctionalCheck {
   override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
     val amount:Long = randomize match {
-      case true => ((scala.util.Random.nextInt(200) * delay) / 100L)  // pick a value up to twice above the delay value
+      case true => ((scala.util.Random.nextInt(200) * delay) / 100L)  // pick a value up to twice above the delay value, and down to zero.
       case false => delay
     }
     Thread.sleep(amount)
@@ -1935,6 +1950,13 @@ object Interpolator extends ConfigFileReader {
             endTag <- getAttr(mn,"endTag")
           ) yield CharKeyedStringInterpolator(startTag,endTag))
         }
+				case "escapedCharKeyedStringInterpolator" => {
+          (for (
+            startTag <- getAttr(mn,"startTag");
+            endTag <- getAttr(mn,"endTag");
+            escapeTag <- getAttr(mn,"escapeTag")
+          ) yield EscapedCharKeyedStringInterpolator(startTag,endTag,escapeTag))
+        }
 				case _ => None
 			}
 		})
@@ -1956,12 +1978,44 @@ case class CharKeyedStringInterpolator(startTag:String,endTag:String) extends In
     partialResult + possibleStartTag + possibleKey + possibleEndTag
   }
 }
-class SimpleInterpolator extends CharKeyedStringInterpolator("%%","%%") {
+case class EscapedCharKeyedStringInterpolator(startTag:String,endTag:String,escapeString:String) extends Interpolator {
+  protected val KeyStartTag = startTag
+  protected val KeyEndTag = endTag
+  protected val EscapeCharacters = escapeString
+  def interpolate(in:String,values:Map[String,String]):String = {
+    val (partialResult,possibleStartTag,possibleKey,possibleEndTag,escapeChars,escaping) = in.foldLeft(("","","","","",false))((acc,item) => {
+      (acc,item) match {
+        case ((soFar,KeyStartTag,key,partialEndTag,escapePattern,false),item) if escapePattern + item == EscapeCharacters => (soFar,KeyStartTag,key,partialEndTag,"",true) // escapePattern complete - set the next item to escapeMode
+        case ((soFar,KeyStartTag,key,partialEndTag,escapePattern,false),item) if EscapeCharacters.startsWith(escapePattern + item) => (soFar,KeyStartTag,key,partialEndTag,escapePattern + item,false) // escapePattern building
+        case ((soFar,KeyStartTag,key,partialEndTag,escapePattern,true),item) => (soFar,KeyStartTag,key + partialEndTag + item,"","",false) //character escaped, continuing to build key
+        case ((soFar,KeyStartTag,key,partialEndTag,escapePattern,false),item) if (partialEndTag + item).length > KeyEndTag.length => (soFar,KeyStartTag,key + partialEndTag + escapePattern + item,"","",false) //end tag became over-long, aborting end-tag and continuing to build key
+        case ((soFar,KeyStartTag,key,partialEndTag,escapePattern,false),item) if (partialEndTag + escapePattern + item) == KeyEndTag => (soFar + values.get(key).getOrElse(KeyStartTag + key + partialEndTag + item),"","","","",false) //end tag complete, commit interpolation
+        case ((soFar,KeyStartTag,key,partialEndTag,escapePattern,false),item) if KeyEndTag.startsWith(partialEndTag + escapePattern + item) => (soFar,KeyStartTag,key,partialEndTag + escapePattern + item,"",false) //end tag still building
+        case ((soFar,partialStartTag,"","","",true),item) => (soFar + partialStartTag + item,"","","","",false) //character escaped, aborted building start tag
+        case ((soFar,KeyStartTag,key,partialEndTag,escapePattern,false),item) => (soFar,KeyStartTag,key + partialEndTag + escapePattern + item,"","",false) //start tag complete, key building
+        case ((soFar,partialStartTag,key,"",escapePattern,false),item) if KeyStartTag == (partialStartTag + item) => (soFar,partialStartTag + escapePattern + item,"","","",false) //start tag complete
+        case ((soFar,partialStartTag,key,"",escapePattern,false),item) if (partialStartTag + escapePattern + item).length > KeyStartTag.length => (soFar + partialStartTag + escapePattern + item,"","","","",false) //start tag became over-long, aborting start-tag and adding to base
+        case ((soFar,partialStartTag,key,"",escapePattern,false),item) if KeyStartTag.startsWith(partialStartTag + item) => (soFar,partialStartTag + escapePattern + item,"","","",false) //start tag still building
+        case ((soFar,partialStartTag,key,partialEndTag,escapePattern,false),item) => (soFar + partialStartTag + key + partialEndTag + escapePattern + item,"","","","",false) //not matched, just adding to the base
+      }
+    })
+    partialResult + possibleStartTag + possibleKey + possibleEndTag + escapeChars + {escaping match {
+      case true => escapeString
+      case false => ""
+    }}
+  }
 }
+
+class ScriptExecutionEnvironment {
+  lazy val httpClient:CleanHttpClient = Http.getClient
+}
+
 
 class ScriptEngine(interpolator:Interpolator) {
   def execute(sequence:List[FunctionalCheck]):Tuple3[ScriptStepResult,Double,Map[String,String]] = {
+    val see = new ScriptExecutionEnvironment()
     sequence.foldLeft((ScriptStepResult(""),0.0,Map.empty[String,String]))((acc,i) => {
+      i.attachScriptExecutionEnvironment(see)
       i.act(acc._1,acc._2,acc._3,interpolator) match {
         case Left(e) => {
           throw e
