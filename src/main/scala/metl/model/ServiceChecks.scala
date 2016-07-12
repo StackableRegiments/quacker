@@ -1859,6 +1859,18 @@ case class RegexFromResult(key:String,regex:String) extends EnvironmentMutator {
   }
 }
 
+case class Delay(delay:Long,randomize:Boolean = false) extends FunctionalCheck {
+  override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+    val amount:Long = randomize match {
+      case true => ((scala.util.Random.nextInt(200) * delay) / 100L)  // pick a value up to twice above the delay value
+      case false => delay
+    }
+    Thread.sleep(amount)
+    FunctionalCheckReturn(previousResult,duration,environment)
+  }
+}
+
+
 case class ForeachXPathFromResult(key:String,xPath:String,funcs:List[FunctionalCheck]) extends FunctionalCheck {
   import org.htmlcleaner._
   override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
