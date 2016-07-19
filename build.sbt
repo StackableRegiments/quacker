@@ -17,6 +17,10 @@ unmanagedResourceDirectories in Test <+= (baseDirectory) { _ / "src/main/webapp"
 
 scalacOptions ++= Seq("-deprecation", "-unchecked")
 
+seq(webSettings :_*)
+
+/*
+>>>>>>> 2e7e214f779cfbbf4c9207b768b108c62fd5703a
 javaOptions in container ++= Seq(
   "-Drun.mode=development",
   "-Dmetlx.configurationFile=config/configuration.local.xml",
@@ -27,7 +31,7 @@ javaOptions in container ++= Seq(
   "-Xmx256m",
   "-Xms256m"
 )
-
+*/
 
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.+"
 
