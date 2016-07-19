@@ -1,0 +1,64 @@
+<div class="lift:surround?with=default;at=content">
+	<head>
+		<link rel="stylesheet" type="text/css" href="static/style.css"/>
+	</head>
+	<div class="header">
+		<h1 id="title">StackableRegiments Bug Report</h1>
+	</div>
+	<form name="fogbugzEntry" id="fogbugzEntry" method="POST" action="/bugHandler">
+		<div class="box clear">
+			<div class="marginBox">
+				<h2>Summary</h2>
+				<p>Please enter a name for this bug</p>
+				<p><input name="summary" id="summary" type="text" size="100"/></p>
+			</div>
+		</div>
+		<div class="box clear">
+			<div class="marginBox">
+				<h2>Product at fault</h2>
+				<p>Please enter the name of the program which went wrong</p>
+				<p><input name="productName" id="productName" type="text" size="100"/></p>
+			</div>
+		</div>
+		<div class="box left">
+			<div class="marginBox">
+				<h2>Name</h2>
+				<p>Please enter your name</p>
+				<p><input name="userName" id="userName" type="text" size="100"/></p>
+			</div>
+		</div>
+		<div class="box right">
+			<div class="marginBox">
+				<h2>Email Address</h2>
+				<p>Please enter your email address</p>
+				<p><input name="emailAddress" id="emailAddress" type="text" size="100"/></p>
+			</div>
+		</div>
+		<div class="box left">
+			<div class="marginBox">
+				<h2>Time</h2>
+				<p>Please enter the time when the bug occurred</p>
+				<p><input name="timeOccurred" id="timeOccurred" type="text" size="100"/></p>
+			</div>
+		</div>
+		<div class="box right">
+			<div class="marginBox">
+				<h2>Location</h2>
+				<p>Please enter the location where the bug occurred</p>
+				<p><input name="locationOccurred" id="locationOccurred" type="text" size="100"/></p>
+			</div>
+		</div>
+		<div class="box clear">
+			<div class="marginBox">
+				<h2>Description of problem</h2>
+				<p>Please enter a description of what went wrong, in as much detail as you can.</p>
+				<textarea name="bugDescription" id="bugDescription" cols="80" rows="10"></textarea>
+			</div>
+		</div>
+		<p>
+			<input id="commitBugSubmit" value="Submit" type="submit"/>
+			<input id="commitBugCancel" type="reset" />
+		</p>
+	</form>
+</div>
+

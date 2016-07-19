@@ -1,0 +1,228 @@
+<configuration>
+	<services>
+		<service name="statements">
+			<server name="statements-dev">
+				<serviceCheck>
+					<label>ping dev</label>
+					<mode>development</mode>
+					<type>icmp</type>
+					<period>60</period>
+					<host>104.199.184.21</host>
+					<ipv6>false</ipv6>
+				</serviceCheck>
+				<serviceCheck>
+					<label>synthetic happy-path dev</label>
+					<mode>development</mode>
+					<type>script</type>
+					<period>360</period>
+					<interpolator type="charKeyedStringInterpolator" startTag="%%" endTag="%%" />
+					<step type="setKey" key="token" value="tokenA"/>
+					<step type="setKey" key="documentId" value="documentA"/>
+					<step type="setKey" key="baseUrl" value="http://104.199.184.21:8080"/>
+					<step type="http" method="get" url="%%baseUrl%%/statements/verifyIdentity?token=%%token%%"/>
+					<step type="storeStatusCode" key="getFormStatusCode"/>
+					<step type="storeResult" key="getFormResult"/>
+<!--
+					<step type="xPathResult" key="surnameLabelFor" xPath="//label[text()='Please enter your surname']/@for"/>
+					<step type="xPathResult" key="surnameInputName" xPath="//input[@id='%%surnameLabelFor%%']/@name"/>
+-->
+					<step type="xPathResult" key="surnameInputName" xPath="(//input)[2]/@name"/>
+					<!--
+					<step type="xPathResult" key="ageLabelFor" xPath="//label[text()='Please enter your age, in years, as it is today']/@for"/>
+					<step type="xPathResult" key="ageInputName" xPath="//input[@id='%%ageLabelFor%%']/@name"/>
+-->
+					<step type="xPathResult" key="ageInputName" xPath="(//input)[3]/@name"/>
+					<step type="xPathResult" key="submitButtonName" xPath="//input[@type='submit']/@name"/>
+					<step type="xPathResult" key="submitButtonValue" xPath="//input[@type='submit']/@value"/>
+					<step type="http" method="post" url="%%baseUrl%%/statements/verifyIdentity">
+						<parameter key="%%ageInputName%%" value="27"/>
+						<parameter key="%%surnameInputName%%" value="higgins"/>
+						<parameter key="%%submitButtonName%%" value="%%submitButtonValue%%"/>
+						<parameter key="%%tokenInputName%%" value="%%token%%"/>
+					</step>
+					<step type="storeStatusCode" key="postFormStatusCode"/>
+					<step type="storeResult" key="postResult"/>
+				</serviceCheck>
+				<serviceCheck>
+					<label>static-handler dev</label>
+					<mode>development</mode>
+					<type>http</type>
+					<period>60</period>
+					<requiredSequentialFailures>3</requiredSequentialFailures>
+					<url>http://104.199.184.21:8080/statements/static/index.html</url>
+					<thresholds>
+						<matcher name="statusCode">
+							<stringEquals value="200"/>
+						</matcher>
+					</thresholds>
+				</serviceCheck>
+			</server>
+			<server name="statements-qat">
+				<serviceCheck>
+					<label>ping qat-ssl-cloud-sql</label>
+					<mode>staging</mode>
+					<type>icmp</type>
+					<period>60</period>
+					<host>104.199.188.214</host>
+					<ipv6>false</ipv6>
+				</serviceCheck>
+				<serviceCheck>
+					<label>synthetic happy-path</label>
+					<mode>staging</mode>
+					<type>script</type>
+					<period>360</period>
+					<interpolator type="charKeyedStringInterpolator" startTag="%%" endTag="%%" />
+					<step type="setKey" key="token" value="tokenA"/>
+					<step type="setKey" key="documentId" value="documentA"/>
+					<step type="setKey" key="baseUrl" value="https://104.199.188.214"/>
+					<step type="http" method="get" url="%%baseUrl%%/statements/verifyIdentity?token=%%token%%"/>
+					<step type="storeStatusCode" key="getFormStatusCode"/>
+					<step type="storeResult" key="getFormResult"/>
+<!--
+					<step type="xPathResult" key="surnameLabelFor" xPath="//label[text()='Please enter your surname']/@for"/>
+					<step type="xPathResult" key="surnameInputName" xPath="//input[@id='%%surnameLabelFor%%']/@name"/>
+-->
+					<step type="xPathResult" key="surnameInputName" xPath="(//input)[2]/@name"/>
+					<!--
+					<step type="xPathResult" key="ageLabelFor" xPath="//label[text()='Please enter your age, in years, as it is today']/@for"/>
+					<step type="xPathResult" key="ageInputName" xPath="//input[@id='%%ageLabelFor%%']/@name"/>
+-->
+					<step type="xPathResult" key="ageInputName" xPath="(//input)[3]/@name"/>
+					<step type="xPathResult" key="submitButtonName" xPath="//input[@type='submit']/@name"/>
+					<step type="xPathResult" key="submitButtonValue" xPath="//input[@type='submit']/@value"/>
+					<step type="http" method="post" url="%%baseUrl%%/statements/verifyIdentity">
+						<parameter key="%%ageInputName%%" value="27"/>
+						<parameter key="%%surnameInputName%%" value="higgins"/>
+						<parameter key="%%submitButtonName%%" value="%%submitButtonValue%%"/>
+						<parameter key="%%tokenInputName%%" value="%%token%%"/>
+					</step>
+					<step type="storeStatusCode" key="postFormStatusCode"/>
+					<step type="storeResult" key="postResult"/>
+				</serviceCheck>
+				<serviceCheck>
+					<label>static-handler qat-ssl-cloud-sql</label>
+					<mode>staging</mode>
+					<type>http</type>
+					<period>60</period>
+					<requiredSequentialFailures>3</requiredSequentialFailures>
+					<url>https://104.199.188.214/statements/static/index.html</url>
+					<thresholds>
+						<matcher name="statusCode">
+							<stringEquals value="200"/>
+						</matcher>
+					</thresholds>
+				</serviceCheck>
+			</server>
+			<server name="statements-prd">
+				<serviceCheck>
+					<label>ping statements-prd</label>
+					<mode>production</mode>
+					<type>icmp</type>
+					<period>60</period>
+					<host>statements.css.gov.au</host>
+					<ipv6>false</ipv6>
+				</serviceCheck>
+				<serviceCheck>
+					<label>synthetic happy-path</label>
+					<mode>production</mode>
+					<type>script</type>
+					<period>360</period>
+					<interpolator type="charKeyedStringInterpolator" startTag="%%" endTag="%%" />
+					<step type="setKey" key="token" value="tokenA"/>
+					<step type="setKey" key="documentId" value="documentA"/>
+					<step type="setKey" key="baseUrl" value="https://104.199.137.170"/>
+					<step type="http" method="get" url="%%baseUrl%%/statements/verifyIdentity?token=%%token%%"/>
+					<step type="storeStatusCode" key="getFormStatusCode"/>
+					<step type="storeResult" key="getFormResult"/>
+<!--
+					<step type="xPathResult" key="surnameLabelFor" xPath="//label[text()='Please enter your surname']/@for"/>
+					<step type="xPathResult" key="surnameInputName" xPath="//input[@id='%%surnameLabelFor%%']/@name"/>
+-->
+					<step type="xPathResult" key="surnameInputName" xPath="(//input)[2]/@name"/>
+					<!--
+					<step type="xPathResult" key="ageLabelFor" xPath="//label[text()='Please enter your age, in years, as it is today']/@for"/>
+					<step type="xPathResult" key="ageInputName" xPath="//input[@id='%%ageLabelFor%%']/@name"/>
+-->
+					<step type="xPathResult" key="ageInputName" xPath="(//input)[3]/@name"/>
+					<step type="xPathResult" key="submitButtonName" xPath="//input[@type='submit']/@name"/>
+					<step type="xPathResult" key="submitButtonValue" xPath="//input[@type='submit']/@value"/>
+					<step type="http" method="post" url="%%baseUrl%%/statements/verifyIdentity">
+						<parameter key="%%ageInputName%%" value="27"/>
+						<parameter key="%%surnameInputName%%" value="higgins"/>
+						<parameter key="%%submitButtonName%%" value="%%submitButtonValue%%"/>
+						<parameter key="%%tokenInputName%%" value="%%token%%"/>
+					</step>
+					<step type="storeStatusCode" key="postFormStatusCode"/>
+					<step type="storeResult" key="postResult"/>
+				</serviceCheck>
+				<serviceCheck>
+					<label>static-handler statements-css-prd</label>
+					<mode>production</mode>
+					<type>http</type>
+					<period>60</period>
+					<requiredSequentialFailures>3</requiredSequentialFailures>
+					<url>https://statements.css.gov.au/statements/static/index.html</url>
+					<thresholds>
+						<matcher name="statusCode">
+							<stringEquals value="200"/>
+						</matcher>
+					</thresholds>
+				</serviceCheck>
+				<serviceCheck>
+					<label>static-handler statements-pss-prd</label>
+					<mode>production</mode>
+					<type>http</type>
+					<period>60</period>
+					<requiredSequentialFailures>3</requiredSequentialFailures>
+					<url>https://statements.pss.gov.au/statements/static/index.html</url>
+					<thresholds>
+						<matcher name="statusCode">
+							<stringEquals value="200"/>
+						</matcher>
+					</thresholds>
+				</serviceCheck>
+				<serviceCheck>
+					<label>static-handler statements-dfrdb-prd</label>
+					<mode>production</mode>
+					<type>http</type>
+					<period>60</period>
+					<requiredSequentialFailures>3</requiredSequentialFailures>
+					<url>https://statements.dfrdb.gov.au/statements/static/index.html</url>
+					<thresholds>
+						<matcher name="statusCode">
+							<stringEquals value="200"/>
+						</matcher>
+					</thresholds>
+				</serviceCheck>
+				<serviceCheck>
+					<label>static-handler statements-militarysuper-prd</label>
+					<mode>production</mode>
+					<type>http</type>
+					<period>60</period>
+					<requiredSequentialFailures>3</requiredSequentialFailures>
+					<url>https://statements.militarysuper.gov.au/statements/static/index.html</url>
+					<thresholds>
+						<matcher name="statusCode">
+							<stringEquals value="200"/>
+						</matcher>
+					</thresholds>
+				</serviceCheck>
+			</server>
+		</service>
+	</services>
+	<validUsers>
+		<validUser>
+			<name>Unauthenticated</name>
+			<authcate>forbidden</authcate>
+			<servicePermissions>
+				<service name="statements">
+					<allowedServiceCheckModes>
+						<serviceCheckMode level="production"/>
+						<serviceCheckMode level="staging"/>
+						<serviceCheckMode level="development"/>
+					</allowedServiceCheckModes>
+				</service>
+			</servicePermissions>
+		</validUser>
+	</validUsers>
+</configuration>

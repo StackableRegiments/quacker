@@ -17,12 +17,10 @@ unmanagedResourceDirectories in Test <+= (baseDirectory) { _ / "src/main/webapp"
 
 scalacOptions ++= Seq("-deprecation", "-unchecked")
 
-jetty()
-
 javaOptions in container ++= Seq(
   "-Drun.mode=development",
   "-Dmetlx.configurationFile=config/configuration.local.xml",
-  "-Dquacker.configDirectoryLocation=../stackableMonitoringDefinitions",
+  "-Dquacker.configDirectoryLocation=config",
   "-Dlogback.configurationFile=config/logback.xml",
   "-XX:+UseConcMarkSweepGC",
   "-XX:+CMSClassUnloadingEnabled",
