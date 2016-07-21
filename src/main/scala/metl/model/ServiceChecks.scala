@@ -1926,8 +1926,8 @@ case class ForLoop(key:String,start:Int,end:Int,incrementing:Boolean,funcs:List[
 }
 
 case class ForeachRegexFromResult(key:String,regex:String,funcs:List[FunctionalCheck]) extends FunctionalCheck {
-  val Pattern = regex.r.unanchored
   override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+    val Pattern = interpolator.interpolate(regex,environment).r.unanchored
     var state:Either[Exception,FunctionalCheckReturn] = Right(FunctionalCheckReturn(previousResult,duration,environment))
     previousResult.body match {
       case Pattern(matches @ _*) => {
@@ -1948,8 +1948,8 @@ case class ForeachRegexFromResult(key:String,regex:String,funcs:List[FunctionalC
 }
 
 case class RegexFromResult(key:String,regex:String) extends EnvironmentMutator {
-  val Pattern = regex.r.unanchored
   override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    val Pattern = interpolator.interpolate(regex,environment).r.unanchored
     var mutatedEnvironment = environment
     result.body match {
       case Pattern(matches @ _*) => {
@@ -1990,7 +1990,7 @@ case class ForeachXPathFromResult(key:String,xPath:String,funcs:List[FunctionalC
   override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
     var state:Either[Exception,FunctionalCheckReturn] = Right(FunctionalCheckReturn(previousResult,duration,environment))
     val cleaned = new HtmlCleaner().clean(previousResult.body)
-    val matches = cleaned.evaluateXPath(xPath).toList.map(_.toString)
+    val matches = cleaned.evaluateXPath(interpolator.interpolate(xPath,environment)).toList.map(_.toString)
     matches.foreach(m => {
       state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment.updated(interpolator.interpolate(key,s.updatedEnvironment),m)))
       funcs.foreach(tf => {
@@ -2009,7 +2009,7 @@ case class XPathFromResult(key:String,xPath:String) extends EnvironmentMutator {
   override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
     var mutatedEnvironment = environment
     val cleaned = new HtmlCleaner().clean(result.body)
-    val matches = cleaned.evaluateXPath(xPath).toList.map(_.toString)
+    val matches = cleaned.evaluateXPath(interpolator.interpolate(xPath,environment)).toList.map(_.toString)
     matches.headOption.foreach(firstMatch => {
       mutatedEnvironment = mutatedEnvironment.updated(interpolator.interpolate(key,mutatedEnvironment),firstMatch)
     })
