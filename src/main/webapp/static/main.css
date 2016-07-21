@@ -107,3 +107,6 @@ serverError{
     background-color: white !important;
     z-index:100 !important;
 }
+#dashboard{
+    overflow-x:hidden;
+}

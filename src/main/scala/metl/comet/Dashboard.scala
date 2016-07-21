@@ -27,14 +27,14 @@ case class StatusCall(id:String,replacementActions:JsCmd, service:String, server
 
 object CheckAction extends Enumeration {
   type CheckAction = Value
-  val Create,Destroy,Update = Value 
+  val Create,Destroy,Update = Value
 }
 
 trait CheckRenderHelper {
   protected val checkActionJsCmds = Map(
     CheckAction.Create -> "createCheck",
     CheckAction.Destroy -> "destroyCheck",
-    CheckAction.Update -> "updateCheck"
+    CheckAction.Update -> ""
   )
   protected val statusClasses = List("serverOk","serverError","serverUnknown")
   protected def statusClassFromStatus(status:Box[Boolean]):String = {
@@ -62,6 +62,8 @@ trait CheckRenderHelper {
       })
     })),
     JField("label",JString(s.label)),
+    JField("service",JString(s.service)),
+    JField("server",JString(s.server)),
     JField("now",JString(now.toString)),
     JField("why",JString(s.why)),
     JField("detail",JString(s.success match {
@@ -79,9 +81,9 @@ object DashboardServer extends LiftActor with ListenerManager{
   def createUpdate = NodeSeq.Empty
   override def lowPriority = {
     case c:CheckResult => updateListeners(c)
-		case s:StatusCall	=> updateListeners(s)
+    case s:StatusCall   => updateListeners(s)
     case _ => {}
-  } 
+  }
 }
 
 class Dashboard extends CometActor with CometListener with CheckRenderHelper {
@@ -92,7 +94,7 @@ class Dashboard extends CometActor with CometListener with CheckRenderHelper {
   override def render = NodeSeq.Empty
   override def fixedRender = {
     "#jsonStructureContainer *" #> Script(JsCrVar("jsonStructure",getJsExpStructure)) //&
-//    "#serverContainer *" #> Servers.structure 
+                                                                                      //    "#serverContainer *" #> Servers.structure
   }
 
   override def lowPriority = {

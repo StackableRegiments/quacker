@@ -1,160 +1,147 @@
 <configuration>
-	<services>
-		<service name="public-web-presence">
-			<server name="public-web-presence-prod">
-				<serviceCheck>
-					<label>ping public-web-presence-prod</label>
-					<mode>production</mode>
-					<type>icmp</type>
-					<period>60</period>
-					<host>104.155.226.235</host>
-					<ipv6>false</ipv6>
-				</serviceCheck>
-				<serviceCheck>
-					<label>index for csc.siteinprod.com.au</label>
-					<mode>production</mode>
-					<type>http</type>
-					<period>60</period>
-					<requiredSequentialFailures>3</requiredSequentialFailures>
-					<url>http://csc.siteinprod.com.au/</url>
-					<thresholds>
-						<matcher name="statusCode">
-							<stringEquals value="200"/>
-						</matcher>
-					</thresholds>
-				</serviceCheck>
-				<serviceCheck>
-					<label>index for css.siteinprod.com.au</label>
-					<mode>production</mode>
-					<type>http</type>
-					<period>60</period>
-					<requiredSequentialFailures>3</requiredSequentialFailures>
-					<url>http://css.siteinprod.com.au/</url>
-					<thresholds>
-						<matcher name="statusCode">
-							<stringEquals value="200"/>
-						</matcher>
-					</thresholds>
-				</serviceCheck>
-				<serviceCheck>
-					<label>index for pss.siteinprod.com.au</label>
-					<mode>production</mode>
-					<type>http</type>
-					<period>60</period>
-					<requiredSequentialFailures>3</requiredSequentialFailures>
-					<url>http://pss.siteinprod.com.au/</url>
-					<thresholds>
-						<matcher name="statusCode">
-							<stringEquals value="200"/>
-						</matcher>
-					</thresholds>
-				</serviceCheck>
-				<serviceCheck>
-					<label>index for pssap.siteinprod.com.au</label>
-					<mode>production</mode>
-					<type>http</type>
-					<period>60</period>
-					<requiredSequentialFailures>3</requiredSequentialFailures>
-					<url>http://pssap.siteinprod.com.au/</url>
-					<thresholds>
-						<matcher name="statusCode">
-							<stringEquals value="200"/>
-						</matcher>
-					</thresholds>
-				</serviceCheck>
-				<serviceCheck>
-					<label>index for eac.siteinprod.com.au</label>
-					<mode>production</mode>
-					<type>http</type>
-					<period>60</period>
-					<requiredSequentialFailures>3</requiredSequentialFailures>
-					<url>http://eac.siteinprod.com.au/</url>
-					<thresholds>
-						<matcher name="statusCode">
-							<stringEquals value="200"/>
-						</matcher>
-					</thresholds>
-				</serviceCheck>
-				<serviceCheck>
-					<label>index for cscri.siteinprod.com.au</label>
-					<mode>production</mode>
-					<type>http</type>
-					<period>60</period>
-					<requiredSequentialFailures>3</requiredSequentialFailures>
-					<url>http://cscri.siteinprod.com.au/</url>
-					<thresholds>
-						<matcher name="statusCode">
-							<stringEquals value="200"/>
-						</matcher>
-					</thresholds>
-				</serviceCheck>
-				<serviceCheck>
-					<label>index for militarysuper.siteinprod.com.au</label>
-					<mode>production</mode>
-					<type>http</type>
-					<period>60</period>
-					<requiredSequentialFailures>3</requiredSequentialFailures>
-					<url>http://militarysuper.siteinprod.com.au/</url>
-					<thresholds>
-						<matcher name="statusCode">
-							<stringEquals value="200"/>
-						</matcher>
-					</thresholds>
-				</serviceCheck>
-				<serviceCheck>
-					<label>index for adfsuper.siteinprod.com.au</label>
-					<mode>production</mode>
-					<type>http</type>
-					<period>60</period>
-					<requiredSequentialFailures>3</requiredSequentialFailures>
-					<url>http://adfsuper.siteinprod.com.au/</url>
-					<thresholds>
-						<matcher name="statusCode">
-							<stringEquals value="200"/>
-						</matcher>
-					</thresholds>
-				</serviceCheck>
-				<serviceCheck>
-					<label>index for dfrdb.siteinprod.com.au</label>
-					<mode>production</mode>
-					<type>http</type>
-					<period>60</period>
-					<requiredSequentialFailures>3</requiredSequentialFailures>
-					<url>http://dfrdb.siteinprod.com.au/</url>
-					<thresholds>
-						<matcher name="statusCode">
-							<stringEquals value="200"/>
-						</matcher>
-					</thresholds>
-				</serviceCheck>
-				<serviceCheck>
-					<label>index for the3rdact.siteinprod.com.au</label>
-					<mode>production</mode>
-					<type>http</type>
-					<period>60</period>
-					<requiredSequentialFailures>3</requiredSequentialFailures>
-					<url>http://the3rdact.siteinprod.com.au/</url>
-					<thresholds>
-						<matcher name="statusCode">
-							<stringEquals value="200"/>
-						</matcher>
-					</thresholds>
-				</serviceCheck>
-			</server>
-		</service>
-	</services>
-	<validUsers>
-		<validUser>
-			<name>Unauthenticated</name>
-			<authcate>forbidden</authcate>
-			<servicePermissions>
-				<service name="public-web-presence">
-					<allowedServiceCheckModes>
-						<serviceCheckMode level="production"/>
-						<serviceCheckMode level="staging"/>
-					</allowedServiceCheckModes>
-				</service>
-			</servicePermissions>
-		</validUser>
-	</validUsers>
+  <services>
+    <service name="public-web-presence">
+      <server name="public-web-presence-prod">
+        <serviceCheck>
+          <label>PING</label>
+          <mode>production</mode>
+          <type>icmp</type>
+          <period>60</period>
+          <host>104.155.226.235</host>
+          <ipv6>false</ipv6>
+        </serviceCheck>
+        <serviceCheck>
+          <label>INDEX PAGE</label>
+          <mode>production</mode>
+          <type>http</type>
+          <period>60</period>
+          <requiredSequentialFailures>3</requiredSequentialFailures>
+          <url>http://csc.siteinprod.com.au/</url>
+          <thresholds>
+            <matcher name="statusCode">
+              <stringEquals value="200"/>
+            </matcher>
+          </thresholds>
+        </serviceCheck>
+        <serviceCheck>
+          <label>INDEX PAGE</label>
+          <mode>production</mode>
+          <type>http</type>
+          <period>60</period>
+          <requiredSequentialFailures>3</requiredSequentialFailures>
+          <url>http://css.siteinprod.com.au/</url>
+          <thresholds>
+            <matcher name="statusCode">
+              <stringEquals value="200"/>
+            </matcher>
+          </thresholds>
+        </serviceCheck>
+        <serviceCheck>
+          <label>INDEX PAGE</label>
+          <mode>production</mode>
+          <type>http</type>
+          <period>60</period>
+          <requiredSequentialFailures>3</requiredSequentialFailures>
+          <url>http://pss.siteinprod.com.au/</url>
+          <thresholds>
+            <matcher name="statusCode">
+              <stringEquals value="200"/>
+            </matcher>
+          </thresholds>
+        </serviceCheck>
+        <serviceCheck>
+          <label>INDEX PAGE</label>
+          <mode>production</mode>
+          <type>http</type>
+          <period>60</period>
+          <requiredSequentialFailures>3</requiredSequentialFailures>
+          <url>http://pssap.siteinprod.com.au/</url>
+          <thresholds>
+            <matcher name="statusCode">
+              <stringEquals value="200"/>
+            </matcher>
+          </thresholds>
+        </serviceCheck>
+        <serviceCheck>
+          <label>INDEX PAGE</label>
+          <mode>production</mode>
+          <type>http</type>
+          <period>60</period>
+          <requiredSequentialFailures>3</requiredSequentialFailures>
+          <url>http://eac.siteinprod.com.au/</url>
+          <thresholds>
+            <matcher name="statusCode">
+              <stringEquals value="200"/>
+            </matcher>
+          </thresholds>
+        </serviceCheck>
+        <serviceCheck>
+          <label>INDEX PAGE</label>
+          <mode>production</mode>
+          <type>http</type>
+          <period>60</period>
+          <requiredSequentialFailures>3</requiredSequentialFailures>
+          <url>http://cscri.siteinprod.com.au/</url>
+          <thresholds>
+            <matcher name="statusCode">
+              <stringEquals value="200"/>
+            </matcher>
+          </thresholds>
+        </serviceCheck>
+        <serviceCheck>
+          <label>INDEX PAGE</label>
+          <mode>production</mode>
+          <type>http</type>
+          <period>60</period>
+          <requiredSequentialFailures>3</requiredSequentialFailures>
+          <url>http://militarysuper.siteinprod.com.au/</url>
+          <thresholds>
+            <matcher name="statusCode">
+              <stringEquals value="200"/>
+            </matcher>
+          </thresholds>
+        </serviceCheck>
+        <serviceCheck>
+          <label>INDEX PAGE</label>
+          <mode>production</mode>
+          <type>http</type>
+          <period>60</period>
+          <requiredSequentialFailures>3</requiredSequentialFailures>
+          <url>http://adfsuper.siteinprod.com.au/</url>
+          <thresholds>
+            <matcher name="statusCode">
+              <stringEquals value="200"/>
+            </matcher>
+          </thresholds>
+        </serviceCheck>
+        <serviceCheck>
+          <label>INDEX PAGE</label>
+          <mode>production</mode>
+          <type>http</type>
+          <period>60</period>
+          <requiredSequentialFailures>3</requiredSequentialFailures>
+          <url>http://dfrdb.siteinprod.com.au/</url>
+          <thresholds>
+            <matcher name="statusCode">
+              <stringEquals value="200"/>
+            </matcher>
+          </thresholds>
+        </serviceCheck>
+      </server>
+    </service>
+  </services>
+  <validUsers>
+    <validUser>
+      <name>Unauthenticated</name>
+      <authcate>forbidden</authcate>
+      <servicePermissions>
+        <service name="public-web-presence">
+          <allowedServiceCheckModes>
+            <serviceCheckMode level="production"/>
+            <serviceCheckMode level="staging"/>
+          </allowedServiceCheckModes>
+        </service>
+      </servicePermissions>
+    </validUser>
+  </validUsers>
 </configuration>

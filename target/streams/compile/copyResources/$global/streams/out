@@ -1,5 +1,0 @@
-[0m[[0mdebug[0m] [0mCopy resource mappings: [0m
-[0m[[0mdebug[0m] [0m	(C:\stackable\monitoring\src\main\resources\.keep,C:\stackable\monitoring\target\scala-2.11\classes\.keep)[0m
-[0m[[0mdebug[0m] [0m	(C:\stackable\monitoring\src\main\resources\props,C:\stackable\monitoring\target\scala-2.11\classes\props)[0m
-[0m[[0mdebug[0m] [0m	(C:\stackable\monitoring\src\main\resources\props\default.log4j.xml,C:\stackable\monitoring\target\scala-2.11\classes\props\default.log4j.xml)[0m
-[0m[[0mdebug[0m] [0m	(C:\stackable\monitoring\src\main\resources\props\default.props,C:\stackable\monitoring\target\scala-2.11\classes\props\default.props)[0m

@@ -69,7 +69,7 @@ body {
 .hex h1 {
     bottom: 50%;
     padding-top:50%;
-    font-size: 1.5em;
+    font-size: 1em;
     z-index: 1;
     -webkit-transform:translateY(-0%) translatez(-1px);
     -ms-transform:translateY(-0%) translatez(-1px);
@@ -116,26 +116,15 @@ body {
     .hex:nth-child(17n+15),
     .hex:nth-child(17n+16),
     .hex:nth-child(17n+17) {
-        margin-top: -4.676%;
-        margin-bottom: -4.676%;
+        margin-top: -2%;
+        margin-bottom: -2%;
         -webkit-transform: translateX(50%) rotate(-60deg) skewY(30deg);
         -ms-transform: translateX(50%) rotate(-60deg) skewY(30deg);
         transform: translateX(50%) rotate(-60deg) skewY(30deg);
     }
-    .hex:nth-child(17n+9):last-child,
-    .hex:nth-child(17n+10):last-child,
-    .hex:nth-child(17n+11):last-child,
-    .hex:nth-child(17n+12):last-child,
-    .hex:nth-child(17n+13):last-child,
-    .hex:nth-child(17n+14):last-child,
-    .hex:nth-child(17n+15):last-child,
-    .hex:nth-child(17n+16):last-child,
-    .hex:nth-child(17n+17):last-child {
-        margin-bottom: 0;
-    }
+    
     .hex:nth-child(17n+10) {
         margin-left: 0.5%;
-        clear: left;
     }
     .hex:nth-child(17n+18) {
         clear: left;
@@ -150,7 +139,9 @@ body {
     .hex:nth-child(17n+5),
     .hex:nth-child(17n+6),
     .hex:nth-child(17n+7),
-    .hex:nth-child(17n+8) {
+    .hex:nth-child(17n+8),
+    .hex:nth-child(17n+9)
+    {
         margin-right: 1%;
     }
 }

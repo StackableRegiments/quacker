@@ -1,8 +1,0 @@
-[0m[[33mwarn[0m] [0mScala version was updated by one of library dependencies:[0m
-[0m[[33mwarn[0m] [0m	* org.scala-lang:scala-library:(2.11.5, sbt.SettingKey$$anon$4@4017c79e, sbt.SettingKey$$anon$4@6ca1597, sbt.SettingKey$$anon$4@27ffa3d6, 2.11.0, 2.11.1, 2.11.7) -> 2.11.6[0m
-[0m[[33mwarn[0m] [0mTo force scalaVersion, add the following:[0m
-[0m[[33mwarn[0m] [0m	ivyScala := ivyScala.value map { _.copy(overrideScalaVersion = true) }[0m
-[0m[[33mwarn[0m] [0mThere may be incompatibilities among your library dependencies.[0m
-[0m[[33mwarn[0m] [0mHere are some of the libraries that were evicted:[0m
-[0m[[33mwarn[0m] [0m	* io.github.stackableregiments:common-utils_2.11:0.1.0 -> 0.2.0[0m
-[0m[[33mwarn[0m] [0mRun 'evicted' to see detailed eviction warnings[0m

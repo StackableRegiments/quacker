@@ -52,7 +52,7 @@ function createHexChecks(){
         _.forIn(servers,function(checksInServer,serverName){
             console.log(serverName);
             _.forIn(checksInServer,function(check){
-		console.log("-",check);
+                console.log("-",check);
                 var checkRoot = $("#templates .checkRootNode")
                         .clone()
                         .appendTo(serviceRootNode);

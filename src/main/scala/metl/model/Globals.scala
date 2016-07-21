@@ -50,27 +50,27 @@ object Globals{
     throw new Exception("no config directory location passed")
   })
   var isDevMode = false
-	protected var validUserAccesses:List[UserAccessRestriction] = List.empty[UserAccessRestriction]
-	def setValidUsers(newUsers:List[UserAccessRestriction]) = {
-		validUserAccesses = (validUserAccesses ::: newUsers).toList
-		currentUserAccessRestriction(updatedUserAccessRestriction)
-	}
-	protected def updatedUserAccessRestriction:UserAccessRestriction = {
-		val me = currentUser.is
-		val validUserAccessesForMe = validUserAccesses.filter(vua => vua.name == me)
-		val myRestriction = validUserAccessesForMe.length match {
-			case 0 => UserAccessRestriction(me,List(new ServicePermission("Public Access Only",None,None,None,None)))
-			case other => UserAccessRestriction(me,validUserAccessesForMe.map(vua => vua.servicePermissions).flatten.toList)
-		}
+  protected var validUserAccesses:List[UserAccessRestriction] = List.empty[UserAccessRestriction]
+  def setValidUsers(newUsers:List[UserAccessRestriction]) = {
+    validUserAccesses = (validUserAccesses ::: newUsers).toList
+    currentUserAccessRestriction(updatedUserAccessRestriction)
+  }
+  protected def updatedUserAccessRestriction:UserAccessRestriction = {
+    val me = currentUser.is
+    val validUserAccessesForMe = validUserAccesses.filter(vua => vua.name == me)
+    val myRestriction = validUserAccessesForMe.length match {
+      case 0 => UserAccessRestriction(me,List(new ServicePermission("Public Access Only",None,None,None,None)))
+      case other => UserAccessRestriction(me,validUserAccessesForMe.map(vua => vua.servicePermissions).flatten.toList)
+    }
     println("myUserAccessRestriction: %s".format(myRestriction))
     myRestriction
-	}
-	def clearValidUsers = {
-		validUserAccesses = List.empty[UserAccessRestriction]
-	}
-	def isValidUser = validUserAccesses.exists(vua => vua.name == currentUser.is)
+  }
+  def clearValidUsers = {
+    validUserAccesses = List.empty[UserAccessRestriction]
+  }
+  def isValidUser = validUserAccesses.exists(vua => vua.name == currentUser.is)
   //Globals for the current session
   object casState extends SessionVar[LiftAuthStateData](LiftAuthStateDataForbidden)
   object currentUser extends SessionVar[String](casState.is.username)
-	object currentUserAccessRestriction extends SessionVar[UserAccessRestriction](updatedUserAccessRestriction)
+  object currentUserAccessRestriction extends SessionVar[UserAccessRestriction](updatedUserAccessRestriction)
 }

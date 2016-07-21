@@ -1,24 +1,9 @@
 <div>
-  <div class="lift:comet?type=Dashboard" name="dashboard">
+  <head>
+    <script src="/static/glass.js"></script>
+  </head>
+  <div class="lift:comet?type=Dashboard" name="dashboard" id="dashboard">
+    <canvas id="glass"></canvas>
     <div id="jsonStructureContainer"></div>
-    <div id="recipients" class="editingOnly"></div>
-    <div id="updated" class="alwaysOn"></div>
-    <div id="breakSomething" class="editingOnly"></div>
-    <div id="reloadXml" class="editingOnly"></div>
-    <div id="services"></div>
-    <hr />
-    <div id="enable" ></div>
-    <div id="dashboardServerContainer">
-      <div id="serverContainer" class="alwaysOn">Loading.  This can take up to 10 seconds.</div>
-    </div>
-  </div>
-  <div id="templates">
-    <ul class="serviceRootNode hexGrid"></ul>
-    <li class="checkRootNode hex"></li>
-    <a class="checkSummary hexIn">
-      <canvas />
-    </a>
-    <h1 class="checkName"></h1>
-    <p class="checkType"></p>
   </div>
 </div>
