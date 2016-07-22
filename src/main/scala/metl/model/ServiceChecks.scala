@@ -1518,7 +1518,7 @@ case class MatcherCheck(serviceCheckMode:ServiceCheckMode,incomingLabel:String,m
 
 case class ScriptStepResult(body:String,metaData:Map[String,String] = Map.empty[String,String],statusCode:Int = 0,duration:Double = 0.0)
 
-case class FunctionalCheckReturn(result:ScriptStepResult,duration:Double,updatedEnvironment:Map[String,String]){
+case class FunctionalCheckReturn(result:ScriptStepResult,duration:Double,updatedEnvironment:Map[String,String],sqlResult:Option[SQLResultSet] = None,httpResult:Option[HTTPResponse] = None,ldapResults:Option[LdapResults] = None){
   protected def safeDisplay(in:String):String = {
     in match {
       case null => ""
@@ -1529,6 +1529,13 @@ case class FunctionalCheckReturn(result:ScriptStepResult,duration:Double,updated
   override def toString = {
     "StepResult(%s,%s,%s)".format(safeDisplay(result.body),duration,updatedEnvironment.map(t => (t._1,safeDisplay(t._2))))
   }
+}
+
+object ScriptStepResult {
+  def empty = ScriptStepResult("")
+}
+object FunctionalCheckReturn {
+  def empty = FunctionalCheckReturn(ScriptStepResult.empty,0.0,Map.empty[String,String])
 }
 
 object FunctionalCheck extends ConfigFileReader {
@@ -1558,21 +1565,147 @@ object FunctionalCheck extends ConfigFileReader {
 						matcher:HTTPResponseMatcher = HTTPResponseMatchers.configureFromXml(<thresholdsPacket>{getNodes(mn,"thresholds")}</thresholdsPacket>)
           ) yield HttpFunctionalCheck(method,url,params,headers,matcher)
         }
+        case "sql" => {
+          for (
+            driver <- getAttr(mn,"driver");
+            url <- getAttr(mn,"url");
+            username <- getAttr(mn,"username");
+            password <- getAttr(mn,"password");
+            query <- getAttr(mn,"query");
+            connectionTimeout = getAttr(mn,"connectionTimeout").map(_.toLong);
+            matchers: List[VerifiableSqlResultSetDefinition] = getNodes(mn,"thresholds").map(ts => {
+							val rowBehaviour = getAttr(ts,"rows").getOrElse("all")
+							val tsMap = Matchers.configureFromXml(ts)
+							VerifiableSqlResultSetDefinition(rowBehaviour,tsMap)
+						})
+          ) yield JDBCFunctionalCheck(driver,url,username,password,query,matchers,connectionTimeout.getOrElse(10000L))
+        }
+        case "ldap" => {
+          for (
+            host <- getAttr(mn,"url");
+            username <- getAttr(mn,"username");
+            password <- getAttr(mn,"password");
+            searchBase <- getAttr(mn,"searchBase");
+            query <- getAttr(mn,"query")
+          ) yield LdapFunctionalCheck(host,username,password,searchBase,query)
+        }
         case "icmp" => {
           for (
             host <- getAttr(mn,"host");
             ipv6 = getAttr(mn,"ipv6").map(_.toBoolean).getOrElse(false)
           ) yield ICMPFunctionalCheck(host,ipv6)
         }
-        case "attachHttpBasicAuth" => {
+        case "httpAttachBasicAuth" => {
           for (
             domain <- getAttr(mn,"domain");
             username <- getAttr(mn,"username");
             password <- getAttr(mn,"password")
+          ) yield HttpAddBasicAuthorization(domain,username,password)
+        }
+        case "httpExtractRequestUrl" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield HttpRequestUrlExtractor(key)
+        }
+        case "httpExtractStatusCode" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield HttpStatusCodeExtractor(key)
+        }
+        case "httpExtractHeaderValue" => {
+          for (
+            key <- getAttr(mn,"key");
+            header <- getAttr(mn,"header")
+          ) yield HttpHeaderExtractor(key,header)
+        }
+        case "httpExtractRedirectCount" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield HttpRedirectCountExtractor(key)
+        }
+        case "httpExtractRetryCount" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield HttpRetryCountExtractor(key)
+        }
+        case "httpExtractStartTime" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield HttpStartTimeExtractor(key)
+        }
+        case "httpExtractEndTime" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield HttpEndTimeExtractor(key)
+        }
+        case "httpExtractExceptions" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield HttpExceptionsExtractor(key)
+        }
+        case "storeSqlResultSet" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield StoreSqlResultSet(key)
+        }
+        case "sqlExtractRow" => {
+          for (
+            key <- getAttr(mn,"key");
+            row <- getAttr(mn,"row").map(_.toInt);
+            separator = getAttr(mn,"separator")
+          ) yield SqlRowExtractor(key,row)
+        }
+        case "sqlExtractColumn" => {
+          for (
+            key <- getAttr(mn,"key");
+            col <- getAttr(mn,"column");
+            separator = getAttr(mn,"separator")
+          ) yield SqlColExtractor(key,col,separator)
+        }
+        case "sqlExtractCell" => {
+          for (
+            key <- getAttr(mn,"key");
+            row <- getAttr(mn,"row").map(_.toInt);
+            col <- getAttr(mn,"column")
           ) yield {
-            HttpAddBasicAuthorization(domain,username,password)
+            SqlCellExtractor(key,row,col)
           }
         }
+        case "storeLdapResult" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield StoreLdapResults(key)
+        }
+        case "ldapExtractQuery" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield LdapQueryExtractor(key)
+        }
+        case "ldapExtractSearchBase" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield LdapSearchBaseExtractor(key)
+        }
+        case "ldapExtractRecord" => {
+          for (
+            key <- getAttr(mn,"key");
+            recordName <- getAttr(mn,"recordName")
+          ) yield LdapRecordExtractor(key,recordName)
+        }
+        case "ldapExtractAttr" => {
+          for (
+            key <- getAttr(mn,"key");
+            attrName <- getAttr(mn,"attrName")
+          ) yield LdapAttrExtractor(key,attrName)
+        }
+        case "ldapExtractAttrFromRecord" => {
+          for (
+            key <- getAttr(mn,"key");
+            recordName <- getAttr(mn,"recordName");
+            attrName <- getAttr(mn,"attrName")
+          ) yield LdapAttrFromRecordExtractor(key,recordName,attrName)
+        }
+      
         case "setKey" => {
           for (
             key <- getAttr(mn,"key");
@@ -1644,13 +1777,6 @@ object FunctionalCheck extends ConfigFileReader {
             ForeachRegexFromResult(key,regex,funcs)
           }
         }
-        case "liftFormExtractor" => {
-          for (
-            prefix <- getAttr(mn,"prefix")
-          ) yield {
-            LiftFormExtractor(prefix)
-          }
-        }
         case "setResult" => {
           for (
             result <- getAttr(mn,"result")
@@ -1707,21 +1833,21 @@ abstract class FunctionalCheck extends Logger {
   def attachScriptExecutionEnvironment(newSee:ScriptExecutionEnvironment) = {
     see = Some(newSee)
   }
-  protected def innerAct(previousResult:ScriptStepResult,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator):FunctionalCheckReturn 
-  def act(previousResult:ScriptStepResult,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator):Either[Exception,FunctionalCheckReturn] = try {
-    debug("STEP: %s \r\n (env: %s)".format(this,environment))
-    Right(innerAct(previousResult,totalDuration,environment,interpolator))
+  protected def innerAct(previousResult:FunctionalCheckReturn,interpolator:Interpolator):FunctionalCheckReturn 
+  def act(previousResult:FunctionalCheckReturn,interpolator:Interpolator):Either[Exception,FunctionalCheckReturn] = try {
+    debug("STEP: %s \r\n (env: %s)".format(this,previousResult.updatedEnvironment))
+    Right(innerAct(previousResult,interpolator))
   } catch {
     case e:Exception => Left(e)
   }
 }
 
 case class HttpAddBasicAuthorization(domain:String,username:String,password:String) extends FunctionalCheck {
-  override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+  override protected def innerAct(previousResult:FunctionalCheckReturn,interpolator:Interpolator) = {
     see.foreach(s => {
-      s.httpClient.addAuthorization(interpolator.interpolate(domain,environment),interpolator.interpolate(username,environment),interpolator.interpolate(password,environment))   
+      s.httpClient.addAuthorization(interpolator.interpolate(domain,previousResult.updatedEnvironment),interpolator.interpolate(username,previousResult.updatedEnvironment),interpolator.interpolate(password,previousResult.updatedEnvironment))   
     })
-    FunctionalCheckReturn(previousResult,duration,environment)
+    previousResult
   }
 }
 case class ICMPFunctionalCheck(uri:String,ipv6:Boolean = false) extends FunctionalCheck {
@@ -1774,7 +1900,10 @@ case class ICMPFunctionalCheck(uri:String,ipv6:Boolean = false) extends Function
 		}
 		case _ => (output:String) => Empty
 	}	
-  override protected def innerAct(previousResult:ScriptStepResult,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+  override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val previousResult = fcr.result
+    val totalDuration = fcr.duration
+    val environment = fcr.updatedEnvironment
     val pingProcess = Runtime.getRuntime().exec(pingCmd(interpolator.interpolate(uri,environment)))
     val inputStream = new BufferedInputStream(pingProcess.getInputStream)
     val errorStream = new BufferedInputStream(pingProcess.getErrorStream)
@@ -1800,8 +1929,170 @@ case class ICMPFunctionalCheck(uri:String,ipv6:Boolean = false) extends Function
   }
 }
 
+object JDBCFunctionalCheckDriverInitializations extends Logger {
+  protected var initializedDrivers = List.empty[String]
+  def initialize(driver:String) = {
+    try {
+      this.synchronized {
+        if (!initializedDrivers.contains(driver)){
+          Class.forName(driver).newInstance()
+          initializedDrivers = driver :: initializedDrivers
+        }
+      }
+    } catch {
+      case e:Exception => {
+        error("exception initializing JDBC driver",e)
+      }
+    }
+  }
+}
+
+case class JDBCFunctionalCheck(driver:String,url:String,username:String,password:String,query:String,thresholds:List[VerifiableSqlResultSetDefinition] = List.empty[VerifiableSqlResultSetDefinition],connectionCreationTimeout:Long = 10000L) extends FunctionalCheck {
+  JDBCFunctionalCheckDriverInitializations.initialize(driver)
+  override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val previousResult = fcr.result
+    val totalDuration = fcr.duration
+    val environment = fcr.updatedEnvironment
+		var output = SQLResultSet(Map.empty[Int,SQLRow])
+    var start = new java.util.Date().getTime
+    var timeTaken:Box[Double] = Empty
+		var errors = List.empty[Throwable]
+		try {
+      Await.result(Future(Some({
+				val result = try {
+					val conn = DriverManager.getConnection(url,username,password)//"jdbc:oracle:thin:@%s".format(uri),username,password)
+					val statement = conn.createStatement
+					var failedVerificationResponses = List.empty[VerificationResponse]
+					val resultSet = statement.executeQuery(query)
+					output = VerifiableSQLResultSetConverter.toVerifiableSQLResultSet(resultSet)
+					resultSet.close
+					conn.close
+          timeTaken = Full(new java.util.Date().getTime - start)
+					val verificationResponses = thresholds.map(t => t.verifyResultSet(output))
+					failedVerificationResponses = verificationResponses.filter(pfv => !pfv.success)
+					if (failedVerificationResponses.length > 0){
+						errors = errors ::: List(new DashboardException("SQL Verification failed",failedVerificationResponses.map(fvr => fvr.errors).flatten.mkString("\r\n")))
+						(false,conn) 
+					} else {
+						(true,conn)
+					}
+				} catch {
+					case e:Throwable => {
+            timeTaken = Full(new java.util.Date().getTime - start)
+						errors = errors ::: List(e)
+						(false,null.asInstanceOf[java.sql.Connection])	
+					}
+				}
+        result match {
+          case l:List[Option[Option[Tuple2[Boolean,Connection]]]] if l.length > 0 => l.head match {
+            case Some(Some((_,null))) => {
+              errors = errors ::: List(new DashboardException("SQL Connection failed","connection is null"))
+            }
+            case Some(Some((true,connection))) => {
+            }
+            case Some(Some((false,other))) => {
+              errors = errors ::: List(new DashboardException("SQL Connection failed","connection: %s".format(other.toString)))
+            }
+            case other => {
+              errors = errors ::: List(new DashboardException("SQL Connection failed","other: %s".format(other.toString)))
+            }
+          }
+        }
+			})),Duration(connectionCreationTimeout,"millis")) 
+    } catch {
+      case e:TimeoutException => {
+        timeTaken = Full(new java.util.Date().getTime - start)
+        errors = errors ::: List(new DashboardException("SQL Connection failed","oracle failed to create a connection within the timeout",List(e)))
+      }
+    }
+		if (errors.length == 1) {
+			throw errors.head
+		} else if (errors.length > 0) {
+			throw new CombinedExceptionsException(errors)
+		} else { 
+      FunctionalCheckReturn(
+        result = ScriptStepResult(body = output.toString,duration = timeTaken.openOr(0)),
+        duration = totalDuration + timeTaken.openOr(0.0),
+        updatedEnvironment = environment,
+        sqlResult = Some(output))
+    }
+  }
+}
+
+case class LdapResults(query:String,base:String,results:List[LdapResult])
+case class LdapResult(name:String,attrs:List[LdapAttr])
+case class LdapAttr(name:String,values:List[String])
+
+
+case class LdapFunctionalCheck(host:String,username:String,password:String,searchBase:String,query:String) extends FunctionalCheck {
+  override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val previousResult = fcr.result
+    val totalDuration = fcr.duration
+    val environment = fcr.updatedEnvironment
+    val start = new java.util.Date().getTime
+    var error:Option[Exception] = None
+    val env = new java.util.Hashtable[String,String]()
+    env.put(Context.INITIAL_CONTEXT_FACTORY,"com.sun.jndi.ldap.LdapCtxFactory")
+                    env.put(Context.PROVIDER_URL,interpolator.interpolate(host,environment))
+                    env.put(Context.SECURITY_AUTHENTICATION,"simple")
+                    env.put(Context.SECURITY_PRINCIPAL,interpolator.interpolate(username,environment))
+                   
+                    env.put(Context.SECURITY_CREDENTIALS,interpolator.interpolate(password,environment))
+    var ctx = new InitialDirContext(env)
+
+    val intQuery = interpolator.interpolate(query,environment)
+    val intSearchBase = interpolator.interpolate(searchBase,environment)
+
+    var output = LdapResults(intQuery,intSearchBase,Nil)
+    try {
+
+      val controls = new SearchControls
+      controls.setSearchScope(SearchControls.SUBTREE_SCOPE)
+
+      ctx = new InitialDirContext(env)
+      val results = ctx.search(intSearchBase,intQuery,controls)
+      while (results.hasMore){
+        val row = results.next()
+        val rowAttrs = row.getAttributes().getAll()
+        var attrs = List.empty[LdapAttr]
+        while (rowAttrs.hasMore){
+          rowAttrs.next() match {
+            case attr:javax.naming.directory.Attribute => {
+              val attrValues = attr.getAll()
+              var aValues = List.empty[String]
+              while (attrValues.hasMore){
+                val value = attrValues.next()
+                aValues = aValues ::: List(value.toString)
+              }
+              attrs = attrs ::: List(LdapAttr(attr.getID(),aValues))
+            }
+            case _ => {}
+          }
+        }
+        output = output.copy(results = output.results ::: List(LdapResult(row.getNameInNamespace,attrs)))
+      }
+      results.close
+    } catch {
+      case e:Exception => error = Some(e)
+    } finally {
+      ctx.close
+    }
+    error.foreach(e => throw e)
+    val duration = new java.util.Date().getTime - start
+    FunctionalCheckReturn(
+      result = ScriptStepResult(output.toString,Map.empty[String,String],0,duration.toDouble),
+      duration = totalDuration + duration,
+      updatedEnvironment = environment,
+      ldapResults = Some(output))
+  }
+}
+
+
 case class HttpFunctionalCheck(method:String,url:String,parameters:List[Tuple2[String,String]] = Nil,headers:Map[String,String] = Map.empty[String,String],matcher:HTTPResponseMatcher = HTTPResponseMatchers.empty) extends FunctionalCheck {
-  override protected def innerAct(previousResult:ScriptStepResult,totalDuration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+  override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val previousResult = fcr.result
+    val totalDuration = fcr.duration
+    val environment = fcr.updatedEnvironment
     val client = see.map(_.httpClient).getOrElse({
       throw new Exception("no available httpClient")
     })
@@ -1816,17 +2107,25 @@ case class HttpFunctionalCheck(method:String,url:String,parameters:List[Tuple2[S
     }
     val response = client.respondToResponse(innerResponse)
     val verificationResponse = matcher.verify(response)
+    println("verification: %s => %s".format(matcher,verificationResponse))
     if (!verificationResponse.success){
       throw new DashboardException("HTTP Verification failed",verificationResponse.errors.mkString("\r\n"))
     }
-    FunctionalCheckReturn(ScriptStepResult(response.responseAsString,response.headers,response.statusCode,response.duration.toDouble),totalDuration + response.duration,environment)
+    FunctionalCheckReturn(
+      result = ScriptStepResult(response.responseAsString,response.headers,response.statusCode,response.duration.toDouble),
+      duration = totalDuration + response.duration,
+      updatedEnvironment = environment,
+      httpResult = Some(response))
   }
 }
 
 case class EnvironmentValidator(validateEnvironment:Map[String,String] => Boolean) extends FunctionalCheck {
-  override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+  override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val previousResult = fcr.result
+    val totalDuration = fcr.duration
+    val environment = fcr.updatedEnvironment
     if (validateEnvironment(environment)){
-      FunctionalCheckReturn(previousResult,duration,environment)
+      fcr
     } else {
       throw new DashboardException("Environment failed validation",environment.toString)
     }
@@ -1834,14 +2133,185 @@ case class EnvironmentValidator(validateEnvironment:Map[String,String] => Boolea
 }
 abstract class EnvironmentMutator extends FunctionalCheck {
   protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):Map[String,String]
-  override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
-    FunctionalCheckReturn(previousResult,duration,mutate(previousResult,environment,interpolator))
+  override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val previousResult = fcr.result
+    val totalDuration = fcr.duration
+    val environment = fcr.updatedEnvironment
+    fcr.copy(updatedEnvironment = mutate(previousResult,environment,interpolator))
   }
 }
+
+abstract class HttpExtractingEnvironmentMutator extends FunctionalCheck {
+  protected def mutate(result:HTTPResponse,environment:Map[String,String],interpolator:Interpolator):Map[String,String]
+  override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val previousResult = fcr.result
+    val totalDuration = fcr.duration
+    val environment = fcr.updatedEnvironment
+    fcr.httpResult.map(httpResult => fcr.copy(updatedEnvironment = mutate(httpResult,environment,interpolator))).getOrElse(fcr)
+  }
+}
+
+case class HttpRequestUrlExtractor(key:String) extends HttpExtractingEnvironmentMutator {
+  override def mutate(result:HTTPResponse,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),interpolator.interpolate(result.requestUrl.toString,environment))
+  }
+}
+case class HttpStatusCodeExtractor(key:String) extends HttpExtractingEnvironmentMutator {
+  override def mutate(result:HTTPResponse,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),interpolator.interpolate(result.statusCode.toString,environment))
+  }
+}
+
+case class HttpHeaderExtractor(key:String,headerName:String) extends HttpExtractingEnvironmentMutator {
+  override def mutate(result:HTTPResponse,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    (for (
+      headerValue <- result.headers.get(headerName)
+    ) yield {
+      environment.updated(interpolator.interpolate(key,environment),interpolator.interpolate(headerValue,environment))
+    }).getOrElse(environment)
+  }
+}
+
+case class HttpRedirectCountExtractor(key:String) extends HttpExtractingEnvironmentMutator {
+  override def mutate(result:HTTPResponse,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),interpolator.interpolate(result.numberOfRedirects.toString,environment))
+  }
+}
+
+case class HttpRetryCountExtractor(key:String) extends HttpExtractingEnvironmentMutator {
+  override def mutate(result:HTTPResponse,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),interpolator.interpolate(result.numberOfRetries.toString,environment))
+  }
+}
+case class HttpStartTimeExtractor(key:String) extends HttpExtractingEnvironmentMutator {
+  override def mutate(result:HTTPResponse,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),interpolator.interpolate(result.startMilis.toString,environment))
+  }
+}
+case class HttpEndTimeExtractor(key:String) extends HttpExtractingEnvironmentMutator {
+  override def mutate(result:HTTPResponse,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),interpolator.interpolate(result.endMilis.toString,environment))
+  }
+}
+case class HttpExceptionsExtractor(key:String) extends HttpExtractingEnvironmentMutator {
+  protected def stringifyExceptions(in:List[Exception]):String = in.toString
+  override def mutate(result:HTTPResponse,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),interpolator.interpolate(result.endMilis.toString,environment))
+  }
+}
+abstract class SqlExtractingEnvironmentMutator extends FunctionalCheck with SafelyExtractFromSql {
+  protected def mutate(result:SQLResultSet,environment:Map[String,String],interpolator:Interpolator):Map[String,String]
+  override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val previousResult = fcr.result
+    val totalDuration = fcr.duration
+    val environment = fcr.updatedEnvironment
+    fcr.sqlResult.map(sqlResult => fcr.copy(updatedEnvironment = mutate(sqlResult,environment,interpolator))).getOrElse(fcr)
+  }
+}
+case class StoreSqlResultSet(key:String) extends SqlExtractingEnvironmentMutator {
+  protected def safelyExtract(resultSet:SQLResultSet):String = resultSet.toString
+  override def mutate(result:SQLResultSet,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),interpolator.interpolate(safelyExtract(result),environment))
+  }
+}
+
+trait SafelyExtractFromSql {
+  protected val defaultSeparator = ", "
+  protected def safelyExtract(cell:SQLCell[_]):String = cell.value.toString
+  protected def safelyExtract(row:SQLRow,separator:String):String = row.cells.values.toList.sortWith((a,b) => a.name < b.name).map(c => safelyExtract(c)).mkString(separator)
+}
+
+case class SqlRowExtractor(key:String,rowNumber:Int,separator:Option[String] = None) extends SqlExtractingEnvironmentMutator {
+  override def mutate(result:SQLResultSet,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    (for(
+      row <- result.rows.get(rowNumber)
+    ) yield {
+      environment.updated(interpolator.interpolate(key,environment),interpolator.interpolate(safelyExtract(row,separator.getOrElse(defaultSeparator)),environment))
+    }).getOrElse(environment)
+  }
+}
+
+case class SqlCellExtractor(key:String,rowNumber:Int,columnName:String) extends SqlExtractingEnvironmentMutator {
+  override def mutate(result:SQLResultSet,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    (for(
+      row <- result.rows.get(rowNumber);
+      col <- row.cells.get(columnName)
+    ) yield {
+      environment.updated(interpolator.interpolate(key,environment),interpolator.interpolate(safelyExtract(col),environment))
+    }).getOrElse(environment)
+  }
+}
+case class SqlColExtractor(key:String,columnName:String,separator:Option[String] = None) extends SqlExtractingEnvironmentMutator {
+  override def mutate(result:SQLResultSet,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    val combinedString = result.rows.values.toList.sortWith((a,b) => a.rowNumber < b.rowNumber).flatMap(r => r.cells.get(columnName).map(safelyExtract _)).mkString(separator.getOrElse(defaultSeparator))
+    environment.updated(interpolator.interpolate(key,environment),interpolator.interpolate(combinedString,environment))
+  }
+}
+
+trait SafelyExtractFromLdap {
+  val defaultRecordSeparator = "\r\n"
+  val defaultAttrSeparator = ", "
+  val defaultAttrValueSeparator = " || " 
+  def stringify(rs:LdapResults):String = rs.results.map(stringify _).mkString(defaultRecordSeparator)
+  def stringify(r:LdapResult):String = "Record(%s,%s)".format(r.name,r.attrs.map(stringify _).mkString(defaultAttrSeparator))
+  def stringify(r:LdapAttr):String = "Attribute(%s,%s)".format(r.name,r.values.mkString(defaultAttrValueSeparator))
+}
+
+abstract class LdapExtractingEnvironmentMutator extends FunctionalCheck with SafelyExtractFromLdap {
+  protected def mutate(result:LdapResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String]
+  override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val previousResult = fcr.result
+    val totalDuration = fcr.duration
+    val environment = fcr.updatedEnvironment
+    fcr.ldapResults.map(ldapResult => fcr.copy(updatedEnvironment = mutate(ldapResult,environment,interpolator))).getOrElse(fcr)
+  }
+}
+case class StoreLdapResults(key:String) extends LdapExtractingEnvironmentMutator {
+  override def mutate(result:LdapResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),interpolator.interpolate(stringify(result),environment))
+  }
+}
+case class LdapQueryExtractor(key:String) extends LdapExtractingEnvironmentMutator {
+  override def mutate(result:LdapResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),interpolator.interpolate(result.query,environment))
+  }
+}
+case class LdapSearchBaseExtractor(key:String) extends LdapExtractingEnvironmentMutator {
+  override def mutate(result:LdapResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),interpolator.interpolate(result.base,environment))
+  }
+}
+case class LdapRecordExtractor(key:String,recordName:String,separator:Option[String] = None) extends LdapExtractingEnvironmentMutator {
+  override def mutate(result:LdapResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    val resultString = result.results.filter(_.name == recordName).map(r => stringify(r)).mkString(separator.getOrElse(defaultRecordSeparator))
+    environment.updated(interpolator.interpolate(key,environment),interpolator.interpolate(resultString,environment))
+  }
+}
+case class LdapAttrExtractor(key:String,attrName:String,separator:Option[String] = None) extends LdapExtractingEnvironmentMutator {
+  override def mutate(result:LdapResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    val resultString = result.results.flatMap(_.attrs.filter(_.name == attrName)).map(a => stringify(a)).mkString(separator.getOrElse(defaultAttrSeparator))
+    environment.updated(interpolator.interpolate(key,environment),interpolator.interpolate(resultString,environment))
+  }
+}
+case class LdapAttrFromRecordExtractor(key:String,recordName:String,attrName:String,separator:Option[String] = None) extends LdapExtractingEnvironmentMutator {
+  override def mutate(result:LdapResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    (for (
+      record <- result.results.find(_.name == recordName);
+      attr <- record.attrs.find(_.name == attrName)
+    ) yield {
+      val attrString = attr.values.mkString(separator.getOrElse(defaultAttrValueSeparator))
+      environment.updated(interpolator.interpolate(key,environment),interpolator.interpolate(attrString,environment))
+    }).getOrElse(environment)
+  }
+}
+
 abstract class ResultMutator extends FunctionalCheck {
   protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):ScriptStepResult
-  override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
-    FunctionalCheckReturn(mutate(previousResult,environment,interpolator),duration,environment)
+  override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val previousResult = fcr.result
+    val totalDuration = fcr.duration
+    val environment = fcr.updatedEnvironment
+    fcr.copy(result = mutate(previousResult,environment,interpolator))
   }
 }
 
@@ -1868,18 +2338,21 @@ case class StatusCodeStorer(key:String) extends EnvironmentMutator {
 }
 
 case class Cond(key:String,value:String,thenFuncs:List[FunctionalCheck],elseFuncs:List[FunctionalCheck]) extends FunctionalCheck {
-  override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
-    var state:Either[Exception,FunctionalCheckReturn] = Right(FunctionalCheckReturn(previousResult,duration,environment))
+  override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val previousResult = fcr.result
+    val totalDuration = fcr.duration
+    val environment = fcr.updatedEnvironment
+    var state:Either[Exception,FunctionalCheckReturn] = Right(fcr)
     if (environment.get(interpolator.interpolate(key,environment)).exists(_ == interpolator.interpolate(value,environment))){
       thenFuncs.foreach(tf => {
         state.right.toOption.map(s => {
-          state = tf.act(s.result,s.duration,s.updatedEnvironment,interpolator)
+          state = tf.act(s,interpolator)
         })
       })
     } else {
       elseFuncs.foreach(tf => {
         state.right.toOption.map(s => {
-          state = tf.act(s.result,s.duration,s.updatedEnvironment,interpolator)
+          state = tf.act(s,interpolator)
         })
       })
     }
@@ -1888,12 +2361,15 @@ case class Cond(key:String,value:String,thenFuncs:List[FunctionalCheck],elseFunc
 }
 
 case class WhileLoop(key:String,value:String,funcs:List[FunctionalCheck]) extends FunctionalCheck {
-  override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
-    var state:Either[Exception,FunctionalCheckReturn] = Right(FunctionalCheckReturn(previousResult,duration,environment))
+  override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val previousResult = fcr.result
+    val totalDuration = fcr.duration
+    val environment = fcr.updatedEnvironment
+    var state:Either[Exception,FunctionalCheckReturn] = Right(fcr)
     while (state.right.toOption.exists(s => s.updatedEnvironment.get(interpolator.interpolate(key,s.updatedEnvironment)).exists(_ == interpolator.interpolate(value,s.updatedEnvironment)))){
       funcs.foreach(tf => {
         state.right.toOption.map(s => {
-          state = tf.act(s.result,s.duration,s.updatedEnvironment,interpolator)
+          state = tf.act(s,interpolator)
         })
       })
     } 
@@ -1902,15 +2378,18 @@ case class WhileLoop(key:String,value:String,funcs:List[FunctionalCheck]) extend
 }
 
 case class ForLoop(key:String,start:Int,end:Int,incrementing:Boolean,funcs:List[FunctionalCheck]) extends FunctionalCheck {
-  override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+  override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val previousResult = fcr.result
+    val totalDuration = fcr.duration
+    val environment = fcr.updatedEnvironment
     var counter = start
-    var state:Either[Exception,FunctionalCheckReturn] = Right(FunctionalCheckReturn(previousResult,duration,environment.updated(key,counter.toString)))
+    var state:Either[Exception,FunctionalCheckReturn] = Right(fcr.copy(updatedEnvironment = environment.updated(key,counter.toString)))
     if ((incrementing && start < end) || ((!incrementing) && start > end)){
       while (counter != end){
         state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment.updated(interpolator.interpolate(key,s.updatedEnvironment),counter.toString)))
         funcs.foreach(tf => {
           state.right.toOption.map(s => {
-            state = tf.act(s.result,s.duration,s.updatedEnvironment,interpolator)
+            state = tf.act(s,interpolator)
           })
         })
         if (incrementing){
@@ -1926,16 +2405,19 @@ case class ForLoop(key:String,start:Int,end:Int,incrementing:Boolean,funcs:List[
 }
 
 case class ForeachRegexFromResult(key:String,regex:String,funcs:List[FunctionalCheck]) extends FunctionalCheck {
-  override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+  override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val previousResult = fcr.result
+    val totalDuration = fcr.duration
+    val environment = fcr.updatedEnvironment
     val Pattern = interpolator.interpolate(regex,environment).r.unanchored
-    var state:Either[Exception,FunctionalCheckReturn] = Right(FunctionalCheckReturn(previousResult,duration,environment))
+    var state:Either[Exception,FunctionalCheckReturn] = Right(fcr)
     previousResult.body match {
       case Pattern(matches @ _*) => {
         matches.foreach(m => {
           state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment.updated(interpolator.interpolate(key,s.updatedEnvironment),m)))
           funcs.foreach(tf => {
             state.right.toOption.map(s => {
-              state = tf.act(s.result,s.duration,s.updatedEnvironment,interpolator)
+              state = tf.act(s,interpolator)
             })
           })
         })
@@ -1974,28 +2456,34 @@ case class RegexFromResult(key:String,regex:String) extends EnvironmentMutator {
 }
 
 case class Delay(delay:Long,randomize:Boolean = false) extends FunctionalCheck {
-  override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
+  override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val previousResult = fcr.result
+    val totalDuration = fcr.duration
+    val environment = fcr.updatedEnvironment
     val amount:Long = randomize match {
       case true => ((scala.util.Random.nextInt(200) * delay) / 100L)  // pick a value up to twice above the delay value, and down to zero.
       case false => delay
     }
     Thread.sleep(amount)
-    FunctionalCheckReturn(previousResult,duration,environment)
+    fcr
   }
 }
 
 
 case class ForeachXPathFromResult(key:String,xPath:String,funcs:List[FunctionalCheck]) extends FunctionalCheck {
   import org.htmlcleaner._
-  override protected def innerAct(previousResult:ScriptStepResult,duration:Double,environment:Map[String,String],interpolator:Interpolator) = {
-    var state:Either[Exception,FunctionalCheckReturn] = Right(FunctionalCheckReturn(previousResult,duration,environment))
+  override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val previousResult = fcr.result
+    val totalDuration = fcr.duration
+    val environment = fcr.updatedEnvironment
+    var state:Either[Exception,FunctionalCheckReturn] = Right(fcr)
     val cleaned = new HtmlCleaner().clean(previousResult.body)
     val matches = cleaned.evaluateXPath(interpolator.interpolate(xPath,environment)).toList.map(_.toString)
     matches.foreach(m => {
       state = state.right.map(s => s.copy(updatedEnvironment = s.updatedEnvironment.updated(interpolator.interpolate(key,s.updatedEnvironment),m)))
       funcs.foreach(tf => {
         state.right.toOption.map(s => {
-          state = tf.act(s.result,s.duration,s.updatedEnvironment,interpolator)
+          state = tf.act(s,interpolator)
         })
       })
     })
@@ -2111,16 +2599,16 @@ class ScriptExecutionEnvironment {
 
 
 class ScriptEngine(interpolator:Interpolator) {
-  def execute(sequence:List[FunctionalCheck]):Tuple3[ScriptStepResult,Double,Map[String,String]] = {
+  def execute(sequence:List[FunctionalCheck]):FunctionalCheckReturn = {
     val see = new ScriptExecutionEnvironment()
-    sequence.foldLeft((ScriptStepResult(""),0.0,Map.empty[String,String]))((acc,i) => {
+    sequence.foldLeft(FunctionalCheckReturn.empty)((acc,i) => {
       i.attachScriptExecutionEnvironment(see)
-      i.act(acc._1,acc._2,acc._3,interpolator) match {
+      i.act(acc,interpolator) match {
         case Left(e) => {
           throw e
         }
         case Right(fcr) => {
-          (fcr.result,fcr.duration,fcr.updatedEnvironment)
+          fcr
         }
       }
     })
@@ -2131,7 +2619,9 @@ case class ScriptedCheck(serviceCheckMode:ServiceCheckMode,incomingLabel:String,
   override val pollInterval = time
   val scriptEngine = new ScriptEngine(interpolator)
   def status = {
-    val (finalResult,totalDuration,finalEnvironment) = scriptEngine.execute(sequence)
+    val fcr = scriptEngine.execute(sequence)
+    val finalResult = fcr.result
+    val totalDuration = fcr.duration
     (finalResult,Full(totalDuration))
   }
   override def performCheck = succeed(status._1.body,status._2)
