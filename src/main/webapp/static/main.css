@@ -110,3 +110,6 @@ serverError{
 #dashboard{
     overflow-x:hidden;
 }
+#content{
+    background-color:black;
+}

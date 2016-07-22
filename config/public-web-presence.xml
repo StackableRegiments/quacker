@@ -3,7 +3,7 @@
     <service name="public-web-presence">
       <server name="public-web-presence-prod">
         <serviceCheck>
-          <label>PING</label>
+          <label>Ping</label>
           <mode>production</mode>
           <type>icmp</type>
           <period>60</period>
@@ -11,7 +11,7 @@
           <ipv6>false</ipv6>
         </serviceCheck>
         <serviceCheck>
-          <label>INDEX PAGE</label>
+          <label>Index page</label>
           <mode>production</mode>
           <type>http</type>
           <period>60</period>
@@ -24,7 +24,7 @@
           </thresholds>
         </serviceCheck>
         <serviceCheck>
-          <label>INDEX PAGE</label>
+          <label>Index page</label>
           <mode>production</mode>
           <type>http</type>
           <period>60</period>
@@ -37,7 +37,7 @@
           </thresholds>
         </serviceCheck>
         <serviceCheck>
-          <label>INDEX PAGE</label>
+          <label>Index page</label>
           <mode>production</mode>
           <type>http</type>
           <period>60</period>
@@ -50,7 +50,7 @@
           </thresholds>
         </serviceCheck>
         <serviceCheck>
-          <label>INDEX PAGE</label>
+          <label>Index page</label>
           <mode>production</mode>
           <type>http</type>
           <period>60</period>
@@ -63,7 +63,7 @@
           </thresholds>
         </serviceCheck>
         <serviceCheck>
-          <label>INDEX PAGE</label>
+          <label>Index page</label>
           <mode>production</mode>
           <type>http</type>
           <period>60</period>
@@ -76,7 +76,7 @@
           </thresholds>
         </serviceCheck>
         <serviceCheck>
-          <label>INDEX PAGE</label>
+          <label>Index page</label>
           <mode>production</mode>
           <type>http</type>
           <period>60</period>
@@ -89,7 +89,7 @@
           </thresholds>
         </serviceCheck>
         <serviceCheck>
-          <label>INDEX PAGE</label>
+          <label>Index page</label>
           <mode>production</mode>
           <type>http</type>
           <period>60</period>
@@ -102,7 +102,7 @@
           </thresholds>
         </serviceCheck>
         <serviceCheck>
-          <label>INDEX PAGE</label>
+          <label>Index page</label>
           <mode>production</mode>
           <type>http</type>
           <period>60</period>
@@ -115,7 +115,7 @@
           </thresholds>
         </serviceCheck>
         <serviceCheck>
-          <label>INDEX PAGE</label>
+          <label>Index page</label>
           <mode>production</mode>
           <type>http</type>
           <period>60</period>

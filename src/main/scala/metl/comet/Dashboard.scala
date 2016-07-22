@@ -34,7 +34,7 @@ trait CheckRenderHelper {
   protected val checkActionJsCmds = Map(
     CheckAction.Create -> "createCheck",
     CheckAction.Destroy -> "destroyCheck",
-    CheckAction.Update -> ""
+    CheckAction.Update -> "updateCheck"
   )
   protected val statusClasses = List("serverOk","serverError","serverUnknown")
   protected def statusClassFromStatus(status:Box[Boolean]):String = {

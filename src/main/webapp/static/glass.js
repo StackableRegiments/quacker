@@ -142,7 +142,6 @@ function render(){
                 stamp.render(check);
             });
         });
-        stamp.skip();
     });
     requestAnimationFrame(render);
 }
