@@ -1,7 +1,7 @@
 var defaultExpandedServices = [];
 var defaultExpandedChecks = [];
-var checkHistory = {
-};
+var checkHistory = {};
+var pulses = {};
 pluginSystem.registerCommand('dataChanged',function(){},function(){});
 pluginSystem.registerCommand('createCheck',function(){
     pluginSystem.suspendCommand('dataChanged');
@@ -42,13 +42,17 @@ $(function (){
     pluginSystem.resumeCommand('layoutChanged');
     glassCanvas = $("#glass");
     glass = glassCanvas[0].getContext("2d");
-    render();
+    _.each(jsonStructure,function(check){
+        checkHistory[check.id] = {lastSeen:Date.now()};
+    });
+    render(Date.now());
 });
 var checkStates = {};
 var sorted = function(obj){
-    return _.sortBy(obj,["lastStatusCode","service","server"]);
+    return _.sortBy(obj,["service","server","label","mode"]);
 };
-function render(){
+function render(time){
+    TWEEN.update(time);
     var w = $(window);
     var fullWidth = w.width();
     var fullHeight = w.height();
@@ -94,6 +98,8 @@ function render(){
                 y += yStep;
             },
             render:function(check){
+
+
                 glass.save();
                 glass.translate(x,y);
                 glass.beginPath();
@@ -103,6 +109,7 @@ function render(){
                     glass.lineTo(vertex.x,vertex.y);
                 });
                 glass.lineTo(start.x,start.y);
+                glass.closePath();
                 glass.strokeStyle = "#000000";
                 glass.lineWidth = 1;
                 glass.stroke();
@@ -119,19 +126,34 @@ function render(){
                     x = viewport.x + (even ? 0 : xStep);
                     y += yStep / 2;
                 }
-                glass.fillStyle = "#000000";
+
+                var pulse = pulses[check.id];
+                if(pulse){
+                    glass.strokeStyle = "#FFFFFF";
+                    glass.lineWidth = 6;
+                    glass.beginPath();
+                    glass.moveTo(start.x - radius,start.y);
+                    glass.lineTo(
+			start.x - radius + radius * 0.8 * Math.cos(pulse.x),
+			start.y + radius * 0.8 * Math.sin(pulse.x));
+                    glass.stroke();
+                }
+                glass.closePath();
 
                 if(viewport.width > 1500) glass.font = "16px Advent Pro";
                 else if(viewport.width > 1000) glass.font = "12px Advent Pro";
                 else if(viewport.width > 400) glass.font = "8px Advent Pro";
-		else glass.font = "6px Advent Pro";
+                else glass.font = "6px Advent Pro";
 
+                glass.strokeStyle = "#000000";
+                glass.fillStyle = "#000000";
                 glass.textBaseline = "bottom";
                 glass.textAlign = "center";
                 var textRoot = {x:start.x,y:start.y - radius/3};
                 glass.fillText(check.label, start.x - radius, textRoot.y);
                 glass.fillText(check.service, start.x - radius, textRoot.y + radius / 3);
                 glass.fillText(check.mode, start.x - radius, textRoot.y + radius / 3 * 2);
+
                 glass.restore();
             }
         };
@@ -152,7 +174,6 @@ function createCheck(obj){
     pluginSystem.fireCommand('createCheck','core.createCheck',obj);
 };
 function internalUpdateCheck(newCheck,targetNode){
-    console.log("internalUpdateCheck",newCheck);
     if(!newCheck.statusCode) newCheck.statusCode = newCheck.lastStatusCode;
     jsonStructure[newCheck.id] = newCheck;
     var history = checkHistory[newCheck.id];
@@ -160,11 +181,15 @@ function internalUpdateCheck(newCheck,targetNode){
         history = checkHistory[newCheck.id] = {};
     }
     var then = history.lastSeen;
-    var now = Date.now();
+    var now = history.lastSeen = Date.now();
     if(then){
-        history.observedInterval = now - then;
-        history.timer = history.observedInterval;
-        console.log("Observed interval",history.timer);
+        var pulse = pulses[newCheck.id]
+        if(!pulse){
+            pulse = pulses[newCheck.id] = {};
+        }
+        pulse.x = 0;
+        pulse.tween = new TWEEN.Tween(pulse)
+            .to({x:Math.PI * 2}, now - then)
+            .start();
     }
-    history.lastSeen = now;
 }

@@ -6,7 +6,7 @@
           <label>Ping</label>
           <mode>production</mode>
           <type>icmp</type>
-          <period>60</period>
+          <period>10</period>
           <host>104.155.226.235</host>
           <ipv6>false</ipv6>
         </serviceCheck>
