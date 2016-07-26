@@ -1,0 +1,106 @@
+.serverError{
+    background-color:red;
+    color: white;
+    border:1px solid darkred;
+}
+.serverOk {
+    background-color:lightgreen;
+    color: green;
+    border:1px solid green;
+}
+.serviceGroup {
+    border:2px groove lightgray;
+}
+.serverGroup {
+    border:1px solid lightgray;
+    font-size: small;
+    font-weight: regular;
+}
+.tableHeader {
+    font-size: small;
+    font-color: darkgray;
+}
+.serviceHeader {
+    font-size: x-large;
+    font-weight: bold;
+}
+.serverHeader {
+    font-size: large;
+    font-weight: bold;
+    font-color: darkblue;
+}
+.furtherDetail {
+    margin-left: 0.5em;
+}
+.toggleable {
+}
+.hideable {
+}
+.toggledIn {
+    display:block;
+}
+.hideableHidden {
+    display:none!important;
+}
+.toggledOut {
+    display:inline-block;
+}
+.collapser {
+    font-size: large;
+    font-weight: bold;
+    margin-left:0.5em;
+    margin-right:0.5em;
+    cursor:Pointer;
+}
+.serviceDataDescriptor {
+    font-weight: bold;
+}
+.furtherDetailHidden {
+    display:none;
+}
+.checkExpanded {
+    margin-bottom:1em;
+}
+.checkCollapsed {
+    margin-bottom:0em;
+    border:none;
+}
+.checkExpanded .checkDetail {
+    margin-top:0.5em;
+}
+.checkDetail {
+    background-color:lightgray;
+    border:1px solid gray;
+    color: black;
+    margin: 10px;
+    padding: 10px;
+}
+.checkExpanded {
+
+}
+.checkCollapsed {
+    display: none !important;
+}
+/*
+      #dashboardServerContainer .alwaysOn {
+      margin: 1em;
+      max-width: 45%;
+      background: white;
+      z-index:1;
+      }
+*/
+.fullWidth {
+    max-width: 100% !important;
+    width: 100% !important;
+    display: block !important;
+    margin: 0em !important;
+}
+.partialWidth {
+    max-width: 45% !important;
+    display: inline-block !important;
+    margin: 0.3em !important;
+}
+.promotedService {
+    background-color: white !important;
+    z-index:100 !important;
+}
