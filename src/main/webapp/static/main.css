@@ -1,52 +1,70 @@
+body{
+    font-family: 'Cabin', sans-serif;
+    font-size:20px;
+}
+.serviceStatus{
+    padding:0 1em;
+}
+.serverChecks{
+    margin-left:2em;
+    display:block;
+}
+.serviceClassfurtherDetail{
+    display:none;
+}
+.serviceContent{
+}
+.serviceCheck{
+    display:inline-block;
+    margin:1em;
+    min-width:20%;
+}
 .serverError{
     background-color:red;
     color: white;
-    border:1px solid darkred;
 }
 .serverOk {
     background-color:lightgreen;
-    color: green;
-    border:1px solid green;
-}
-.serviceGroup {
-    border:2px groove lightgray;
+    color: black;
 }
 .serverGroup {
-    border:1px solid lightgray;
-    font-size: small;
+    margin-left:2em;
     font-weight: regular;
 }
 .tableHeader {
-    font-size: small;
     font-color: darkgray;
 }
 .serviceHeader {
-    font-size: x-large;
-    font-weight: bold;
+    font-size: 200%;
+    display:inline-block;
 }
 .serverHeader {
-    font-size: large;
+    font-size: 150%;
     font-weight: bold;
     font-color: darkblue;
+    display:block;
+    margin-left:2em;
+    margin-top:0.5em;
+}
+.detailContainer{
+    display:block;
 }
 .furtherDetail {
     margin-left: 0.5em;
+    display:inline-block;
 }
 .toggleable {
 }
 .hideable {
 }
 .toggledIn {
-    display:block;
 }
 .hideableHidden {
     display:none!important;
 }
 .toggledOut {
-    display:inline-block;
 }
 .collapser {
-    font-size: large;
     font-weight: bold;
     margin-left:0.5em;
     margin-right:0.5em;

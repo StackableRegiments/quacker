@@ -98,7 +98,9 @@ function createChecks(){
             'class':dataClasses,
             'title':label
         });
-        var returnObj = $("<span/>",{}).append($("<span/>",{
+        var returnObj = $("<span/>",{
+            class:"detailContainer"
+        }).append($("<span/>",{
             'class': 'serviceDataDescriptor '+ furtherDetailClass,
             'text':label
         })).append($("<span/>",{
