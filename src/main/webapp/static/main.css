@@ -1,0 +1,124 @@
+body{
+    font-family: 'Cabin', sans-serif;
+    font-size:20px;
+}
+.serviceStatus{
+    padding:0 1em;
+}
+.serverChecks{
+    margin-left:2em;
+    display:block;
+}
+.serviceClassfurtherDetail{
+    display:none;
+}
+.serviceContent{
+}
+.serviceCheck{
+    display:inline-block;
+    margin:1em;
+    min-width:20%;
+}
+.serverError{
+    background-color:red;
+    color: white;
+}
+.serverOk {
+    background-color:lightgreen;
+    color: black;
+}
+.serverGroup {
+    margin-left:2em;
+    font-weight: regular;
+}
+.tableHeader {
+    font-color: darkgray;
+}
+.serviceHeader {
+    font-size: 200%;
+    display:inline-block;
+}
+.serverHeader {
+    font-size: 150%;
+    font-weight: bold;
+    font-color: darkblue;
+    display:block;
+    margin-left:2em;
+    margin-top:0.5em;
+}
+.detailContainer{
+    display:block;
+}
+.furtherDetail {
+    margin-left: 0.5em;
+    display:inline-block;
+}
+.toggleable {
+}
+.hideable {
+}
+.toggledIn {
+}
+.hideableHidden {
+    display:none!important;
+}
+.toggledOut {
+}
+.collapser {
+    font-weight: bold;
+    margin-left:0.5em;
+    margin-right:0.5em;
+    cursor:Pointer;
+}
+.serviceDataDescriptor {
+    font-weight: bold;
+}
+.furtherDetailHidden {
+    display:none;
+}
+.checkExpanded {
+    margin-bottom:1em;
+}
+.checkCollapsed {
+    margin-bottom:0em;
+    border:none;
+}
+.checkExpanded .checkDetail {
+    margin-top:0.5em;
+}
+.checkDetail {
+    background-color:lightgray;
+    border:1px solid gray;
+    color: black;
+    margin: 10px;
+    padding: 10px;
+}
+.checkExpanded {
+
+}
+.checkCollapsed {
+    display: none !important;
+}
+/*
+      #dashboardServerContainer .alwaysOn {
+      margin: 1em;
+      max-width: 45%;
+      background: white;
+      z-index:1;
+      }
+*/
+.fullWidth {
+    max-width: 100% !important;
+    width: 100% !important;
+    display: block !important;
+    margin: 0em !important;
+}
+.partialWidth {
+    max-width: 45% !important;
+    display: inline-block !important;
+    margin: 0.3em !important;
+}
+.promotedService {
+    background-color: white !important;
+    z-index:100 !important;
+}
