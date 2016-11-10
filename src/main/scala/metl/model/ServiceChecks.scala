@@ -1518,7 +1518,7 @@ case class MatcherCheck(serviceCheckMode:ServiceCheckMode,incomingLabel:String,m
 
 case class ScriptStepResult(body:String,metaData:Map[String,String] = Map.empty[String,String],statusCode:Int = 0,duration:Double = 0.0)
 
-case class FunctionalCheckReturn(result:ScriptStepResult,duration:Double,updatedEnvironment:Map[String,String],sqlResult:Option[SQLResultSet] = None,httpResult:Option[HTTPResponse] = None,ldapResults:Option[LdapResults] = None){
+case class FunctionalCheckReturn(result:ScriptStepResult,duration:Double,updatedEnvironment:Map[String,String],sqlResult:Option[SQLResultSet] = None,httpResult:Option[HTTPResponse] = None,ldapResults:Option[LdapResults] = None,jmxResults:Option[JmxResults] = None){
   protected def safeDisplay(in:String):String = {
     in match {
       case null => ""
@@ -1594,6 +1594,11 @@ object FunctionalCheck extends ConfigFileReader {
             host <- getAttr(mn,"host");
             ipv6 = getAttr(mn,"ipv6").map(_.toBoolean).getOrElse(false)
           ) yield ICMPFunctionalCheck(host,ipv6)
+        }
+        case "jmx" => {
+          for (
+            url <- getAttr(mn,"url")
+          ) yield JmxFunctionalCheck(url)
         }
         case "httpAttachBasicAuth" => {
           for (
@@ -2118,6 +2123,104 @@ case class HttpFunctionalCheck(method:String,url:String,parameters:List[Tuple2[S
       httpResult = Some(response))
   }
 }
+
+case class JmxFunctionalCheck(jmxServiceUrl:String) extends FunctionalCheck {
+  import java.lang.Thread.State
+  import java.lang.management._
+  import java.lang.management.ManagementFactory._
+  import javax.management.remote.{JMXServiceURL,JMXConnectorFactory}
+  import collection.JavaConverters._
+  override def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val previousResult = fcr.result
+    val totalDuration = fcr.duration
+    val environment = fcr.updatedEnvironment
+    val interpolatedUrl = new JMXServiceURL(interpolator.interpolate(jmxServiceUrl,environment))
+    
+    val start = new java.util.Date().getTime
+    val client = JMXConnectorFactory.connect(interpolatedUrl)
+    val beanConnection = client.getMBeanServerConnection()
+
+    val remoteOsBean = ManagementFactory.newPlatformMXBeanProxy(beanConnection,
+      ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME,
+      classOf[OperatingSystemMXBean]
+    )
+    val remoteOs = JmxOsSpec(remoteOsBean.getName,remoteOsBean.getArch,remoteOsBean.getAvailableProcessors,remoteOsBean.getSystemLoadAverage,remoteOsBean.getVersion)
+    val remoteRuntimeBean = ManagementFactory.newPlatformMXBeanProxy(beanConnection,
+      ManagementFactory.RUNTIME_MXBEAN_NAME,
+      classOf[RuntimeMXBean]
+    )
+    val remoteRuntime = JmxRuntimeSpec(
+      remoteRuntimeBean.getName,
+      remoteRuntimeBean.getInputArguments.asScala.toList,//.toArray.toList.map(_.asInstanceOf[String]),
+      remoteRuntimeBean.getClassPath,
+      remoteRuntimeBean.getLibraryPath,
+      remoteRuntimeBean.getManagementSpecVersion,
+      remoteRuntimeBean.getSpecName,
+      remoteRuntimeBean.getSpecVendor,
+      remoteRuntimeBean.getSpecVersion,
+      remoteRuntimeBean.getSystemProperties.asScala.toMap,
+      remoteRuntimeBean.getUptime,
+      remoteRuntimeBean.getVmName,
+      remoteRuntimeBean.getVmVendor,
+      remoteRuntimeBean.getVmVersion,
+      remoteRuntimeBean.getStartTime,
+      remoteRuntimeBean.isBootClassPathSupported match {
+        case true => Some(remoteRuntimeBean.getBootClassPath)
+        case false => None
+      }
+    )
+    val remoteMemoryBean = ManagementFactory.newPlatformMXBeanProxy(beanConnection,
+      ManagementFactory.MEMORY_MXBEAN_NAME,
+      classOf[MemoryMXBean]
+    )
+    val remoteHeapBean = remoteMemoryBean.getHeapMemoryUsage
+    val remoteNonHeapBean = remoteMemoryBean.getNonHeapMemoryUsage
+    val remoteMemory = JmxMemorySpec(
+      JmxMemoryUsage(
+        remoteHeapBean.getInit,
+        remoteHeapBean.getUsed,
+        remoteHeapBean.getCommitted,
+        remoteHeapBean.getMax
+      ),
+      JmxMemoryUsage(
+        remoteNonHeapBean.getInit,
+        remoteNonHeapBean.getUsed,
+        remoteNonHeapBean.getCommitted,
+        remoteNonHeapBean.getMax
+      ),
+      remoteMemoryBean.getObjectPendingFinalizationCount
+    )
+    val remoteThreadBean = ManagementFactory.newPlatformMXBeanProxy(beanConnection,
+      ManagementFactory.THREAD_MXBEAN_NAME,
+      classOf[ThreadMXBean]
+    )
+    val remoteThreads = remoteThreadBean.getThreadInfo(remoteThreadBean.getAllThreadIds).toList/*.toArray.toList*/.map(ti => {
+      JmxThreadSpec(ti.getThreadId,ti.getThreadName,ti.getThreadState)
+    })
+    val jmxResult = JmxResults(
+      remoteOs,
+      remoteRuntime,
+      remoteMemory,
+      remoteThreads
+    )
+    client.close
+    val duration = new java.util.Date().getTime - start
+    FunctionalCheckReturn(
+      result = ScriptStepResult(jmxResult.toString,Map.empty[String,String],200,duration),
+      duration = totalDuration + duration,
+      updatedEnvironment = environment,
+      jmxResults = Some(jmxResult)
+    )
+  }
+}
+
+case class JmxOsSpec(name:String,arch:String,processorCount:Int,loadAverage:Double,version:String)
+case class JmxRuntimeSpec(name:String,inputArgs:List[String],classPath:String,libraryPath:String,managementSpecVersion:String,specName:String,specVendor:String,specVersion:String,systemProperties:Map[String,String],uptime:Long,vmName:String,vmVendor:String,vmVersion:String,startTime:Long,bootClassPath:Option[String])
+case class JmxMemoryUsage(init:Long,used:Long,committed:Long,max:Long)
+case class JmxMemorySpec(heap:JmxMemoryUsage,nonHeap:JmxMemoryUsage,objectsPendingFinalizationCount:Int)
+case class JmxThreadSpec(threadId:Long,name:String,threadState:java.lang.Thread.State)
+
+case class JmxResults(os:JmxOsSpec,runtime:JmxRuntimeSpec,memory:JmxMemorySpec,threads:List[JmxThreadSpec])
 
 case class EnvironmentValidator(validateEnvironment:Map[String,String] => Boolean) extends FunctionalCheck {
   override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
