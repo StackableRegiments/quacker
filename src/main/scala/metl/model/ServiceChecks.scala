@@ -441,6 +441,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
 }
 
 abstract class Pinger(incomingLabel:String, incomingMode:ServiceCheckMode) extends LiftActor with VisualElement with metl.comet.CheckRenderHelper with Logger {
+  import GraphableData._
 	val mode = incomingMode
 	override val label = incomingLabel
 	override def template = Templates.getServiceTemplate
@@ -478,20 +479,20 @@ abstract class Pinger(incomingLabel:String, incomingMode:ServiceCheckMode) exten
 		val now = updatedTime(false)
 		lastStatus = Full(false)
 		currentFailures = currentFailures + 1
-		inform(false,Map(
+		inform(false,List((now.getTime,Map(
 			"type" -> "fail",
 			"why" -> why,
 			"detail" -> detail,
 			"currentFailures" -> currentFailures,
 			"lastUp" -> lastUptimeString
-		),now,why,detail)
+		))),now,why,detail)
     val cr = CheckResult(id,label,getServiceName,getServerName,now,why,lastUp,detail,mode,false)
     DashboardServer ! cr
 		if (currentFailures >= failureTolerance){
 			ErrorRecorder ! cr
 		}
   }
-  def succeed(why:String,timeTaken:Box[Double] = Empty) = {
+  def succeed(why:String,timeTaken:Box[Double] = Empty,data:List[Tuple2[Long,Map[String,GraphableDatum]]] = Nil) = {
 		val now = new Date()
 		val checkDuration = timeTaken.openOr((new Date().getTime - lastCheckBegin.openOr(now).getTime).toDouble)
 		checkTimeout.map(c => {
@@ -503,21 +504,21 @@ abstract class Pinger(incomingLabel:String, incomingMode:ServiceCheckMode) exten
 		updatedTime(true,now)
 		lastStatus = Full(true)
 		currentFailures = 0
-		inform(true,Map(
+		inform(true,List((now.getTime,Map(
 			"type" -> "success",
 			"why" -> why,
 			"duration" -> checkDuration
-		),now,why)
-    var cr =  CheckResult(id,label,getServiceName,getServerName,now,why,lastUp,"",mode,true)
+		))),now,why)
+    var cr =  CheckResult(id,label,getServiceName,getServerName,now,why,lastUp,"",mode,true,data)
 		DashboardServer ! cr 
 		ErrorRecorder ! cr 
   }
-	def inform(wasSuccessful:Boolean,information:Map[String,Any], when:Date = new Date(),why:String = "", detail:String = "") = {
+	def inform(wasSuccessful:Boolean,information:List[Tuple2[Long,Map[String,GraphableDatum]]], when:Date = new Date(),why:String = "", detail:String = "") = {
     lastWhy = Full(why)
     lastDetail = Full(detail)
 		internalInform(getServiceName,getServerName,label,wasSuccessful,mode,when,information,why,detail)
 	}
-	protected def internalInform(service:String,server:String,check:String,wasSuccessful:Boolean,serviceCheckMode:ServiceCheckMode,timestamp:Date,information:Map[String,Any],why:String = "",detail:String = ""):Unit = {
+	protected def internalInform(service:String,server:String,check:String,wasSuccessful:Boolean,serviceCheckMode:ServiceCheckMode,timestamp:Date,information:List[Tuple2[Long,Map[String,GraphableDatum]]],why:String = "",detail:String = ""):Unit = {
 		HistoryServer ! CheckResult(id,label,getServiceName,getServerName,now,why,lastUptime,detail,mode,wasSuccessful,information) 
 	}
   override protected def exceptionHandler:PartialFunction[Throwable,Unit] = {
@@ -1518,7 +1519,7 @@ case class MatcherCheck(serviceCheckMode:ServiceCheckMode,incomingLabel:String,m
 
 case class ScriptStepResult(body:String,metaData:Map[String,String] = Map.empty[String,String],statusCode:Int = 0,duration:Double = 0.0)
 
-case class FunctionalCheckReturn(result:ScriptStepResult,duration:Double,updatedEnvironment:Map[String,String],sqlResult:Option[SQLResultSet] = None,httpResult:Option[HTTPResponse] = None,ldapResults:Option[LdapResults] = None,jmxResults:Option[JmxResults] = None){
+case class FunctionalCheckReturn(result:ScriptStepResult,duration:Double,updatedEnvironment:Map[String,String],data:List[Tuple2[Long,Map[String,GraphableDatum]]],sqlResult:Option[SQLResultSet] = None,httpResult:Option[HTTPResponse] = None,ldapResults:Option[LdapResults] = None,jmxResults:Option[JmxResults] = None){
   protected def safeDisplay(in:String):String = {
     in match {
       case null => ""
@@ -1535,7 +1536,7 @@ object ScriptStepResult {
   def empty = ScriptStepResult("")
 }
 object FunctionalCheckReturn {
-  def empty = FunctionalCheckReturn(ScriptStepResult.empty,0.0,Map.empty[String,String])
+  def empty = FunctionalCheckReturn(ScriptStepResult.empty,0.0,Map.empty[String,String],Nil)
 }
 
 object FunctionalCheck extends ConfigFileReader {
@@ -1600,6 +1601,133 @@ object FunctionalCheck extends ConfigFileReader {
             url <- getAttr(mn,"url")
           ) yield JmxFunctionalCheck(url)
         }
+        case "jmxExtractOsLoad" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            JmxOsLoadExtractor(key)
+          }
+        }
+        case "jmxExtractOsProcessorCount" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            JmxOsProcessorCountExtractor(key)
+          }
+        }
+        case "jmxExtractOsName" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            JmxOsNameExtractor(key)
+          }
+        }
+        case "jmxExtractOsArch" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            JmxOsArchExtractor(key)
+          }
+        }
+        case "jmxExtractOsVersion" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            JmxOsVersionExtractor(key)
+          }
+        }
+        case "jmxExtractRuntimeUptime" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            JmxRuntimeUptimeExtractor(key)
+          }
+        }
+        case "jmxExtractRuntimeInputArgs" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            JmxRuntimeInputArgsExtractor(key)
+          }
+        }
+        case "jmxExtractRuntimeName" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            JmxRuntimeNameExtractor(key)
+          }
+        }
+        case "jmxExtractHeapMemoryMax" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            JmxHeapMemoryMaxExtractor(key)
+          }
+        }
+        case "jmxExtractHeapMemoryUsed" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            JmxHeapMemoryUsedExtractor(key)
+          }
+        }
+        case "jmxExtractHeapMemoryCommitted" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            JmxHeapMemoryCommittedExtractor(key)
+          }
+        }
+        case "jmxExtractHeapMemoryInit" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            JmxHeapMemoryInitExtractor(key)
+          }
+        }
+        case "jmxExtractHeapMemoryPercentage" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            JmxHeapMemoryPercentageExtractor(key)
+          }
+        }
+        case "jmxExtractNonHeapMemoryMax" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            JmxNonHeapMemoryMaxExtractor(key)
+          }
+        }
+        case "jmxExtractNonHeapMemoryUsed" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            JmxNonHeapMemoryUsedExtractor(key)
+          }
+        }
+        case "jmxExtractNonHeapMemoryCommitted" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            JmxNonHeapMemoryCommittedExtractor(key)
+          }
+        }
+        case "jmxExtractNonHeapMemoryInit" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            JmxNonHeapMemoryInitExtractor(key)
+          }
+        }
+        case "jmxExtractNonHeapMemoryPercentage" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            JmxNonHeapMemoryPercentageExtractor(key)
+          }
+        }
+
         case "httpAttachBasicAuth" => {
           for (
             domain <- getAttr(mn,"domain");
@@ -1789,6 +1917,13 @@ object FunctionalCheck extends ConfigFileReader {
             ResultSetter(result)
           }
         }
+        case "setResultToAttribute" => {
+          for (
+            key <- getAttr(mn,"key")
+          ) yield {
+            RetrieveAttributeToResult(key)
+          }
+        }
         case "if" => {
           for (
             key <- getAttr(mn,"key");
@@ -1827,11 +1962,54 @@ object FunctionalCheck extends ConfigFileReader {
             Delay(delay,random)
           }
         }
+        case "stringEquals" => {
+          for (
+            key <- getAttr(mn,"key");
+            value <- getAttr(mn,"value")
+          ) yield {
+            EnvironmentValidator("%s equals %s".format(key,value),(env) => env.get(key).exists(_ == value))
+          }
+        }
+        case "stringEqualsInsensitive" => {
+          for (
+            key <- getAttr(mn,"key");
+            value <- getAttr(mn,"value").map(_.toLowerCase.trim)
+          ) yield {
+            EnvironmentValidator("%s equals %s".format(key,value),(env) => env.get(key).exists(_.toLowerCase.trim == value))
+          }
+        }
+        case "numericallyLessThan" => {
+          for (
+            key <- getAttr(mn,"key");
+            value <- getAttr(mn,"value").map(_.toDouble)
+          ) yield {
+            EnvironmentValidator("%s numerically less than %s".format(key,value),(env) => env.get(key).exists(_.toDouble < value))
+          }
+        }
+        case "numericallyGreaterThan" => {
+          for (
+            key <- getAttr(mn,"key");
+            value <- getAttr(mn,"value").map(_.toDouble)
+          ) yield {
+            EnvironmentValidator("%s numerically less than %s".format(key,value),(env) => env.get(key).exists(_.toDouble > value))
+          }
+        }
+        case "numericallyEqualTo" => {
+          for (
+            key <- getAttr(mn,"key");
+            value <- getAttr(mn,"value").map(_.toDouble)
+          ) yield {
+            EnvironmentValidator("%s numerically less than %s".format(key,value),(env) => env.get(key).exists(_.toDouble == value))
+          }
+        }
+
 				case _ => None
 			}
 		})
 	}
 }
+
+import GraphableData._
 
 abstract class FunctionalCheck extends Logger {
   protected var see:Option[ScriptExecutionEnvironment] = None
@@ -1909,6 +2087,7 @@ case class ICMPFunctionalCheck(uri:String,ipv6:Boolean = false) extends Function
     val previousResult = fcr.result
     val totalDuration = fcr.duration
     val environment = fcr.updatedEnvironment
+    val now = new Date().getTime
     val pingProcess = Runtime.getRuntime().exec(pingCmd(interpolator.interpolate(uri,environment)))
     val inputStream = new BufferedInputStream(pingProcess.getInputStream)
     val errorStream = new BufferedInputStream(pingProcess.getErrorStream)
@@ -1930,7 +2109,12 @@ case class ICMPFunctionalCheck(uri:String,ipv6:Boolean = false) extends Function
       throw new DashboardException("Ping failed","Packet loss recognised: "+output)
     val stringOutput = output.toString
     val timeTaken = pingTimeExtractor(stringOutput)
-    FunctionalCheckReturn(ScriptStepResult(body = stringOutput,duration = timeTaken.openOr(0)),totalDuration + timeTaken.openOr(0.0),environment)
+    val newData:Tuple2[Long,Map[String,GraphableDatum]] = (now,Map(
+      "checkType" -> "icmp",
+      "ipv6" -> ipv6,
+      "timeTaken" -> timeTaken.getOrElse(0.0)
+    ))
+    FunctionalCheckReturn(ScriptStepResult(body = stringOutput,duration = timeTaken.openOr(0)),totalDuration + timeTaken.openOr(0.0),environment,newData :: fcr.data)
   }
 }
 
@@ -2015,11 +2199,16 @@ case class JDBCFunctionalCheck(driver:String,url:String,username:String,password
 		} else if (errors.length > 0) {
 			throw new CombinedExceptionsException(errors)
 		} else { 
+      val newData:Tuple2[Long,Map[String,GraphableDatum]] = (now.getTime,Map(("checkType",GraphableString("jdbc")) :: timeTaken.toList.map(tt => {
+        ("timeTaken",GraphableDouble(tt))
+      }):_*))
       FunctionalCheckReturn(
         result = ScriptStepResult(body = output.toString,duration = timeTaken.openOr(0)),
         duration = totalDuration + timeTaken.openOr(0.0),
         updatedEnvironment = environment,
-        sqlResult = Some(output))
+        sqlResult = Some(output),
+        data = newData :: fcr.data
+      )
     }
   }
 }
@@ -2084,11 +2273,17 @@ case class LdapFunctionalCheck(host:String,username:String,password:String,searc
     }
     error.foreach(e => throw e)
     val duration = new java.util.Date().getTime - start
+    val newData:Tuple2[Long,Map[String,GraphableDatum]] = (now.getTime,Map(
+      "checkType" -> "ldap",
+      "timeTaken" -> duration
+    ))
     FunctionalCheckReturn(
       result = ScriptStepResult(output.toString,Map.empty[String,String],0,duration.toDouble),
       duration = totalDuration + duration,
       updatedEnvironment = environment,
-      ldapResults = Some(output))
+      ldapResults = Some(output),
+      data = newData :: fcr.data
+    )
   }
 }
 
@@ -2112,19 +2307,25 @@ case class HttpFunctionalCheck(method:String,url:String,parameters:List[Tuple2[S
     }
     val response = client.respondToResponse(innerResponse)
     val verificationResponse = matcher.verify(response)
-    println("verification: %s => %s".format(matcher,verificationResponse))
     if (!verificationResponse.success){
       throw new DashboardException("HTTP Verification failed",verificationResponse.errors.mkString("\r\n"))
     }
+    val newData:Tuple2[Long,Map[String,GraphableDatum]] = (now.getTime,Map(
+      "checkType" -> "http",
+      "timeTaken" -> response.duration.toDouble,
+      "statusCode" -> response.statusCode
+    ))
     FunctionalCheckReturn(
       result = ScriptStepResult(response.responseAsString,response.headers,response.statusCode,response.duration.toDouble),
       duration = totalDuration + response.duration,
       updatedEnvironment = environment,
-      httpResult = Some(response))
+      httpResult = Some(response),
+      data = newData :: fcr.data
+    )
   }
 }
 
-case class JmxFunctionalCheck(jmxServiceUrl:String) extends FunctionalCheck {
+case class JmxFunctionalCheck(jmxServiceUrl:String,credentials:Option[Tuple2[String,String]] = None) extends FunctionalCheck {
   import java.lang.Thread.State
   import java.lang.management._
   import java.lang.management.ManagementFactory._
@@ -2194,8 +2395,27 @@ case class JmxFunctionalCheck(jmxServiceUrl:String) extends FunctionalCheck {
       ManagementFactory.THREAD_MXBEAN_NAME,
       classOf[ThreadMXBean]
     )
-    val remoteThreads = remoteThreadBean.getThreadInfo(remoteThreadBean.getAllThreadIds).toList/*.toArray.toList*/.map(ti => {
-      JmxThreadSpec(ti.getThreadId,ti.getThreadName,ti.getThreadState)
+    val cpuTimeSupported = remoteThreadBean.isThreadCpuTimeSupported && {
+      true 
+    }
+    val allThreadIds = remoteThreadBean.getAllThreadIds
+    val cpuTimes = remoteThreadBean.isThreadCpuTimeSupported match {
+      case false => Map.empty[Long,Long]
+      case true => {
+        var enabledThreadCpuTime = false
+        if (!remoteThreadBean.isThreadCpuTimeEnabled){
+          remoteThreadBean.setThreadCpuTimeEnabled(true)
+          enabledThreadCpuTime = true
+        }
+        val threadTimes = Map(allThreadIds.toList.map(tid => (tid,remoteThreadBean.getThreadCpuTime(tid))):_*)
+        if (enabledThreadCpuTime){
+          remoteThreadBean.setThreadCpuTimeEnabled(false)
+        }
+        threadTimes
+      }
+    }
+    val remoteThreads = remoteThreadBean.getThreadInfo(allThreadIds).toList/*.toArray.toList*/.map(ti => {
+      JmxThreadSpec(ti.getThreadId,ti.getThreadName,ti.getThreadState,cpuTimes.get(ti.getThreadId))
     })
     val jmxResult = JmxResults(
       remoteOs,
@@ -2205,11 +2425,23 @@ case class JmxFunctionalCheck(jmxServiceUrl:String) extends FunctionalCheck {
     )
     client.close
     val duration = new java.util.Date().getTime - start
+    val newData:Tuple2[Long,Map[String,GraphableDatum]] = (now.getTime,Map(
+      "checkType" -> "jmx",
+      "timeTaken" -> duration.toDouble,
+      "loadAverage" -> remoteOs.loadAverage,
+      "uptime" -> remoteRuntime.uptime,
+      "startTime" -> remoteRuntime.startTime,
+      "heapMax" -> remoteMemory.heap.max,
+      "heapUsed" -> remoteMemory.heap.used,
+      "nonHeapMax" -> remoteMemory.nonHeap.max,
+      "nonHeapUsed" -> remoteMemory.nonHeap.used
+    ))
     FunctionalCheckReturn(
       result = ScriptStepResult(jmxResult.toString,Map.empty[String,String],200,duration),
       duration = totalDuration + duration,
       updatedEnvironment = environment,
-      jmxResults = Some(jmxResult)
+      jmxResults = Some(jmxResult),
+      data = newData :: fcr.data
     )
   }
 }
@@ -2218,11 +2450,128 @@ case class JmxOsSpec(name:String,arch:String,processorCount:Int,loadAverage:Doub
 case class JmxRuntimeSpec(name:String,inputArgs:List[String],classPath:String,libraryPath:String,managementSpecVersion:String,specName:String,specVendor:String,specVersion:String,systemProperties:Map[String,String],uptime:Long,vmName:String,vmVendor:String,vmVersion:String,startTime:Long,bootClassPath:Option[String])
 case class JmxMemoryUsage(init:Long,used:Long,committed:Long,max:Long)
 case class JmxMemorySpec(heap:JmxMemoryUsage,nonHeap:JmxMemoryUsage,objectsPendingFinalizationCount:Int)
-case class JmxThreadSpec(threadId:Long,name:String,threadState:java.lang.Thread.State)
+case class JmxThreadSpec(threadId:Long,name:String,threadState:java.lang.Thread.State,cpuTime:Option[Long])
 
 case class JmxResults(os:JmxOsSpec,runtime:JmxRuntimeSpec,memory:JmxMemorySpec,threads:List[JmxThreadSpec])
 
-case class EnvironmentValidator(validateEnvironment:Map[String,String] => Boolean) extends FunctionalCheck {
+abstract class JmxExtractingEnvironmentMutator extends FunctionalCheck {
+  protected def mutate(result:JmxResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String]
+  override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val previousResult = fcr.result
+    val totalDuration = fcr.duration
+    val environment = fcr.updatedEnvironment
+    fcr.jmxResults.map(jmxResult => fcr.copy(updatedEnvironment = mutate(jmxResult,environment,interpolator))).getOrElse(fcr)
+  }
+}
+
+case class JmxOsLoadExtractor(key:String) extends JmxExtractingEnvironmentMutator {
+  override def mutate(result:JmxResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),result.os.loadAverage.toString)
+  }
+}
+case class JmxOsProcessorCountExtractor(key:String) extends JmxExtractingEnvironmentMutator {
+  override def mutate(result:JmxResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),result.os.processorCount.toString)
+  }
+}
+case class JmxOsNameExtractor(key:String) extends JmxExtractingEnvironmentMutator {
+  override def mutate(result:JmxResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),result.os.name)
+  }
+}
+case class JmxOsArchExtractor(key:String) extends JmxExtractingEnvironmentMutator {
+  override def mutate(result:JmxResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),result.os.arch)
+  }
+}
+case class JmxOsVersionExtractor(key:String) extends JmxExtractingEnvironmentMutator {
+  override def mutate(result:JmxResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),result.os.version)
+  }
+}
+
+case class JmxRuntimeUptimeExtractor(key:String) extends JmxExtractingEnvironmentMutator {
+  override def mutate(result:JmxResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),result.runtime.uptime.toString)
+  }
+}
+
+case class JmxRuntimeInputArgsExtractor(key:String) extends JmxExtractingEnvironmentMutator {
+  override def mutate(result:JmxResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),result.runtime.inputArgs.mkString(" "))
+  }
+}
+
+case class JmxRuntimeNameExtractor(key:String) extends JmxExtractingEnvironmentMutator {
+  override def mutate(result:JmxResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),result.runtime.name)
+  }
+}
+case class JmxHeapMemoryMaxExtractor(key:String) extends JmxExtractingEnvironmentMutator {
+  override def mutate(result:JmxResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),result.memory.heap.max.toString)
+  }
+}
+case class JmxHeapMemoryUsedExtractor(key:String) extends JmxExtractingEnvironmentMutator {
+  override def mutate(result:JmxResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),result.memory.heap.used.toString)
+  }
+}
+case class JmxHeapMemoryCommittedExtractor(key:String) extends JmxExtractingEnvironmentMutator {
+  override def mutate(result:JmxResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),result.memory.heap.committed.toString)
+  }
+}
+case class JmxHeapMemoryInitExtractor(key:String) extends JmxExtractingEnvironmentMutator {
+  override def mutate(result:JmxResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),result.memory.heap.init.toString)
+  }
+}
+case class JmxHeapMemoryPercentageExtractor(key:String) extends JmxExtractingEnvironmentMutator {
+  override def mutate(result:JmxResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),((result.memory.heap.used * 100) / result.memory.heap.max).toString)
+  }
+}
+case class JmxNonHeapMemoryMaxExtractor(key:String) extends JmxExtractingEnvironmentMutator {
+  override def mutate(result:JmxResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),result.memory.nonHeap.max.toString)
+  }
+}
+case class JmxNonHeapMemoryUsedExtractor(key:String) extends JmxExtractingEnvironmentMutator {
+  override def mutate(result:JmxResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),result.memory.nonHeap.used.toString)
+  }
+}
+case class JmxNonHeapMemoryCommittedExtractor(key:String) extends JmxExtractingEnvironmentMutator {
+  override def mutate(result:JmxResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),result.memory.nonHeap.committed.toString)
+  }
+}
+case class JmxNonHeapMemoryInitExtractor(key:String) extends JmxExtractingEnvironmentMutator {
+  override def mutate(result:JmxResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),result.memory.nonHeap.init.toString)
+  }
+}
+case class JmxNonHeapMemoryPercentageExtractor(key:String) extends JmxExtractingEnvironmentMutator {
+  override def mutate(result:JmxResults,environment:Map[String,String],interpolator:Interpolator):Map[String,String] = {
+    environment.updated(interpolator.interpolate(key,environment),((result.memory.nonHeap.used * 100) / result.memory.nonHeap.max).toString)
+  }
+}
+
+case class ResultValidator(description:String,validateResult:ScriptStepResult => Boolean) extends FunctionalCheck {
+  override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val previousResult = fcr.result
+    val totalDuration = fcr.duration
+    val environment = fcr.updatedEnvironment
+    if (validateResult(previousResult)){
+      fcr
+    } else {
+      throw new DashboardException("Result failed validation",environment.toString)
+    }
+  }
+}
+
+case class EnvironmentValidator(description:String,validateEnvironment:Map[String,String] => Boolean) extends FunctionalCheck {
   override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
     val previousResult = fcr.result
     val totalDuration = fcr.duration
@@ -2624,6 +2973,10 @@ case class ResultSetter(seed:String) extends ResultMutator {
   override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):ScriptStepResult = ScriptStepResult(interpolator.interpolate(seed,environment))
 }
 
+case class RetrieveAttributeToResult(key:String) extends ResultMutator {
+  override protected def mutate(result:ScriptStepResult,environment:Map[String,String],interpolator:Interpolator):ScriptStepResult = environment.get(key).map(res => ScriptStepResult(interpolator.interpolate(res,environment))).getOrElse(result)
+}
+
 abstract class Interpolator {
   def interpolate(in:String,values:Map[String,String]):String
 }
@@ -2725,7 +3078,8 @@ case class ScriptedCheck(serviceCheckMode:ServiceCheckMode,incomingLabel:String,
     val fcr = scriptEngine.execute(sequence)
     val finalResult = fcr.result
     val totalDuration = fcr.duration
-    (finalResult,Full(totalDuration))
+    val data = fcr.data
+    (finalResult,Full(totalDuration),data)
   }
-  override def performCheck = succeed(status._1.body,status._2)
+  override def performCheck = succeed(status._1.body,status._2,status._3)
 }

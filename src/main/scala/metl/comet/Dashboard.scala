@@ -31,6 +31,7 @@ object CheckAction extends Enumeration {
 }
 
 trait CheckRenderHelper {
+  import GraphableData._
   protected val checkActionJsCmds = Map(
     CheckAction.Create -> "createCheck",
     CheckAction.Destroy -> "destroyCheck",
@@ -69,7 +70,24 @@ trait CheckRenderHelper {
       case _ => s.detail
     })),
     JField("lastUp",JString(uptimeString(s.lastUp))),
-    JField("mode",JString(s.mode.toString))
+    JField("mode",JString(s.mode.toString)),
+    JField("data",JArray(s.data.map(tup => {
+      val when = tup._1
+      val data = tup._2
+      JObject(List(
+        JField("when",JInt(tup._1)),
+        JField("values",JObject(tup._2.toList.map(dTup => {
+          JField(dTup._1,dTup._2 match {
+            case GraphableFloat(f) => JDouble(f)
+            case GraphableDouble(d) => JDouble(d)
+            case GraphableInt(i) => JInt(i)
+            case GraphableLong(l) => JInt(l)
+            case GraphableString(s) => JString(s)
+            case GraphableBoolean(b) => JBool(b)
+          })
+        })))
+      ))
+    })))
   ))
   def jsonForVisualElement(v:VisualElement) = v.jsonRenderer()
   def jsExpForVisualElement(v:VisualElement) = v.jsExpRenderer()

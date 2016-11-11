@@ -35,7 +35,24 @@ object ServiceCheckMode {
 	}
 }
 
-case class CheckResult(id:String,label:String,service:String,server:String,when:Date,why:String,lastUp:Box[Date],detail:String,mode:ServiceCheckMode,success:Boolean,data:Map[String,Any] = Map.empty[String,Any])
+sealed trait GraphableDatum 
+case class GraphableString(v:String) extends GraphableDatum
+case class GraphableLong(v:Long) extends GraphableDatum
+case class GraphableInt(v:Int) extends GraphableDatum
+case class GraphableDouble(v:Double) extends GraphableDatum
+case class GraphableFloat(v:Float) extends GraphableDatum
+case class GraphableBoolean(v:Boolean) extends GraphableDatum
+
+object GraphableData {
+  implicit def convert(in:String) = GraphableString(in)
+  implicit def convert(in:Long) = GraphableLong(in)
+  implicit def convert(in:Int) = GraphableInt(in)
+  implicit def convert(in:Double) = GraphableDouble(in)
+  implicit def convert(in:Float) = GraphableFloat(in)
+  implicit def convert(in:Boolean) = GraphableBoolean(in)
+}
+
+case class CheckResult(id:String,label:String,service:String,server:String,when:Date,why:String,lastUp:Box[Date],detail:String,mode:ServiceCheckMode,success:Boolean,data:List[Tuple2[Long,Map[String,GraphableDatum]]] = Nil)
 
 abstract class ErrorActor(name:String) extends LiftActor {
 	protected def outputAction(cr:CheckResult) = {
