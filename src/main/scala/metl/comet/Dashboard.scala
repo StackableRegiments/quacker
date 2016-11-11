@@ -27,7 +27,7 @@ case class StatusCall(id:String,replacementActions:JsCmd, service:String, server
 
 object CheckAction extends Enumeration {
   type CheckAction = Value
-  val Create,Destroy,Update = Value 
+  val Create,Destroy,Update,History = Value 
 }
 
 trait CheckRenderHelper {
@@ -109,8 +109,7 @@ class Dashboard extends CometActor with CometListener with CheckRenderHelper {
   def getJsExpStructure = JsObj(Servers.getVisualElements.map(ve => (ve.id,jsExpForVisualElement(ve))):_*)
   override def render = NodeSeq.Empty
   override def fixedRender = {
-    "#jsonStructureContainer *" #> Script(JsCrVar("jsonStructure",getJsExpStructure)) //&
-//    "#serverContainer *" #> Servers.structure 
+    "#jsonStructureContainer *" #> Script(JsCrVar("jsonStructure",getJsExpStructure)) 
   }
 
   override def lowPriority = {

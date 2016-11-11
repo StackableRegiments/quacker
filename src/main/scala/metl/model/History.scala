@@ -19,7 +19,7 @@ import metl.comet._
 import com.mongodb._
 import scala.xml._
 
-abstract class HistoryListener(name:String) extends LiftActor with Logger {
+abstract class HistoryListener(val name:String) extends LiftActor with Logger {
 	protected val filterAction:(CheckResult)=>Boolean = (c:CheckResult) => true
 	protected def outputAction(cr:CheckResult):Unit
 	override def messageHandler = {
@@ -66,7 +66,7 @@ abstract class PushingToRemoteHistoryListener(name:String) extends HistoryListen
 	}
 }
 
-class InMemoryHistoryListener(name:String,historyCountPerItem:Int) extends HistoryListener(name) {
+class InMemoryHistoryListener(override val name:String,historyCountPerItem:Int) extends HistoryListener(name) {
   import scala.collection.immutable.Queue
   import scala.collection.mutable.{HashMap => MutMap}
   val store = new MutMap[Tuple3[String,String,String],Queue[CheckResult]]
@@ -92,14 +92,14 @@ object NullListener extends HistoryListener("null") {
 	override def outputAction(cr:CheckResult):Unit = {}
 }
 
-class DebugHistoryListener(name:String) extends HistoryListener(name) {
+class DebugHistoryListener(override val name:String) extends HistoryListener(name) {
 	override def outputAction(cr:CheckResult):Unit = {
 		trace("%s:%s:%s:%s-> %s %s %s:: %s".format(cr.service,cr.server,cr.label,cr.mode,cr.when,cr.when,cr.detail,cr.data.toString.take(10)))	
 	}
 }
 
 
-class MongoHistoryListener(name:String,host:String,port:Int,database:String,collection:String) extends PushingToRemoteHistoryListener(name){
+class MongoHistoryListener(override val name:String,host:String,port:Int,database:String,collection:String) extends PushingToRemoteHistoryListener(name){
 	var mongo = new Mongo(host,port)
 	//choosing to use the "normal" write concern.  http://api.mongodb.org/java/2.6/com/mongodb/WriteConcern.html for more information
 	val defaultWriteConcern = WriteConcern.valueOf("NORMAL")
@@ -199,6 +199,10 @@ object HistoryServer extends LiftActor with ConfigFileReader {
 	def clear = {
 		historyListeners = List.empty[HistoryListener]
 	}
+  def getHistory(name:Option[String],service:String,server:String,label:String):List[CheckResult] = {
+    val listeners = name.map(n => historyListeners.filter(_.name == n)).getOrElse(historyListeners)
+    listeners.flatMap(_.getHistoryFor(service,server,label,None))
+  }
 	def configureFromXml(xml:Node):List[String] = {
 		val newHistoryListeners = (xml \\ "historyListeners").map(hls => (hls \\ "historyListener")).flatten.map(n => {
 			val name = getText(n,"name").getOrElse("unknown history listener")

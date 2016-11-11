@@ -18,6 +18,7 @@ import com.metl.cas._
  * to modify lift's environment
  */
 class Boot {
+  implicit val formats = net.liftweb.json.DefaultFormats
   def boot {
 		Globals.isDevMode = Props.mode match {
 			case Props.RunModes.Production => false
@@ -47,6 +48,14 @@ class Boot {
 			}
 		}
 		LiftRules.dispatch.append {
+      case Req(List("history",service,server,label),_,_) => () => {
+        val checks = HistoryServer.getHistory(None,service,server,label)
+        Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks),200))
+      }
+      case Req(List("history",historyListenerName,service,server,label),_,_) => () => {
+        val checks = HistoryServer.getHistory(Some(historyListenerName),service,server,label)
+        Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks),200))
+      }
 			case Req("reloadXml" :: _,_,_) => () => {
 				val configurationStatus = ServiceConfigurator.describeAutoConfigure(ServiceConfigurator.autoConfigure)
 				Full(PlainTextResponse("Xml configuration reloaded\r\n%s".format(configurationStatus),List.empty[Tuple2[String,String]], 200))
