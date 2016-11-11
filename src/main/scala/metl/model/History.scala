@@ -77,7 +77,6 @@ class InMemoryHistoryListener(name:String,historyCountPerItem:Int) extends Histo
     var newValue = oldValue.enqueue(cr)
     while (historyCountPerItem > 0 && newValue.length > historyCountPerItem && newValue.length > 0){
       val dequeued = newValue.dequeue
-      info("removed: %s".format(dequeued._1.why))
       newValue = dequeued._2
     }
     store += ((key,newValue))
