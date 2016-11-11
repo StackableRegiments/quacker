@@ -121,7 +121,7 @@ abstract class LogChangesErrorActor(name:String) extends ErrorActor(name) {
 	protected def doFailureAction(who:String,serviceName:String,serverName:String,why:String,detail:String,date:Date,lastUp:String,mode:ServiceCheckMode):Unit = {}
 }
 
-class AppendableFile(filename:String) {
+class AppendableFile(filename:String) extends Logger {
 	private var box:Box[FileWriter] = Empty
 	private def setupBox = {
 		box = box match {
@@ -129,12 +129,12 @@ class AppendableFile(filename:String) {
 				try { 
 					Full(new FileWriter(filename,true)) 
 				} catch {
-					case i:java.io.IOException => {
-						println("failed to create filewriter with expected IOException: %s".format(i.getMessage.toString))
+					case e:java.io.IOException => {
+						error("failed to create filewriter with expected IOException: %s".format(e.getMessage.toString),e)
 						Empty 
 					}
 					case e:Throwable => {
-						println("failed to create filewriter with unexpected exception: %s".format(e.getMessage.toString))
+						error("failed to create filewriter with unexpected exception: %s".format(e.getMessage.toString),e)
 						Empty 
 					}
 				}
@@ -144,18 +144,18 @@ class AppendableFile(filename:String) {
 					fw.close
 					Full(new FileWriter(filename,true))
 				} catch {
-					case i:java.io.IOException => {
-						println("failed to close filewriter with expected IOException: %s".format(i.getMessage.toString))
+					case e:java.io.IOException => {
+						error("failed to close filewriter with expected IOException: %s".format(e.getMessage.toString),e)
 						Empty 
 					}
 					case e:Throwable => {
-						println("failed to close filewriter with unexpected exception: %s".format(e.getMessage.toString))
+						error("failed to close filewriter with unexpected exception: %s".format(e.getMessage.toString),e)
 						Empty 
 					}
 				}
 			}
 			case other => {
-				println("other error on box: %s".format(other))
+				error("other error on box: %s".format(other))
 				Empty
 			}
 		}
@@ -186,7 +186,7 @@ class ErrorDiskLogger(name:String,filename:String) extends LogEveryErrorActor(na
 	} 
 }
 
-case class SimpleMailer(smtp:String,port:Int,ssl:Boolean,username:String,password:String) extends net.liftweb.util.Mailer {
+case class SimpleMailer(smtp:String,port:Int,ssl:Boolean,username:String,password:String) extends net.liftweb.util.Mailer with Logger {
   import net.liftweb.util.Mailer._
 	customProperties = Map(
 		"mail.smtp.starttls.enable" -> ssl.toString,
@@ -203,7 +203,7 @@ case class SimpleMailer(smtp:String,port:Int,ssl:Boolean,username:String,passwor
 		}
 		catch {
 			case e:Throwable => {
-				println("exception while sending mail: %s -> %s".format(e,e.getMessage))
+				error("exception while sending mail: %s".format(e.getMessage),e)
 			}
 		}
 	}
@@ -274,7 +274,7 @@ object ErrorRecorder extends LiftActor with ConfigFileReader {
 			val edl = new ErrorDiskLogger(name,file){
 				override val filterAction = (cr:CheckResult) => filterFunc(cr)
 			}
-			println("creating ErrorDiskLogger: %s (%s)".format(name,edl))
+			trace("creating ErrorDiskLogger: %s (%s)".format(name,edl))
 			edl
 		}).toList
 		val emailLoggers = (xml \\ "mailer").map(n => {
@@ -311,7 +311,6 @@ object ErrorRecorder extends LiftActor with ConfigFileReader {
 		}).toList
 		val newNotifiers = (diskLoggers ::: emailLoggers)
 		newNotifiers.foreach(mailer => mailers = mailer :: mailers)
-		//println("All notifiers: %s".format(mailers))
 		newNotifiers.length match {
 			case 0 => List.empty[String]
 			case other => List("loaded %s notifiers".format(other))

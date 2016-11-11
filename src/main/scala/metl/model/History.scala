@@ -19,13 +19,14 @@ import metl.comet._
 import com.mongodb._
 import scala.xml._
 
-abstract class HistoryListener(name:String) extends LiftActor {
+abstract class HistoryListener(name:String) extends LiftActor with Logger {
 	protected val filterAction:(CheckResult)=>Boolean = (c:CheckResult) => true
 	protected def outputAction(cr:CheckResult):Unit
 	override def messageHandler = {
 		case c:CheckResult if filterAction(c) => outputAction(c)
 		case _ => {}
 	}
+  def getHistoryFor(service:String,server:String,label:String,after:Option[Long]):List[CheckResult] = Nil
 }
 
 abstract class PushingToRemoteHistoryListener(name:String) extends HistoryListener(name) {
@@ -65,6 +66,28 @@ abstract class PushingToRemoteHistoryListener(name:String) extends HistoryListen
 	}
 }
 
+class InMemoryHistoryListener(name:String,historyCountPerItem:Int) extends HistoryListener(name) {
+  import scala.collection.immutable.Queue
+  import scala.collection.mutable.{HashMap => MutMap}
+  val store = new MutMap[Tuple3[String,String,String],Queue[CheckResult]]
+	override val filterAction:(CheckResult)=>Boolean = (c:CheckResult) => true
+	override def outputAction(cr:CheckResult):Unit = {
+    val key = (cr.service,cr.server,cr.label)
+    val oldValue = store.get(key).getOrElse(Queue.empty[CheckResult])
+    var newValue = oldValue.enqueue(cr)
+    while (historyCountPerItem > 0 && newValue.length > historyCountPerItem && newValue.length > 0){
+      val dequeued = newValue.dequeue
+      info("removed: %s".format(dequeued._1.why))
+      newValue = dequeued._2
+    }
+    store += ((key,newValue))
+  }
+  override def getHistoryFor(service:String,server:String,label:String,after:Option[Long]):List[CheckResult] = {
+    val res = store.get((service,server,label)).map(_.toList).getOrElse(Nil)
+    after.map(a => res.filter(_.when.getTime > a)).getOrElse(res)
+  }
+}
+
 object NullListener extends HistoryListener("null") {
 	override val filterAction:(CheckResult)=>Boolean = (c:CheckResult) => false
 	override def outputAction(cr:CheckResult):Unit = {}
@@ -72,7 +95,7 @@ object NullListener extends HistoryListener("null") {
 
 class DebugHistoryListener(name:String) extends HistoryListener(name) {
 	override def outputAction(cr:CheckResult):Unit = {
-		println("%s:%s:%s:%s-> %s %s %s:: %s".format(cr.service,cr.server,cr.label,cr.mode,cr.when,cr.when,cr.detail,cr.data.toString.take(10)))	
+		trace("%s:%s:%s:%s-> %s %s %s:: %s".format(cr.service,cr.server,cr.label,cr.mode,cr.when,cr.when,cr.detail,cr.data.toString.take(10)))	
 	}
 }
 
@@ -81,15 +104,15 @@ class MongoHistoryListener(name:String,host:String,port:Int,database:String,coll
 	var mongo = new Mongo(host,port)
 	//choosing to use the "normal" write concern.  http://api.mongodb.org/java/2.6/com/mongodb/WriteConcern.html for more information
 	val defaultWriteConcern = WriteConcern.valueOf("NORMAL")
-	def withMongo(action:DBCollection=>Boolean):Boolean = {
+	def withMongo[A](action:DBCollection=>A):Option[A] = {
 		try {
 			val db = mongo.getDB(database)
 			val coll = db.getCollection(collection)
-			action(coll)
+			Some(action(coll))
 		} catch {
 			case e:Throwable => {
-				println("failed to write to mongodb (%s:%s/%s/%s) for some reason: %s".format(host,port,database,collection,e))
-				false
+				error("failed to write to mongodb (%s:%s/%s/%s)".format(host,port,database,collection),e)
+        None
 			}
 		}	
 	}
@@ -111,6 +134,21 @@ class MongoHistoryListener(name:String,host:String,port:Int,database:String,coll
 		dbo.put("data",toDBObject(cr.data))
 		dbo
 	} 
+  def dbObjectToCr(dbo:DBObject):CheckResult = {
+    CheckResult(
+      id = nextFuncName,
+      label = dbo.get("label").asInstanceOf[String],
+      service = dbo.get("service").asInstanceOf[String],
+      server = dbo.get("server").asInstanceOf[String],
+      when = dbo.get("when").asInstanceOf[Date],
+      why = dbo.get("why").asInstanceOf[String],
+      lastUp = tryo(dbo.get("lastUp").asInstanceOf[Date]),
+      detail = dbo.get("detail").asInstanceOf[String],
+      mode = ServiceCheckMode.parse(dbo.get("mode").asInstanceOf[String]),
+      success = dbo.get("success").asInstanceOf[Boolean],
+      data = Nil
+    )
+  }
 	def toDBObject(input:Any,internal:Boolean = false):AnyRef = {
 		input match {
 			case t:Tuple2[String,Any] => {
@@ -135,16 +173,25 @@ class MongoHistoryListener(name:String,host:String,port:Int,database:String,coll
 			case l:Long if internal => l.asInstanceOf[AnyRef]
 			case i:Int if internal => i.asInstanceOf[AnyRef]
 			case other => {
-				println("unknown dbobject encountered: %s".format(other))
+				error("unknown dbobject encountered: %s".format(other))
 				new BasicDBObject("unknown",other.toString)
 			}
 		}
 	}
+  override def getHistoryFor(service:String,server:String,label:String,after:Option[Long]):List[CheckResult] = { //not yet implementing "after"
+    withMongo(c => {
+      val query = new BasicDBObject
+      query.put("service",service)
+      query.put("server",server)
+      query.put("label",label)
+      c.find(query).toArray
+    }).map(_.toArray.toList).getOrElse(Nil).map(o => dbObjectToCr(o.asInstanceOf[DBObject]))
+  }
 	override def performRepeatableAtomicAction(cr:CheckResult):Boolean = {
 		withMongo(c => {
 			c.insert(toDBObject(cr).asInstanceOf[DBObject],defaultWriteConcern)
 			true
-		})
+		}).getOrElse(false)
 	}
 }
 
@@ -158,6 +205,10 @@ object HistoryServer extends LiftActor with ConfigFileReader {
 			val name = getText(n,"name").getOrElse("unknown history listener")
 			val listenerType = getText(n,"type")
 			listenerType match {
+        case Some("inMemory") => {
+          val queueLength = getInt(n,"queueLength").getOrElse(1)
+          new InMemoryHistoryListener(name,queueLength)
+        }
 				case Some("mongodb") => {
 					val host = getText(n,"host").getOrElse("localhost")
 					val port = getInt(n,"port").getOrElse(27017)
@@ -178,8 +229,8 @@ object HistoryServer extends LiftActor with ConfigFileReader {
 						override val filterAction = filterFunc
 					}
 				}
-				case _ => {
-					println("failed to construct listener from: %s".format(n))
+				case other => {
+					error("failed to construct listener from(%s): %s".format(other,n))
 					NullListener
 				}
 			}

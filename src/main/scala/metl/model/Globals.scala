@@ -13,9 +13,9 @@ import com.metl.cas._
 
 import scala.collection.JavaConverters._
 
-object EnvVariable {
+object EnvVariable extends Logger {
   protected val environmentVariables:Map[String,String] = System.getenv.asScala.toMap;
-  println(environmentVariables)
+  info(environmentVariables)
   protected def trimSystemProp(in:String):Box[String] = {
     try {
       var value = in.trim
@@ -33,17 +33,17 @@ object EnvVariable {
   def getProp(systemEnvName:String,javaPropName:String):Box[String] = {
     environmentVariables.get(systemEnvName).filterNot(v => v == null || v == "").map(v => trimSystemProp(v)).getOrElse({
       val value = net.liftweb.util.Props.get(javaPropName).map(v => Full(v)).openOr(Full(System.getProperty(javaPropName)))
-      println("getting from java prop: %s => %s".format(javaPropName,value))
+      trace("getting from java prop: %s => %s".format(javaPropName,value))
       value
     })
   }
 }
 
-object Globals{
+object Globals extends Logger {
   //Globals for the system
   var configDirectoryLocation = "config"
   EnvVariable.getProp("QUACKER_CONFIG_DIRECTORY_LOCATION","quacker.configDirectoryLocation").map(qcdl => {
-    println("setting config directory location to: %s".format(qcdl))
+    trace("setting config directory location to: %s".format(qcdl))
     configDirectoryLocation = qcdl
     qcdl
   }).openOr({
@@ -62,7 +62,7 @@ object Globals{
 			case 0 => UserAccessRestriction(me,List(new ServicePermission("Public Access Only",None,None,None,None)))
 			case other => UserAccessRestriction(me,validUserAccessesForMe.map(vua => vua.servicePermissions).flatten.toList)
 		}
-    println("myUserAccessRestriction: %s".format(myRestriction))
+    trace("myUserAccessRestriction: %s".format(myRestriction))
     myRestriction
 	}
 	def clearValidUsers = {

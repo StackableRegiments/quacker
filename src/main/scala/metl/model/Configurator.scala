@@ -11,15 +11,7 @@ import javax.mail._
 import javax.mail.internet._
 import java.io.File
 
-object ServiceConfigurator {
-	private def throwExceptionWithPrintedMessage(exception:Throwable,messageLines:List[String]) = {
-		println("----")
-		println("")
-		messageLines.foreach(println(_))
-		println("")
-		println("----")
-		throw exception
-	}
+object ServiceConfigurator extends Logger {
 	private val osName = System.getProperty("os.name")	
 	val isWindows = osName.toLowerCase.trim.startsWith("windows")
 	val isLinux = osName.toLowerCase.trim.startsWith("linux")

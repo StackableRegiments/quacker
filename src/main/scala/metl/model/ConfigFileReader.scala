@@ -1,8 +1,9 @@
 package metl.model
 
+import net.liftweb.common._
 import scala.xml._
 
-trait ConfigFileReader {
+trait ConfigFileReader extends Logger {
 	protected def getNodes(e:Node,tagName:String):List[Node] = (e \\ tagName).theSeq.toList
 	protected def getImmediateNodes(e:Node,tagName:String):List[Node] = (e \ tagName).theSeq.toList
 	protected def getChildrenNodes(e:Node):List[Node] = e.child.toList
