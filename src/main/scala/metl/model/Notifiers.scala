@@ -36,13 +36,27 @@ object ServiceCheckMode {
 	}
 }
 
-sealed trait GraphableDatum 
-case class GraphableString(v:String) extends GraphableDatum
-case class GraphableLong(v:Long) extends GraphableDatum
-case class GraphableInt(v:Int) extends GraphableDatum
-case class GraphableDouble(v:Double) extends GraphableDatum
-case class GraphableFloat(v:Float) extends GraphableDatum
-case class GraphableBoolean(v:Boolean) extends GraphableDatum
+sealed trait GraphableDatum {
+  def getAsString:String
+}
+case class GraphableString(v:String) extends GraphableDatum{
+  override def getAsString:String = v
+}
+case class GraphableLong(v:Long) extends GraphableDatum {
+  override def getAsString:String = v.toString
+}
+case class GraphableInt(v:Int) extends GraphableDatum {
+  override def getAsString:String = v.toString
+}
+case class GraphableDouble(v:Double) extends GraphableDatum {
+  override def getAsString:String = v.toString
+}
+case class GraphableFloat(v:Float) extends GraphableDatum {
+  override def getAsString:String = v.toString
+}
+case class GraphableBoolean(v:Boolean) extends GraphableDatum {
+  override def getAsString:String = v.toString
+}
 
 object GraphableStringSerializer extends CustomSerializer[GraphableString]((formats:net.liftweb.json.Formats) => ({
     case JString(s) => GraphableString(s)

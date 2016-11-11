@@ -1583,6 +1583,30 @@ object FunctionalCheck extends ConfigFileReader {
             url <- getAttr(mn,"url")
           ) yield JmxFunctionalCheck(url)
         }
+        case "munin" => {
+          for (
+            host <- getAttr(mn,"host");
+            port <- getAttr(mn,"port").map(_.toInt)
+          ) yield {
+            (mn \\ "thresholds").headOption.map(_ho => getNodes(mn,"thresholds").map(ts => {
+              val tsName = getAttr(ts,"name").getOrElse("unknown")
+              val tsType = getAttr(ts,"type").getOrElse("counter")
+              MuninCategoryDefinition(tsName,MuninFieldType.parse(tsType))
+            })).map(onlyFetch => {
+              MuninFunctionalCheck(host,port,onlyFetch)
+            }).getOrElse({
+              MuninFunctionalCheck(host,port)
+            })
+          }
+        }
+        case "dataExtractor" => {
+          for (
+            key <- getAttr(mn,"key");
+            dataAttributeName <- getAttr(mn,"dataAttributeName")
+          ) yield {
+            DataExtractor(key,dataAttributeName)
+          }
+        }
         case "jmxExtractOsLoad" => {
           for (
             key <- getAttr(mn,"key")
@@ -2307,6 +2331,162 @@ case class HttpFunctionalCheck(method:String,url:String,parameters:List[Tuple2[S
   }
 }
 
+class TelnetFunctionalCheck[A](host:String,port:Int) extends FunctionalCheck {
+  protected val commandResponseTerminator:Option[String] = None
+  protected def telnetBehaviour(tc:TelnetClient):Tuple2[List[String],Option[A]] = {
+    val inputStream = new BufferedInputStream(tc.getInputStream)
+    val output = readStream(inputStream)	
+    inputStream.close
+    (output.split("\n").toList,None)
+  }
+  protected def writeTo(input:String,stream:BufferedOutputStream) = {
+    val command = (input + "\n").getBytes("ISO-8859-1")
+    stream.write(command,0,command.length)
+    stream.flush	
+  }
+  protected def readStream(input:BufferedInputStream,endPattern:Option[String] = None):String = readStreamLoop(input,endPattern,new Date(),5000L)
+  protected def readStreamLoop(input:BufferedInputStream,endPattern:Option[String],startTime:Date, timeout:Long):String = {
+    var output = ""
+    var hasFinished = false
+    while (input.available > 0 && !hasFinished){
+      output += input.read.asInstanceOf[Char]
+      endPattern.map(ep => {
+        hasFinished = output.endsWith(ep)
+      })
+    }
+    if (output == "" && (new Date().getTime - startTime.getTime) < timeout){
+      Thread.sleep(timeout / 10)	
+      output += readStreamLoop(input,endPattern,startTime,timeout)
+    }
+    output
+  }
+  protected def convert(in:A):Map[String,GraphableDatum] = Map.empty[String,GraphableDatum]
+  override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val now = new Date().getTime
+    val tc = new TelnetClient()
+    tc.connect(host,port)
+    val output = telnetBehaviour(tc)
+    tc.disconnect
+    val duration = (new Date().getTime - now).toDouble
+    val carrierData = output._2.map(convert _).getOrElse(Map.empty[String,GraphableDatum])
+    val newData:Tuple2[Long,Map[String,GraphableDatum]] = (now,Map(
+      "checkType" -> GraphableString("telnet"),
+      "timeTaken" -> GraphableDouble(duration),
+      "statusCode" -> GraphableInt(200)
+    ) ++ carrierData)
+    FunctionalCheckReturn(
+      result = ScriptStepResult(output._1.mkString("\r\n"),Map.empty[String,String],200,duration),
+      duration = fcr.duration + duration,
+      updatedEnvironment = fcr.updatedEnvironment,
+      data = newData :: fcr.data
+    )
+  }
+}
+
+case class MuninFunctionalCheck(host:String, port:Int, onlyFetch:List[MuninCategoryDefinition] = List(MuninCategoryDefinition("cpu",Counter),MuninCategoryDefinition("memory",Guage))) extends TelnetFunctionalCheck[Map[String,Map[String,Double]]](host,port){
+	protected val previous = {
+		val map = new MSMap[String,MSMap[String,Double]]()
+		onlyFetch.map(munCatDef => map.put(munCatDef.name,new MSMap[String,scala.Double]()))
+		map
+	}
+	override val commandResponseTerminator:Option[String] = Some("\n.\n")
+	protected def generatedDelta[Double](inputName:String,input:Map[String,scala.Double]):Map[String,scala.Double] = {
+		val result = previous.get(inputName).map(po => Map(input.keys.map(ink => {
+			val updatedValue = (po(ink),input(ink)) match {
+				case (p:scala.Double,i:scala.Double) if (i < p) => {
+					// this is the counter reset behaviour.  I do believe that counters occasionally reset themselves to zero in munin
+					debug("possibleOverflow: %s (%s -> %s)".format(ink,p,i))
+					val out = i
+					po.put(ink,0.0)
+					out
+				}
+				case (p:scala.Double,i:scala.Double) => {
+					debug("correct counter behaviour: %s (%s -> %s)".format(ink,p,i))
+					val out = i - p
+					po.put(ink,i)
+					out
+				}
+				case other => {
+					debug("resetting to zero: %s (%s)".format(ink,other))
+					val out = 0.0
+					po.put(ink,0.0)
+					out
+				}
+			}
+			(ink,updatedValue)
+		}).toList:_*)).getOrElse(input)
+		result
+	}
+	protected def interpretMuninData(tc:TelnetClient):Map[String,Map[String,Double]] = {
+		val outputStream = new BufferedOutputStream(tc.getOutputStream)
+		val inputStream = new BufferedInputStream(tc.getInputStream)
+		var output = readStream(inputStream)
+		if (output.length == 0)
+			throw new DashboardException("Munin failed","no response from remote node")
+		writeTo("list",outputStream)
+		val possibleQueries = readStream(inputStream).split(" ").toList
+		val desiredQueries = onlyFetch.filter(of => possibleQueries.contains(of.name))
+		val completeOutput = Map(desiredQueries.map(of => {
+			val o = of.name
+			writeTo("fetch "+o,outputStream)
+			val individualOutput = readStream(inputStream,commandResponseTerminator)
+			val formattedOutput = Map(individualOutput.split("\n").filter(l => l.length > 1).map(l => {
+				val parts = l.split(" ")
+				val muninDataKey = parts(0).reverse.dropWhile(c => c != '.').drop(1).reverse.toString
+				val muninDataValue = tryo(parts(1).toDouble).openOr(-1.0)
+				(muninDataKey,muninDataValue)
+			}):_*)
+			val finalOutput = of.fieldType match {
+				case Counter => {
+					try {
+						val deltas = generatedDelta(o, formattedOutput)
+						Map(deltas.toList.map(fo => (fo._1,fo._2.toDouble)):_*)
+					} catch {	
+						case _ => formattedOutput
+					}
+				}
+				case Guage => {
+					formattedOutput
+				}
+				case PercentageCounter => {
+					try {
+						val deltas = generatedDelta(o,formattedOutput)
+						val total = deltas.values.sum
+						val deltaPercentages = Map(deltas.toList.map(d => (d._1, ((d._2 / total) * 100))):_*)
+						deltaPercentages
+					} catch {
+						case _ => formattedOutput
+					}
+				}
+				case PercentageGuage => {
+					try {
+						val total = formattedOutput.values.sum
+						Map(formattedOutput.toList.map(fo => (fo._1,((fo._2 / total) * 100))):_*)
+					} catch {
+						case _ => formattedOutput
+					}
+				}
+			}
+			(o,finalOutput)	
+		}):_*)
+		writeTo("quit",outputStream)
+		outputStream.close
+		inputStream.close
+		completeOutput
+	}
+  override protected def convert(in:Map[String,Map[String,Double]]):Map[String,GraphableDatum] = {
+    Map(in.toList.flatMap(ot => {
+      ot._2.toList.map(it => {
+        ("%s__%s".format(ot._1,it._1),GraphableDouble(it._2))
+      })
+    }):_*)
+  }
+	override def telnetBehaviour(tc:TelnetClient):Tuple2[List[String],Option[Map[String,Map[String,Double]]]] = {
+		val completeOutput = interpretMuninData(tc)
+		(completeOutput.keys.map(cok => "%s -> %s".format(cok,completeOutput(cok))).toList,Some(completeOutput))
+	}
+}
+
 case class JmxFunctionalCheck(jmxServiceUrl:String,credentials:Option[Tuple2[String,String]] = None) extends FunctionalCheck {
   import java.lang.Thread.State
   import java.lang.management._
@@ -2574,7 +2754,16 @@ abstract class EnvironmentMutator extends FunctionalCheck {
     fcr.copy(updatedEnvironment = mutate(previousResult,environment,interpolator))
   }
 }
-
+case class DataExtractor(key:String,dataAttribute:String) extends FunctionalCheck {
+  override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val previousResult = fcr.result
+    val totalDuration = fcr.duration
+    val environment = fcr.updatedEnvironment
+    fcr.data.flatMap(td => td._2.get(dataAttribute).map(da => (td._1,da.getAsString))).headOption.map(nv => {
+      fcr.copy(updatedEnvironment = environment.updated(key,nv._2.toString))
+    }).getOrElse(fcr)
+  }
+}
 abstract class HttpExtractingEnvironmentMutator extends FunctionalCheck {
   protected def mutate(result:HTTPResponse,environment:Map[String,String],interpolator:Interpolator):Map[String,String]
   override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
