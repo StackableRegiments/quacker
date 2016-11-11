@@ -479,15 +479,9 @@ abstract class Pinger(incomingLabel:String, incomingMode:ServiceCheckMode) exten
 		val now = updatedTime(false)
 		lastStatus = Full(false)
 		currentFailures = currentFailures + 1
-		inform(false,List((now.getTime,Map(
-			"type" -> "fail",
-			"why" -> why,
-			"detail" -> detail,
-			"currentFailures" -> currentFailures,
-			"lastUp" -> lastUptimeString
-		))),now,why,detail)
     val cr = CheckResult(id,label,getServiceName,getServerName,now,why,lastUp,detail,mode,false)
     DashboardServer ! cr
+    HistoryServer ! cr
 		if (currentFailures >= failureTolerance){
 			ErrorRecorder ! cr
 		}
@@ -504,23 +498,11 @@ abstract class Pinger(incomingLabel:String, incomingMode:ServiceCheckMode) exten
 		updatedTime(true,now)
 		lastStatus = Full(true)
 		currentFailures = 0
-		inform(true,List((now.getTime,Map(
-			"type" -> "success",
-			"why" -> why,
-			"duration" -> checkDuration
-		))),now,why)
     var cr =  CheckResult(id,label,getServiceName,getServerName,now,why,lastUp,"",mode,true,data)
+    HistoryServer ! cr
 		DashboardServer ! cr 
 		ErrorRecorder ! cr 
   }
-	def inform(wasSuccessful:Boolean,information:List[Tuple2[Long,Map[String,GraphableDatum]]], when:Date = new Date(),why:String = "", detail:String = "") = {
-    lastWhy = Full(why)
-    lastDetail = Full(detail)
-		internalInform(getServiceName,getServerName,label,wasSuccessful,mode,when,information,why,detail)
-	}
-	protected def internalInform(service:String,server:String,check:String,wasSuccessful:Boolean,serviceCheckMode:ServiceCheckMode,timestamp:Date,information:List[Tuple2[Long,Map[String,GraphableDatum]]],why:String = "",detail:String = ""):Unit = {
-		HistoryServer ! CheckResult(id,label,getServiceName,getServerName,now,why,lastUptime,detail,mode,wasSuccessful,information) 
-	}
   override protected def exceptionHandler:PartialFunction[Throwable,Unit] = {
 		case DashboardException(reason,detail,innerExceptions) => {
 			fail(reason,detail)

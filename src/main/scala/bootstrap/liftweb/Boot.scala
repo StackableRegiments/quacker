@@ -18,7 +18,7 @@ import com.metl.cas._
  * to modify lift's environment
  */
 class Boot {
-  implicit val formats = net.liftweb.json.DefaultFormats
+  implicit val formats = GraphableData.formats
   def boot {
 		Globals.isDevMode = Props.mode match {
 			case Props.RunModes.Production => false

@@ -18,6 +18,7 @@ import java.io._
 import metl.comet._
 
 import scala.xml._
+import net.liftweb.json._
 
 abstract class ServiceCheckMode
 case object STAGING extends ServiceCheckMode
@@ -43,7 +44,64 @@ case class GraphableDouble(v:Double) extends GraphableDatum
 case class GraphableFloat(v:Float) extends GraphableDatum
 case class GraphableBoolean(v:Boolean) extends GraphableDatum
 
+object GraphableStringSerializer extends CustomSerializer[GraphableString]((formats:net.liftweb.json.Formats) => ({
+    case JString(s) => GraphableString(s)
+  },
+  {
+    case GraphableString(s) => JString(s)
+  })
+)
+object GraphableIntSerializer extends CustomSerializer[GraphableInt]((formats:net.liftweb.json.Formats) => ({
+    case JInt(s) => GraphableInt(s.toInt)
+  },
+  {
+    case GraphableInt(s) => JInt(s)
+  })
+)
+object GraphableLongSerializer extends CustomSerializer[GraphableLong]((formats:net.liftweb.json.Formats) => ({
+    case JInt(s) => GraphableLong(s.toLong)
+  },
+  {
+    case GraphableLong(s) => JInt(s)
+  })
+)
+object GraphableFloatSerializer extends CustomSerializer[GraphableFloat]((formats:net.liftweb.json.Formats) => ({
+    case JDouble(s) => GraphableFloat(s.toFloat)
+  },
+  {
+    case GraphableFloat(s) => JDouble(s)
+  })
+)
+object GraphableDoubleSerializer extends CustomSerializer[GraphableDouble]((formats:net.liftweb.json.Formats) => ({
+    case JDouble(s) => GraphableDouble(s.toDouble)
+  },
+  {
+    case GraphableDouble(s) => JDouble(s)
+  })
+)
+object GraphableBooleanSerializer extends CustomSerializer[GraphableBoolean]((formats:net.liftweb.json.Formats) => ({
+    case JBool(s) => GraphableBoolean(s)
+  },
+  {
+    case GraphableBoolean(s) => JBool(s)
+  })
+)
+object GraphableDatumSerializer extends CustomSerializer[GraphableDatum]((formats:net.liftweb.json.Formats) => ({
+    case JString(s) => GraphableString(s)
+    case JInt(s) => GraphableLong(s.toLong)
+    case JDouble(s) => GraphableDouble(s.toDouble)
+    case JBool(s) => GraphableBoolean(s)
+},{
+    case GraphableBoolean(s) => JBool(s)
+    case GraphableDouble(s) => JDouble(s)
+    case GraphableFloat(s) => JDouble(s)
+    case GraphableLong(s) => JInt(s)
+    case GraphableInt(s) => JInt(s)
+    case GraphableString(s) => JString(s)
+}))
+
 object GraphableData {
+  val formats = net.liftweb.json.DefaultFormats + GraphableDatumSerializer + GraphableDoubleSerializer + GraphableFloatSerializer + GraphableLongSerializer + GraphableIntSerializer + GraphableBooleanSerializer
   implicit def convert(in:String) = GraphableString(in)
   implicit def convert(in:Long) = GraphableLong(in)
   implicit def convert(in:Int) = GraphableInt(in)
