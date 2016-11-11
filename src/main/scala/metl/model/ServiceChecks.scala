@@ -1599,12 +1599,20 @@ object FunctionalCheck extends ConfigFileReader {
             })
           }
         }
-        case "dataExtractor" => {
+        case "latestDataExtractor" => {
           for (
             key <- getAttr(mn,"key");
             dataAttributeName <- getAttr(mn,"dataAttributeName")
           ) yield {
-            DataExtractor(key,dataAttributeName)
+            LatestDataExtractor(key,dataAttributeName)
+          }
+        }
+        case "lastDataExtractor" => {
+          for (
+            key <- getAttr(mn,"key");
+            dataAttributeName <- getAttr(mn,"dataAttributeName")
+          ) yield {
+            LastDataExtractor(key,dataAttributeName)
           }
         }
         case "jmxExtractOsLoad" => {
@@ -2364,7 +2372,7 @@ class TelnetFunctionalCheck[A](host:String,port:Int) extends FunctionalCheck {
   override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
     val now = new Date().getTime
     val tc = new TelnetClient()
-    tc.connect(host,port)
+    tc.connect(interpolator.interpolate(host,fcr.updatedEnvironment),port)
     val output = telnetBehaviour(tc)
     tc.disconnect
     val duration = (new Date().getTime - now).toDouble
@@ -2754,16 +2762,27 @@ abstract class EnvironmentMutator extends FunctionalCheck {
     fcr.copy(updatedEnvironment = mutate(previousResult,environment,interpolator))
   }
 }
-case class DataExtractor(key:String,dataAttribute:String) extends FunctionalCheck {
+case class LastDataExtractor(key:String,dataAttribute:String) extends FunctionalCheck {
   override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
     val previousResult = fcr.result
     val totalDuration = fcr.duration
     val environment = fcr.updatedEnvironment
-    fcr.data.flatMap(td => td._2.get(dataAttribute).map(da => (td._1,da.getAsString))).headOption.map(nv => {
-      fcr.copy(updatedEnvironment = environment.updated(key,nv._2.toString))
+    fcr.data.headOption.flatMap(td => td._2.get(interpolator.interpolate(dataAttribute,environment))).map(nv => {
+      fcr.copy(updatedEnvironment = environment.updated(interpolator.interpolate(key,environment),interpolator.interpolate(nv.toString,environment)))
     }).getOrElse(fcr)
   }
 }
+case class LatestDataExtractor(key:String,dataAttribute:String) extends FunctionalCheck {
+  override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
+    val previousResult = fcr.result
+    val totalDuration = fcr.duration
+    val environment = fcr.updatedEnvironment
+    fcr.data.flatMap(td => td._2.get(interpolator.interpolate(dataAttribute,fcr.updatedEnvironment)).map(da => (td._1,da.getAsString))).headOption.map(nv => {
+      fcr.copy(updatedEnvironment = environment.updated(interpolator.interpolate(key,fcr.updatedEnvironment),interpolator.interpolate(nv._2.toString,fcr.updatedEnvironment)))
+    }).getOrElse(fcr)
+  }
+}
+
 abstract class HttpExtractingEnvironmentMutator extends FunctionalCheck {
   protected def mutate(result:HTTPResponse,environment:Map[String,String],interpolator:Interpolator):Map[String,String]
   override protected def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
