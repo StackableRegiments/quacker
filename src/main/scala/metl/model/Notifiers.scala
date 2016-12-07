@@ -258,7 +258,7 @@ class ErrorDiskLogger(name:String,filename:String) extends LogEveryErrorActor(na
 	} 
 }
 
-case class SimpleMailer(smtp:String,port:Int,ssl:Boolean,username:String,password:String) extends net.liftweb.util.Mailer with Logger {
+case class SimpleMailer(smtp:String,port:Int,ssl:Boolean,username:String,password:String,fromAddress:Option[String] = None) extends net.liftweb.util.Mailer with Logger {
   import net.liftweb.util.Mailer._
 	customProperties = Map(
 		"mail.smtp.starttls.enable" -> ssl.toString,
@@ -271,7 +271,7 @@ case class SimpleMailer(smtp:String,port:Int,ssl:Boolean,username:String,passwor
 	})
 	def sendMailMessage(to:String,who:String,subject:String,message:String):Unit = {
 		try {
-			sendMail(From("Service.Monitor@stackableregiments.com"),Subject(subject),PlainMailBodyType(message) :: List(To(to)):_*)
+			sendMail(From(fromAddress.getOrElse("Service.Monitor@stackableregiments.com")),Subject(subject),PlainMailBodyType(message) :: List(To(to)):_*)
 		}
 		catch {
 			case e:Throwable => {
@@ -281,7 +281,7 @@ case class SimpleMailer(smtp:String,port:Int,ssl:Boolean,username:String,passwor
 	}
 }
 
-class ErrorMailer(name:String,smtp:String,port:Int,username:String,password:String) extends LogChangesErrorActor(name){
+class ErrorMailer(name:String,smtp:String,port:Int,username:String,password:String,fromAddress:Option[String] = None) extends LogChangesErrorActor(name){
 	protected val ssl:Boolean = true
 	protected lazy val mailer = SimpleMailer(smtp,port,ssl,username,password)
 	protected val messagePrefix:String = ""
@@ -361,13 +361,14 @@ object ErrorRecorder extends LiftActor with ConfigFileReader {
 			val xmlMaxInterval = getLong(n,"maximumInterval").getOrElse(3600000L)
 			val shortcutLinkServerName = getText(n,"shortcutHost").getOrElse("")
 			val xmlMessageSubject = getText(n,"mailSubject").getOrElse("")
+      val xmlFromAddress = getText(n,"mailFrom")
 			val xmlMessagePrefix = getText(n,"mailMessageBodyPrefix").getOrElse("")
 			val xmlMessageSuffix = getText(n,"mailMessageBodySuffix").getOrElse("")
 			val xmlInterestedParties = getNodes(n,"recipients").map(rNode => getNodes(rNode,"emailAddress").map(eNode => eNode.text.toString).filterNot(emailAddress => emailAddress == "")).flatten.toList
 			val servicePermissions:List[ServicePermission] = getNodes(n,"servicePermissions").map(spNodes => getNodes(spNodes,"service").map(sp => ServicePermission.configureFromXml(sp))).flatten.toList
 			val restrictions = UserAccessRestriction(name,servicePermissions)
 			val filterFunc = (cr:CheckResult) => restrictions.permit(cr)
-			val em = new ErrorMailer(name,smtp,port,username,password){
+			val em = new ErrorMailer(name,smtp,port,username,password,xmlFromAddress){
 				override val shortcutHost = shortcutLinkServerName
 				override val interestedParties:List[String] = xmlInterestedParties
 				override val filterAction = (cr:CheckResult) => filterFunc(cr)
