@@ -290,8 +290,8 @@ class ErrorMailer(name:String,smtp:String,port:Int,username:String,password:Stri
 	protected val interestedParties:List[String] = List.empty[String]
 	protected val shortcutHost:String = ""
 
-	protected def successSubject(mode:ServiceCheckMode,serviceName:String):String = "%s %s %s".format(modeContractor(mode),messageSubject,serviceName).take(30).toString 
-	protected def failureSubject(mode:ServiceCheckMode,serviceName:String):String = "%s %s %s".format(modeContractor(mode),messageSubject,serviceName).take(30).toString
+	protected def successSubject(mode:ServiceCheckMode,serviceName:String,serverName:String):String = "%s %s %s %s".format(modeContractor(mode),messageSubject,serviceName,serverName).take(78).toString 
+	protected def failureSubject(mode:ServiceCheckMode,serviceName:String,serverName:String):String = "%s %s %s %s".format(modeContractor(mode),messageSubject,serviceName,serverName).take(78).toString
 
 	protected def modeContractor(mode:ServiceCheckMode):String = mode match {
 		case PRODUCTION => "PRD"
@@ -310,7 +310,7 @@ SUCCESS: '%s'  [%s].
 %s Detection time.
 %s Last known uptime.
 %s""".format(messagePrefix,serviceName,serverName,who,mode.toString,shortcutHost,urlEncode(serviceName),urlEncode(who),date,lastUp,messageSuffix)
-		sendMailMessage(who,successSubject(mode,serviceName),successMessage)	
+		sendMailMessage(who,successSubject(mode,serviceName,serverName),successMessage)	
 	}
 	override def doFailureAction(who:String,serviceName:String,serverName:String,why:String,detail:String,date:Date,lastUp:String,mode:ServiceCheckMode):Unit = {
 		val failMessage = """%s%s : %s
@@ -325,7 +325,7 @@ Error message: '%s'.
 Error detail: '%s'.
 
 %s""".format(messagePrefix,serviceName,serverName,who,mode.toString,why,shortcutHost,urlEncode(serviceName),urlEncode(who),date,lastUp,detail,messageSuffix)
-		sendMailMessage(who,failureSubject(mode,serviceName),failMessage)
+		sendMailMessage(who,failureSubject(mode,serviceName,serverName),failMessage)
 	}
 	protected def sendMailMessage(who:String,subject:String,message:String):Unit = interestedParties.foreach(emailAddress => mailer.sendMailMessage(emailAddress,who,subject,message))
 }
