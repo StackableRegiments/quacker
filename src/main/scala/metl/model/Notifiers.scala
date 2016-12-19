@@ -290,8 +290,8 @@ class ErrorMailer(name:String,smtp:String,port:Int,username:String,password:Stri
 	protected val interestedParties:List[String] = List.empty[String]
 	protected val shortcutHost:String = ""
 
-	protected def successSubject(mode:ServiceCheckMode,serviceName:String,serverName:String):String = "%s %s %s %s".format(modeContractor(mode),messageSubject,serviceName,serverName).take(155).toString 
-	protected def failureSubject(mode:ServiceCheckMode,serviceName:String,serverName:String):String = "%s %s %s %s".format(modeContractor(mode),messageSubject,serviceName,serverName).take(155).toString
+	protected def successSubject(mode:ServiceCheckMode,serviceName:String,serverName:String):String = "%s PASS %s %s %s".format(modeContractor(mode),messageSubject,serviceName,serverName).take(155).toString
+	protected def failureSubject(mode:ServiceCheckMode,serviceName:String,serverName:String):String = "%s FAIL %s %s %s".format(modeContractor(mode),messageSubject,serviceName,serverName).take(155).toString
 
 	protected def modeContractor(mode:ServiceCheckMode):String = mode match {
 		case PRODUCTION => "PRD"
