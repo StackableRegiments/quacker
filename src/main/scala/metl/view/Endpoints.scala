@@ -14,12 +14,12 @@ trait Stemmer {
 
 object SystemRestHelper extends RestHelper with Stemmer with Logger {
   serve {
-    case Req(List("history", service, server, label), _, _) => () => {
-      val checks = HistoryServer.getHistory(None, service, server, label)
+    case Req(List("history", service, server, serviceCheckName), _, _) => () => {
+      val checks = HistoryServer.getHistory(None, service, server, serviceCheckName)
       Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
     }
-    case Req(List("history", historyListenerName, service, server, label), _, _) => () => {
-      val checks = HistoryServer.getHistory(Some(historyListenerName), service, server, label)
+    case Req(List("history", historyListenerName, service, server, serviceCheckName), _, _) => () => {
+      val checks = HistoryServer.getHistory(Some(historyListenerName), service, server, serviceCheckName)
       Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
     }
     case Req("allHistory" :: _, _, _) => () => {

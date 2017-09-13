@@ -73,10 +73,9 @@ object Templates {
 	def getEndpointInformationTemplate = TemplateFinder.findAnyTemplate(List("_EndpointInformation")).openOr(NodeSeq.Empty)
 }
 
-
 trait VisualElement {
 	val id:String = nextFuncName
-	val label:String 
+	val label:String
 	protected var internalServiceName = "unknown"
 	protected var internalServerName = "unknown"
 	protected def template = NodeSeq.Empty
@@ -222,6 +221,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
 		(xml \\ "serviceCheck").map(sc => {
 			val periodInt = getInt(sc,"period").getOrElse(60) * 1000
 			val period = new TimeSpan(periodInt)
+			val serviceCheckName = getAttr(sc,"name").getOrElse("unnamed")
 			val label = getText(sc,"label").getOrElse("no label")
 			val mode = ServiceCheckMode.parse(getText(sc,"mode").getOrElse("test"))
 			val timeout = getInt(sc,"timeout").map(t => new TimeSpan(t))
@@ -243,30 +243,28 @@ object ServiceCheckConfigurator extends ConfigFileReader {
 							EndpointDescriptor(epName,epUrl,epDesc)
 						}).toList
 						val htmlDescriptor = getText(sc,"html").getOrElse("")
-						val name = getText(sc,"name").getOrElse("")
 						try {
 							val html = scala.xml.XML.loadString(htmlDescriptor)
-							new EndpointInformationWithHtml(name,html,endpoints)
+							new EndpointInformationWithHtml(serviceCheckName,html,endpoints)
 						} catch {
 							case e:Throwable => 
-								EndpointInformationWithString(name,htmlDescriptor,endpoints)
+								EndpointInformationWithString(serviceCheckName,htmlDescriptor,endpoints)
 						}
 					}
 					case "information" => {
-						val name = getText(sc,"name").getOrElse("")
 						val htmlDescriptor = getText(sc,"html").getOrElse("")
 						try {
 							val html = scala.xml.XML.loadString(htmlDescriptor)
-							HtmlInformation(name,html)
+							HtmlInformation(serviceCheckName,html)
 						} catch {
 							case e:Throwable => 
-								Information(name,htmlDescriptor)
+								Information(serviceCheckName,htmlDescriptor)
 						}
 					}
 					case "icmp" => {
 						val host = getOrError(getText(sc,"host"),"","host not specified")
 						val ipv6 = getBool(sc,"ipv6").getOrElse(false)
-						PingICMP(mode,label,host,ipv6,period)
+						PingICMP(mode,serviceCheckName,label,host,ipv6,period)
 					}
 					case "xmpp" => {
 						val host = getOrError(getText(sc,"host"),"","host not specified")
@@ -275,7 +273,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
 							case _ => Empty
 						}
 						val allowAnonymousAccess = false
-						PingXmpp(mode,label,host,domain,allowAnonymousAccess,period)
+						PingXmpp(mode,serviceCheckName,label,host,domain,allowAnonymousAccess,period)
 					}
 					case "oracle" => {
 						val uri = getOrError(getText(sc,"connectionUri"),"","connection string not specified")
@@ -287,7 +285,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
 							val tsMap = Matchers.configureFromXml(ts)
 							VerifiableSqlResultSetDefinition(rowBehaviour,tsMap)
 						})
-						PingOracle(mode,label,uri,username,password,query,thresholds,period)
+						PingOracle(mode,serviceCheckName,label,uri,username,password,query,thresholds,period)
 					}
 					case "mysql" => {
 						val host = getOrError(getText(sc,"host"),"","host not specified")
@@ -300,18 +298,18 @@ object ServiceCheckConfigurator extends ConfigFileReader {
 							val tsMap = Matchers.configureFromXml(ts)
 							VerifiableSqlResultSetDefinition(rowBehaviour,tsMap)
 						})
-						PingMySQL(mode,label,host,db,query,username,password,thresholds,period)
+						PingMySQL(mode,serviceCheckName,label,host,db,query,username,password,thresholds,period)
 					}
 					case "mongo" => {
 						val host = getOrError(getText(sc,"host"),"","host not specified")
 						val port = getOrError(getInt(sc,"port"),-1,"port not specified")
 						val db = getOrError(getText(sc,"database"),"","database not specified")
 						val table = getOrError(getText(sc,"table"),"","table not specified")
-						PingMongo(mode,label,host,port,db,table,period)
+						PingMongo(mode,serviceCheckName,label,host,port,db,table,period)
 					}
 					case "memcached" => {
 						val host = getOrError(getText(sc,"host"),"","host not specified")
-						PingMemCached(mode,label,host,period)
+						PingMemCached(mode,serviceCheckName,label,host,period)
 					}
 					case "ldap" => {
 						val host = getOrError(getText(sc,"host"),"","host not specified")
@@ -319,12 +317,12 @@ object ServiceCheckConfigurator extends ConfigFileReader {
 						val password = getOrError(getText(sc,"password"),"","password not specified")
 						val searchTerm = getOrError(getText(sc,"searchTerm"),"","searchTerm not specified")
 						val searchBase = getOrError(getText(sc,"searchBase"),"","searchTerm not specified")
-						new PingLDAP(mode,label,host,username,password,searchBase,searchTerm,period)
+						new PingLDAP(mode,serviceCheckName,label,host,username,password,searchBase,searchTerm,period)
 					}
 					case "munin" => {
 						val host = getOrError(getText(sc,"host"),"localhost","host not specified")
 						val port = getOrError(getInt(sc,"port"),4949,"port not specified")
-						new PingMunin(mode,label,host,port,List(MuninCategoryDefinition("cpu",PercentageCounter),MuninCategoryDefinition("memory",Guage)),period)
+						new PingMunin(mode,serviceCheckName,label,host,port,List(MuninCategoryDefinition("cpu",PercentageCounter),MuninCategoryDefinition("memory",Guage)),period)
 					}
 					case "munin_threshold" => {
 						val host = getOrError(getText(sc,"host"),"localhost","host not specified")
@@ -335,7 +333,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
 								val tsMap = Matchers.configureFromXml(ts)
 								(tsName,MuninCategoryDefinition(tsName,MuninFieldType.parse(tsType),tsMap))
 							}):_*)
-						PingMuninAgainstThreshhold(mode,label,host,port,thresholds,period)
+						PingMuninAgainstThreshhold(mode,serviceCheckName,label,host,port,thresholds,period)
 					}
           case "samba" => {
             val host = getOrError(getText(sc,"host"),"localhost","host not specified")
@@ -343,13 +341,13 @@ object ServiceCheckConfigurator extends ConfigFileReader {
             val file = getOrError(getText(sc,"file"),"serverStatus","host not specified")
             val username = getOrError(getText(sc,"username"),"","host not specified")
             val password = getOrError(getText(sc,"password"),"","host not specified")
-            PingSamba(mode,label,host,domain,file,username,password,period)
+            PingSamba(mode,serviceCheckName,label,host,domain,file,username,password,period)
           }
 					case "svn" => {
 						val host = getOrError(getText(sc,"host"),"","host not specified")
 						val username = getOrError(getText(sc,"username"),"","username not specified")
 						val password = getOrError(getText(sc,"password"),"","password not specified")
-						PingSVN(mode,label,host,username,password,period)
+						PingSVN(mode,serviceCheckName,label,host,username,password,period)
 					}
 					case "http" => {
 						val url = getOrError(getText(sc,"url"),"","url not specified")
@@ -362,7 +360,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
 								case _ => false
 							}
 						}).toList
-						HttpCheck(mode,label,url,additionalHeaders,matcher,period)
+						HttpCheck(mode,serviceCheckName,label,url,additionalHeaders,matcher,period)
 					}
 					case "http_with_credentials" => {
 						val url = getOrError(getText(sc,"url"),"","url not specified")
@@ -377,7 +375,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
 								case _ => false
 							}
 						}).toList
-						HttpCheckWithBasicAuth(mode,label,url,username,password,additionalHeaders,matcher,period)
+						HttpCheckWithBasicAuth(mode,serviceCheckName,label,url,username,password,additionalHeaders,matcher,period)
 					}
  					case "dependency" => {
 						val matchers:Map[DependencyDescription,DependencyMatcher] = Map(getNodes(sc,"thresholds").map(t => {
@@ -389,20 +387,20 @@ object ServiceCheckConfigurator extends ConfigFileReader {
 							val matcher = DependencyMatchers.configureFromXml(t)
 							(desc,matcher)
 						}):_*)
-						DependencyCheck(mode,label,matchers,period)
+						DependencyCheck(mode,serviceCheckName,label,matchers,period)
 					}
 					case "matcher" => {
             getImmediateNodes(sc,"matcher").map(mNodes => {
               Matchers.configureFromXml(mNodes).headOption.map(ho => {
                 val matcher = ho._2
-                MatcherCheck(mode,label,matcher,period)
+                MatcherCheck(mode,serviceCheckName,label,matcher,period)
               }).getOrElse(NullCheck)
             }).headOption.getOrElse(NullCheck)
 					}
           case "script" => {
             val interpolator = Interpolator.configureFromXml( <interpolators>{getImmediateNodes(sc,"interpolator")}</interpolators> )
             val sequence = FunctionalCheck.configureFromXml( <steps>{getImmediateNodes(sc,"step")}</steps> )
-            ScriptedCheck(mode,label,sequence,interpolator.getOrElse(EmptyInterpolator),period)  
+            ScriptedCheck(mode,serviceCheckName,label,sequence,interpolator.getOrElse(EmptyInterpolator),period)
           }
 					case other => {
 						failed = true
@@ -440,9 +438,10 @@ object ServiceCheckConfigurator extends ConfigFileReader {
 	}
 }
 
-abstract class Pinger(incomingLabel:String, incomingMode:ServiceCheckMode) extends LiftActor with VisualElement with metl.comet.CheckRenderHelper with Logger {
+abstract class Pinger(incomingName:String,incomingLabel:String,incomingMode:ServiceCheckMode) extends LiftActor with VisualElement with metl.comet.CheckRenderHelper with Logger {
   import GraphableData._
 	val mode = incomingMode
+	val name = incomingName
 	override val label = incomingLabel
 	override def template = Templates.getServiceTemplate
 	var checkTimeout:Box[TimeSpan] = Empty
@@ -479,7 +478,7 @@ abstract class Pinger(incomingLabel:String, incomingMode:ServiceCheckMode) exten
 		val now = updatedTime(false)
 		lastStatus = Full(false)
 		currentFailures = currentFailures + 1
-    val cr = CheckResult(id,label,getServiceName,getServerName,now,why,lastUp,detail,mode,false)
+    val cr = CheckResult(id,name,label,getServiceName,getServerName,now,why,lastUp,detail,mode,false)
     DashboardServer ! cr
     HistoryServer ! cr
 		if (currentFailures >= failureTolerance){
@@ -498,7 +497,7 @@ abstract class Pinger(incomingLabel:String, incomingMode:ServiceCheckMode) exten
 		updatedTime(true,now)
 		lastStatus = Full(true)
 		currentFailures = 0
-    var cr =  CheckResult(id,label,getServiceName,getServerName,now,why,lastUp,"",mode,true,data)
+    var cr =  CheckResult(id,name,label,getServiceName,getServerName,now,why,lastUp,"",mode,true,data)
     HistoryServer ! cr
 		DashboardServer ! cr 
 		ErrorRecorder ! cr 
@@ -608,7 +607,7 @@ abstract class Pinger(incomingLabel:String, incomingMode:ServiceCheckMode) exten
   }
 }
 
-case class PingXmpp(serviceCheckMode:ServiceCheckMode, incomingLabel:String,resource:String,serviceName:Option[String]=None,allowAnonymousAccess:Boolean=false,time:TimeSpan = 10 seconds) extends Pinger(incomingLabel,serviceCheckMode){
+case class PingXmpp(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,resource:String,serviceName:Option[String]=None,allowAnonymousAccess:Boolean=false,time:TimeSpan = 10 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
 	val hostname = resource
 	val service = serviceName.getOrElse(hostname)
   override val pollInterval = time
@@ -692,7 +691,7 @@ case object PercentageGuage extends MuninFieldType
 
 case class MuninCategoryDefinition(name:String,fieldType:MuninFieldType,matchers:Map[String,Matcher] = Map.empty[String,Matcher])
 
-class PingMunin(serviceCheckMode:ServiceCheckMode, incomingLabel:String, host:String, port:Int, onlyFetch:List[MuninCategoryDefinition] = List(MuninCategoryDefinition("cpu",Counter),MuninCategoryDefinition("memory",Guage)), time:TimeSpan = 5 seconds) extends PingTelnet(serviceCheckMode,incomingLabel,host,port,time){
+class PingMunin(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String, host:String, port:Int, onlyFetch:List[MuninCategoryDefinition] = List(MuninCategoryDefinition("cpu",Counter),MuninCategoryDefinition("memory",Guage)), time:TimeSpan = 5 seconds) extends PingTelnet(serviceCheckMode,incomingName,incomingLabel,host,port,time){
 	protected val previous = {
 		val map = new MSMap[String,MSMap[String,Double]]()
 		onlyFetch.map(munCatDef => map.put(munCatDef.name,new MSMap[String,scala.Double]()))
@@ -790,7 +789,7 @@ class PingMunin(serviceCheckMode:ServiceCheckMode, incomingLabel:String, host:St
 	}
 }
 
-case class PingMuninAgainstThreshhold(serviceCheckMode:ServiceCheckMode, incomingLabel:String, host:String, port:Int, thresholds:Map[String,MuninCategoryDefinition] = Map.empty[String,MuninCategoryDefinition], time:TimeSpan = 5 seconds) extends PingMunin(serviceCheckMode,incomingLabel,host,port,thresholds.values.toList,time){
+case class PingMuninAgainstThreshhold(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String, host:String, port:Int, thresholds:Map[String,MuninCategoryDefinition] = Map.empty[String,MuninCategoryDefinition], time:TimeSpan = 5 seconds) extends PingMunin(serviceCheckMode,incomingName,incomingLabel,host,port,thresholds.values.toList,time){
 	override def telnetBehaviour(tc:TelnetClient):List[String] = {
 		val completeOutput = interpretMuninData(tc)
 		var errors = List.empty[String]
@@ -828,7 +827,7 @@ case class PingMuninAgainstThreshhold(serviceCheckMode:ServiceCheckMode, incomin
 	}
 }
 
-class PingTelnet(serviceCheckMode:ServiceCheckMode, incomingLabel:String,host:String,port:Int,time:TimeSpan = 5 seconds) extends Pinger(incomingLabel,serviceCheckMode){
+class PingTelnet(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,host:String,port:Int,time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
   override val pollInterval = time
 	protected val commandResponseTerminator:Option[String] = None
 	protected def telnetBehaviour(tc:TelnetClient):List[String] = {
@@ -869,7 +868,7 @@ class PingTelnet(serviceCheckMode:ServiceCheckMode, incomingLabel:String,host:St
 }
 
 
-case class PingICMP(serviceCheckMode:ServiceCheckMode, incomingLabel:String,uri:String,ipv6:Boolean = false,time:TimeSpan = 5 seconds) extends Pinger(incomingLabel,serviceCheckMode){
+case class PingICMP(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,uri:String,ipv6:Boolean = false,time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
 		//pinging is done via ipv4 at present.  ipv6 in some networks results in unexpected results for some subnets
    private val pingCmd = (ServiceConfigurator.isWindows,ServiceConfigurator.isLinux,ServiceConfigurator.isOSX,ipv6) match {
 		case (true,false,false,false) => "ping -4 -n 1 "+uri
@@ -1101,7 +1100,7 @@ import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeoutException
 import scala.concurrent.{Future,Await}
 
-case class PingOracle(serviceCheckMode:ServiceCheckMode, incomingLabel:String,uri:String,username:String,password:String, query:String, thresholds:List[VerifiableSqlResultSetDefinition] = List.empty[VerifiableSqlResultSetDefinition], time:TimeSpan = 5 seconds) extends Pinger(incomingLabel,serviceCheckMode){
+case class PingOracle(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,uri:String,username:String,password:String, query:String, thresholds:List[VerifiableSqlResultSetDefinition] = List.empty[VerifiableSqlResultSetDefinition], time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
   override val pollInterval = time
 	OracleSetup.initialize
 	protected val connectionCreationTimeout = 10000L
@@ -1167,7 +1166,7 @@ object MySQLSetup {
 	def initialize = {}	
 }
 
-case class PingMySQL(serviceCheckMode:ServiceCheckMode, incomingLabel:String,uri:String,database:String,query:String,username:String,password:String,thresholds:List[VerifiableSqlResultSetDefinition] = List.empty[VerifiableSqlResultSetDefinition], time:TimeSpan = 5 seconds) extends Pinger(incomingLabel,serviceCheckMode){
+case class PingMySQL(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,uri:String,database:String,query:String,username:String,password:String,thresholds:List[VerifiableSqlResultSetDefinition] = List.empty[VerifiableSqlResultSetDefinition], time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
   override val pollInterval = time
 	MySQLSetup.initialize
   var sqlConnection:Option[Connection] = None
@@ -1205,7 +1204,7 @@ case class PingMySQL(serviceCheckMode:ServiceCheckMode, incomingLabel:String,uri
 	override def performCheck = succeed(status.toString)
 }
 
-case class PingSamba(serviceCheckMode:ServiceCheckMode, incomingLabel:String,hostname:String,domain:String,filename:String,username:String,password:String,time:TimeSpan = 5 seconds) extends Pinger(incomingLabel,serviceCheckMode) {
+case class PingSamba(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,hostname:String,domain:String,filename:String,username:String,password:String,time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode) {
   override val pollInterval = time
   def isForURI(uri:URI):Boolean = uri.getHost == hostname && uri.getScheme == "smb"
   val auth = new NtlmPasswordAuthentication(domain,username,password)
@@ -1231,7 +1230,7 @@ case class PingSamba(serviceCheckMode:ServiceCheckMode, incomingLabel:String,hos
 	override def performCheck = succeed(status.toString)
 }
 
-case class PingMongo(serviceCheckMode:ServiceCheckMode, incomingLabel:String,hostname:String,port:Int,database:String,table:String,time:TimeSpan = 5 seconds) extends Pinger(incomingLabel,serviceCheckMode){
+case class PingMongo(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,hostname:String,port:Int,database:String,table:String,time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
   override val pollInterval = time
 	var mongo = new Mongo(hostname,port)
   def status = {
@@ -1245,7 +1244,7 @@ case class PingMongo(serviceCheckMode:ServiceCheckMode, incomingLabel:String,hos
   }
 	override def performCheck = succeed(status.toString)
 }
-case class PingMemCached(serviceCheckMode:ServiceCheckMode, incomingLabel:String,uri:String, time:TimeSpan = 5 seconds) extends Pinger(incomingLabel,serviceCheckMode){
+case class PingMemCached(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,uri:String, time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
   override val pollInterval = time
   private	val port = 11211
 	private val address = new InetSocketAddress(uri,11211)
@@ -1270,7 +1269,7 @@ case class PingMemCached(serviceCheckMode:ServiceCheckMode, incomingLabel:String
   }:PartialFunction[Throwable,Unit]) orElse super.exceptionHandler
 	override def performCheck = succeed(status.toString)
 }
-class PingLDAP(serviceCheckMode:ServiceCheckMode, incomingLabel:String,host:String,username:String,password:String,searchBase:String,searchTerm:String,time:TimeSpan = 5 seconds) extends Pinger(incomingLabel,serviceCheckMode){
+class PingLDAP(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,host:String,username:String,password:String,searchBase:String,searchTerm:String,time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
   override val pollInterval = time
 	private val infoGroups = Seq("cn","uid","sn","givenname","mail")
 	private val env = new java.util.Hashtable[String,String]();
@@ -1316,7 +1315,7 @@ class PingLDAP(serviceCheckMode:ServiceCheckMode, incomingLabel:String,host:Stri
 	override def performCheck = succeed(status.toString)
 }
 
-case class PingSVN(serviceCheckMode:ServiceCheckMode, incomingLabel:String,server:String,username:String,password:String,time:TimeSpan = 5 seconds) extends Pinger(incomingLabel,serviceCheckMode){
+case class PingSVN(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,server:String,username:String,password:String,time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
   override val pollInterval = time
   SVNRepositoryFactoryImpl.setup
   private val authManager = SVNWCUtil.createDefaultAuthenticationManager(username,password)
@@ -1331,12 +1330,12 @@ case class PingSVN(serviceCheckMode:ServiceCheckMode, incomingLabel:String,serve
   }
 	override def performCheck = succeed(status.toString)
 }
-case class CheckUnexceptional(serviceCheckMode:ServiceCheckMode, incomingLabel:String,condition:Function0[Any],time:TimeSpan = 5 seconds) extends Pinger(incomingLabel,serviceCheckMode){
+case class CheckUnexceptional(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,condition:Function0[Any],time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
   override val pollInterval = time
   def status = condition()
 	override def performCheck = succeed("Was expected")
 }
-case class CheckDoesnt(serviceCheckMode:ServiceCheckMode, incomingLabel:String,condition:Function0[Option[String]], time:TimeSpan = 5 seconds) extends Pinger(incomingLabel,serviceCheckMode){
+case class CheckDoesnt(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,condition:Function0[Option[String]], time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
   override val pollInterval = 5 seconds
 	override def performCheck = {
 		condition() match {
@@ -1438,7 +1437,7 @@ class HTTPResponseMatcher{
 	}
 }
 
-case class HttpCheck(serviceCheckMode:ServiceCheckMode, incomingLabel:String,uri:String,headers:List[Tuple2[String,String]] = List.empty[Tuple2[String,String]], matcher:HTTPResponseMatcher = HTTPResponseMatchers.default, time:TimeSpan = 5 seconds) extends Pinger(incomingLabel,serviceCheckMode){
+case class HttpCheck(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,uri:String,headers:List[Tuple2[String,String]] = List.empty[Tuple2[String,String]], matcher:HTTPResponseMatcher = HTTPResponseMatchers.default, time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
   override val pollInterval = time
 	def getClient = Http.getClient
   var client = getClient
@@ -1457,7 +1456,7 @@ case class HttpCheck(serviceCheckMode:ServiceCheckMode, incomingLabel:String,uri
 	}
 	override def performCheck = succeed(status._1.toString,status._2)
 }
-case class HttpCheckWithBasicAuth(serviceCheckMode:ServiceCheckMode, incomingLabel:String,uri:String,username:String,password:String, headers:List[Tuple2[String,String]] = List.empty[Tuple2[String,String]], matcher:HTTPResponseMatcher = HTTPResponseMatchers.default, time:TimeSpan = 5 seconds) extends Pinger(incomingLabel,serviceCheckMode){
+case class HttpCheckWithBasicAuth(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,uri:String,username:String,password:String, headers:List[Tuple2[String,String]] = List.empty[Tuple2[String,String]], matcher:HTTPResponseMatcher = HTTPResponseMatchers.default, time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
   override val pollInterval = time
 	def getClient = Http.getAuthedClient(username,password)
   var client = getClient
@@ -1476,7 +1475,7 @@ case class HttpCheckWithBasicAuth(serviceCheckMode:ServiceCheckMode, incomingLab
 	}
 	override def performCheck = succeed(status._1.toString,status._2)
 }
-case class DependencyCheck(serviceCheckMode:ServiceCheckMode,incomingLabel:String,dependencies:Map[DependencyDescription,DependencyMatcher],time:TimeSpan) extends Pinger(incomingLabel,serviceCheckMode){
+case class DependencyCheck(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,dependencies:Map[DependencyDescription,DependencyMatcher],time:TimeSpan) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
 	override val pollInterval = time
 	failureTolerance = 3
 	def status = {
@@ -1492,7 +1491,7 @@ case class DependencyCheck(serviceCheckMode:ServiceCheckMode,incomingLabel:Strin
 	}
 	override def performCheck = succeed(status)
 }
-case class MatcherCheck(serviceCheckMode:ServiceCheckMode,incomingLabel:String,matcher:Matcher,time:TimeSpan) extends Pinger(incomingLabel,serviceCheckMode){
+case class MatcherCheck(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,matcher:Matcher,time:TimeSpan) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
 	override val pollInterval = time
 	failureTolerance = 3
 	def status = "%s is %s".format(matcher.describe,matcher.verify(true).toString)
@@ -3261,7 +3260,7 @@ class ScriptEngine(interpolator:Interpolator) {
   }
 }
       
-case class ScriptedCheck(serviceCheckMode:ServiceCheckMode,incomingLabel:String,sequence:List[FunctionalCheck],interpolator:Interpolator,time:TimeSpan) extends Pinger(incomingLabel,serviceCheckMode){
+case class ScriptedCheck(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,sequence:List[FunctionalCheck],interpolator:Interpolator,time:TimeSpan) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
   override val pollInterval = time
   val scriptEngine = new ScriptEngine(interpolator)
   def status = {

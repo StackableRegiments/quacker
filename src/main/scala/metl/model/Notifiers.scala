@@ -124,7 +124,7 @@ object GraphableData {
   implicit def convert(in:Boolean) = GraphableBoolean(in)
 }
 
-case class CheckResult(id:String,label:String,service:String,server:String,when:Date,why:String,lastUp:Box[Date],detail:String,mode:ServiceCheckMode,success:Boolean,data:List[Tuple2[Long,Map[String,GraphableDatum]]] = Nil)
+case class CheckResult(id:String,serviceCheck:String,label:String,service:String,server:String,when:Date,why:String,lastUp:Box[Date],detail:String,mode:ServiceCheckMode,success:Boolean,data:List[Tuple2[Long,Map[String,GraphableDatum]]] = Nil)
 
 abstract class ErrorActor(name:String) extends LiftActor {
 	protected def outputAction(cr:CheckResult) = {

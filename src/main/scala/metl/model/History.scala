@@ -26,7 +26,7 @@ abstract class HistoryListener(val name:String) extends LiftActor with Logger {
 		case c:CheckResult if filterAction(c) => outputAction(c)
 		case _ => {}
 	}
-  def getHistoryFor(service:String,server:String,label:String,after:Option[Long]):List[CheckResult] = Nil
+  def getHistoryFor(service:String, server:String, serviceCheck:String, after:Option[Long]):List[CheckResult] = Nil
   def getAllHistory(after:Option[Long]):List[List[CheckResult]] = Nil
 }
 
@@ -73,7 +73,7 @@ class InMemoryHistoryListener(override val name:String,historyCountPerItem:Int) 
   val store = new MutMap[Tuple3[String,String,String],Queue[CheckResult]]
 	override val filterAction:(CheckResult)=>Boolean = (c:CheckResult) => true
 	override def outputAction(cr:CheckResult):Unit = {
-    val key = (cr.service,cr.server,cr.label)
+    val key = (cr.service,cr.server,cr.serviceCheck)
     val oldValue = store.get(key).getOrElse(Queue.empty[CheckResult])
     var newValue = oldValue.enqueue(cr)
     while (historyCountPerItem > 0 && newValue.length > historyCountPerItem && newValue.length > 0){
@@ -82,8 +82,8 @@ class InMemoryHistoryListener(override val name:String,historyCountPerItem:Int) 
     }
     store += ((key,newValue))
   }
-  override def getHistoryFor(service:String,server:String,label:String,after:Option[Long]):List[CheckResult] = {
-    val res = store.get((service,server,label)).map(_.toList).getOrElse(Nil)
+  override def getHistoryFor(service:String, server:String, serviceCheck:String, after:Option[Long]):List[CheckResult] = {
+    val res = store.get((service,server,serviceCheck)).map(_.toList).getOrElse(Nil)
     after.map(a => res.filter(_.when.getTime > a)).getOrElse(res)
   }
 	override def getAllHistory(after:Option[Long]):List[List[CheckResult]] = {
@@ -129,6 +129,7 @@ class MongoHistoryListener(override val name:String,host:String,port:Int,databas
 		dbo.put("label",cr.label)
 		dbo.put("service",cr.service)
 		dbo.put("server",cr.server)
+		dbo.put("serviceCheck",cr.serviceCheck)
 		dbo.put("when",cr.when)
 		dbo.put("why",cr.why)
 		cr.lastUp.map(lu => dbo.put("lastUp",lu))
@@ -144,6 +145,7 @@ class MongoHistoryListener(override val name:String,host:String,port:Int,databas
       label = dbo.get("label").asInstanceOf[String],
       service = dbo.get("service").asInstanceOf[String],
       server = dbo.get("server").asInstanceOf[String],
+			serviceCheck = dbo.get("serviceCheck").asInstanceOf[String],
       when = dbo.get("when").asInstanceOf[Date],
       why = dbo.get("why").asInstanceOf[String],
       lastUp = tryo(dbo.get("lastUp").asInstanceOf[Date]),
@@ -182,12 +184,12 @@ class MongoHistoryListener(override val name:String,host:String,port:Int,databas
 			}
 		}
 	}
-  override def getHistoryFor(service:String,server:String,label:String,after:Option[Long]):List[CheckResult] = { //not yet implementing "after"
+  override def getHistoryFor(service:String, server:String, serviceCheck:String, after:Option[Long]):List[CheckResult] = { //not yet implementing "after"
     withMongo(c => {
       val query = new BasicDBObject
       query.put("service",service)
       query.put("server",server)
-      query.put("label",label)
+      query.put("name",serviceCheck)
       c.find(query).toArray
     }).map(_.toArray.toList).getOrElse(Nil).map(o => dbObjectToCr(o.asInstanceOf[DBObject]))
   }
@@ -204,9 +206,9 @@ object HistoryServer extends LiftActor with ConfigFileReader with Logger {
 	def clear = {
 		historyListeners = List.empty[HistoryListener]
 	}
-  def getHistory(name:Option[String],service:String,server:String,label:String):List[CheckResult] = {
-    val listeners = name.map(n => historyListeners.filter(_.name == n)).getOrElse(historyListeners)
-    listeners.flatMap(_.getHistoryFor(service, server, label, None))
+  def getHistory(listenerName:Option[String],service:String,server:String,serviceCheckName:String):List[CheckResult] = {
+    val listeners = listenerName.map(n => historyListeners.filter(_.name == n)).getOrElse(historyListeners)
+    listeners.flatMap(_.getHistoryFor(service, server, serviceCheckName, None))
   }
 	def getAllHistory:List[List[CheckResult]] = {
 		historyListeners.flatMap(_.getAllHistory(None))
