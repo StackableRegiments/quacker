@@ -488,7 +488,7 @@
 						getChecks:function(){return checks;},
 						getErrors:function(){return errors;},
 						updateTable:function(newCheck){
-							var statusClasses = newCheck["statusClass"]
+							var statusClasses = newCheck["statusClass"];
 							var identifier = newCheck['id'];
 							checks[identifier].check = newCheck;
 							if (newCheck['statusCode'] == "N"){
@@ -580,8 +580,8 @@
 			<div id="adornerBackground"></div>
 			<div id="popupMessageBoxContainer">
 				<div id="loadingImage"></div>
-					<div id="popupMessageBox"></div>
-					<div id="progressItems"></div>
+				<div id="popupMessageBox"></div>
+				<div id="progressItems"></div>
 			</div>
 		</div>
 		<div id="clientSideControls">

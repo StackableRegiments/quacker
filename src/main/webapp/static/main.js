@@ -106,7 +106,7 @@ function createChecks(){
         })).append($("<span/>",{
             'class': furtherDetailClass,
             'text':': '
-        })).append(innerObj);
+        })).append("&nbsp;&nbsp;").append(innerObj);
         if (inner != undefined){
             innerObj.append(inner);
         }
@@ -139,6 +139,7 @@ function createChecks(){
             });
             serverRootNode.append(serverHeader).append(serverChecks);
             _.forEach(checksInServer,function(check){
+                console.log("check: " + check.label + ", " + check.mode);
                 var checkNode = $("<span/>",{
                     'class': _.reduce(['serviceCheck','check',toggleableClass],function(acc,item){return acc + ' ' + item;},''),
                     'id': check.id
@@ -167,13 +168,13 @@ function createChecks(){
                         var summaryContainer = elem([],true,false);
                         var summaryLine1 = checkElem([],false,false);
                         var capacity = furtherDetail('Purpose','serviceCapacity',true,check.label);
-                        var serviceClass = furtherDetail('Class','serviceClass',true,check.mode);
-                        summaryLine1.append(capacity).append(serviceClass);
+                        summaryLine1.append(capacity);
                         var summaryLine2 = checkElem([],true,true);
+                        var serviceClass = furtherDetail('Class','serviceClass',true,check.mode);
                         var lastChecked = furtherDetail('Last checked','serviceLastChecked',false,check.lastChecked);
                         var lastUp = furtherDetail('Last up','serviceLastUp',true,check.lastUp);
                         var frequency = furtherDetail('Frequency','servicePeriod',true,check.pollInterval);
-                        summaryLine2.append(lastChecked).append(lastUp).append(frequency);
+                        summaryLine2.append(serviceClass).append(lastChecked).append(lastUp).append(frequency);
                         summaryContainer.append(summaryLine1).append(summaryLine2);
                         summary.append(summaryContainer);
                         var detailContainer = checkElem([],true,true);
@@ -309,6 +310,8 @@ function createCheck(obj){
     pluginSystem.fireCommand('createCheck','core.createCheck',obj);
 };
 function internalUpdateCheck(newCheck,targetNode){
+    console.log("newCheck: " + newCheck["label"] + ", " + newCheck["mode"]);
+
     var rootNode = targetNode;
     var id = newCheck["id"];
     if (rootNode == undefined){
