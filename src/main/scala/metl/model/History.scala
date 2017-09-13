@@ -26,8 +26,8 @@ abstract class HistoryListener(val name:String) extends LiftActor with Logger {
 		case c:CheckResult if filterAction(c) => outputAction(c)
 		case _ => {}
 	}
-  def getHistoryFor(service:String, server:String, serviceCheck:String, after:Option[Long]):List[CheckResult] = Nil
-  def getAllHistory(after:Option[Long]):List[List[CheckResult]] = Nil
+  def getHistoryFor(service:String,server:String,serviceCheck:String,after:Option[Long],limit:Option[Int]):List[CheckResult] = Nil
+  def getAllHistory(after:Option[Long],limit:Option[Int]):List[List[CheckResult]] = Nil
 }
 
 abstract class PushingToRemoteHistoryListener(name:String) extends HistoryListener(name) {
@@ -82,13 +82,15 @@ class InMemoryHistoryListener(override val name:String,historyCountPerItem:Int) 
     }
     store += ((key,newValue))
   }
-  override def getHistoryFor(service:String, server:String, serviceCheck:String, after:Option[Long]):List[CheckResult] = {
+  override def getHistoryFor(service:String,server:String,serviceCheck:String,after:Option[Long],limit:Option[Int]):List[CheckResult] = {
     val res = store.get((service,server,serviceCheck)).map(_.toList).getOrElse(Nil)
-    after.map(a => res.filter(_.when.getTime > a)).getOrElse(res)
+		val timeBounded = after.map(a => res.filter(_.when.getTime > a)).getOrElse(res)
+		limit.map(l => timeBounded.take(l)).getOrElse(timeBounded)
   }
-	override def getAllHistory(after:Option[Long]):List[List[CheckResult]] = {
+	override def getAllHistory(after:Option[Long],limit:Option[Int]):List[List[CheckResult]] = {
 		val all = store.keySet.map(store.get(_).map(_.toList)).map(_.getOrElse(Nil)).toList
-		after.map(a => all.map(c => c.filter(_.when.getTime > a))).getOrElse(all)
+		val timeBounded = after.map(a => all.map(c => c.filter(_.when.getTime > a))).getOrElse(all)
+		limit.map(l => timeBounded.map(_.take(l))).getOrElse(timeBounded)
 	}
 }
 
@@ -184,7 +186,7 @@ class MongoHistoryListener(override val name:String,host:String,port:Int,databas
 			}
 		}
 	}
-  override def getHistoryFor(service:String, server:String, serviceCheck:String, after:Option[Long]):List[CheckResult] = { //not yet implementing "after"
+  override def getHistoryFor(service:String, server:String, serviceCheck:String, after:Option[Long], limit:Option[Int]):List[CheckResult] = { //not yet implementing "after"
     withMongo(c => {
       val query = new BasicDBObject
       query.put("service",service)
@@ -206,12 +208,20 @@ object HistoryServer extends LiftActor with ConfigFileReader with Logger {
 	def clear = {
 		historyListeners = List.empty[HistoryListener]
 	}
-  def getHistory(listenerName:Option[String],service:String,server:String,serviceCheckName:String):List[CheckResult] = {
+  def getHistory(listenerName:Option[String],service:String,server:String,serviceCheckName:String,limit:Option[String]):List[CheckResult] = {
     val listeners = listenerName.map(n => historyListeners.filter(_.name == n)).getOrElse(historyListeners)
-    listeners.flatMap(_.getHistoryFor(service, server, serviceCheckName, None))
+		val count = limit match {
+			case s:Some[String] => s.map(_.toInt)
+			case None => None
+		}
+    listeners.flatMap(_.getHistoryFor(service, server, serviceCheckName, None, count))
   }
-	def getAllHistory:List[List[CheckResult]] = {
-		historyListeners.flatMap(_.getAllHistory(None))
+	def getAllHistory(limit:Option[String]):List[List[CheckResult]] = {
+		val count = limit match {
+			case s:Some[String] => s.map(_.toInt)
+			case None => None
+		}
+		historyListeners.flatMap(_.getAllHistory(None, count))
 	}
 	def configureFromXml(xml:Node):List[String] = {
 		debug("configureFromXml: %s".format(xml))

@@ -8,16 +8,16 @@ import net.liftweb.util.Helpers.tryo
 
 object SystemRestHelper extends RestHelper with Logger {
   serve {
-    case Req(List("history", service, server, serviceCheckName), _, _) => () => {
-      val checks = HistoryServer.getHistory(None, service, server, serviceCheckName)
+    case r@Req(List("history", service, server, serviceCheckName), _, _) => () => {
+      val checks = HistoryServer.getHistory(None, service, server, serviceCheckName, r.param("limit"))
       Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
     }
-    case Req(List("history", historyListenerName, service, server, serviceCheckName), _, _) => () => {
-      val checks = HistoryServer.getHistory(Some(historyListenerName), service, server, serviceCheckName)
+    case r@Req(List("history", historyListenerName, service, server, serviceCheckName), _, _) => () => {
+      val checks = HistoryServer.getHistory(Some(historyListenerName), service, server, serviceCheckName, r.param("limit"))
       Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
     }
-    case Req("allHistory" :: _, _, _) => () => {
-      val checks = HistoryServer.getAllHistory
+    case r@Req("allHistory" :: _, _, _) => () => {
+      val checks = HistoryServer.getAllHistory(r.param("limit"))
       Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
     }
     case Req("reloadXml" :: _, _, _) => () => {
