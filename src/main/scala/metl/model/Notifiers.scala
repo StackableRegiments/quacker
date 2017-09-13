@@ -25,6 +25,7 @@ case object STAGING extends ServiceCheckMode
 case object PRODUCTION extends ServiceCheckMode
 case object TEST extends ServiceCheckMode
 case object DEVELOPMENT extends ServiceCheckMode
+case object OPERATIONS extends ServiceCheckMode
 
 object ServiceCheckMode {
 	def parse(s:String):ServiceCheckMode = s.toLowerCase.trim  match {
@@ -32,6 +33,7 @@ object ServiceCheckMode {
 		case "production" => PRODUCTION
 		case "test" => TEST
 		case "development" => DEVELOPMENT
+		case "operations" => OPERATIONS
 		case _ => TEST
 	}
 }
