@@ -71,7 +71,7 @@ libraryDependencies ++= {
     /*samba*/
     "jcifs" % "jcifs" % "1.3.17",
     /*general utils specific*/
-    "io.github.stackableregiments" %% "common-utils" % "0.2.+",
+    "io.github.stackableregiments" %% "common-utils" % "1.2.+",
 //    "com.metl" % "LiftExtensions" % "1.0-SNAPSHOT",
     /*auth*/
     "io.github.stackableregiments" %% "lift-authentication" % "0.2.+",

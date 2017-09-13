@@ -27,6 +27,7 @@ abstract class HistoryListener(val name:String) extends LiftActor with Logger {
 		case _ => {}
 	}
   def getHistoryFor(service:String,server:String,label:String,after:Option[Long]):List[CheckResult] = Nil
+  def getAllHistory(after:Option[Long]):List[List[CheckResult]] = Nil
 }
 
 abstract class PushingToRemoteHistoryListener(name:String) extends HistoryListener(name) {
@@ -85,6 +86,10 @@ class InMemoryHistoryListener(override val name:String,historyCountPerItem:Int) 
     val res = store.get((service,server,label)).map(_.toList).getOrElse(Nil)
     after.map(a => res.filter(_.when.getTime > a)).getOrElse(res)
   }
+	override def getAllHistory(after:Option[Long]):List[List[CheckResult]] = {
+		val all = store.keySet.map(store.get(_).map(_.toList)).map(_.getOrElse(Nil)).toList
+		after.map(a => all.map(c => c.filter(_.when.getTime > a))).getOrElse(all)
+	}
 }
 
 object NullListener extends HistoryListener("null") {
@@ -194,17 +199,22 @@ class MongoHistoryListener(override val name:String,host:String,port:Int,databas
 	}
 }
 
-object HistoryServer extends LiftActor with ConfigFileReader {
+object HistoryServer extends LiftActor with ConfigFileReader with Logger {
 	var historyListeners:List[HistoryListener] = List.empty[HistoryListener]
 	def clear = {
 		historyListeners = List.empty[HistoryListener]
 	}
   def getHistory(name:Option[String],service:String,server:String,label:String):List[CheckResult] = {
     val listeners = name.map(n => historyListeners.filter(_.name == n)).getOrElse(historyListeners)
-    listeners.flatMap(_.getHistoryFor(service,server,label,None))
+    listeners.flatMap(_.getHistoryFor(service, server, label, None))
   }
+	def getAllHistory:List[List[CheckResult]] = {
+		historyListeners.flatMap(_.getAllHistory(None))
+	}
 	def configureFromXml(xml:Node):List[String] = {
-		val newHistoryListeners = (xml \\ "historyListeners").map(hls => (hls \\ "historyListener")).flatten.map(n => {
+		warn("configureFromXml: %s".format(xml))
+		val newHistoryListeners = (xml \ "historyListeners").map(hls => (hls \ "historyListener")).flatten.map(n => {
+			warn("configuring from node: %s".format(n))
 			val name = getText(n,"name").getOrElse("unknown history listener")
 			val listenerType = getText(n,"type")
 			listenerType match {

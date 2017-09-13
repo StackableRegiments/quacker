@@ -3,3 +3,5 @@ project/target
 project/project/target
 .idea/
 *.iml
+config/*.xml
+monitoringDashboardConfig/*.xml
