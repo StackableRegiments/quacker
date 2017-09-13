@@ -6,13 +6,7 @@ import net.liftweb.http._
 import net.liftweb.http.rest.RestHelper
 import net.liftweb.util.Helpers.tryo
 
-trait Stemmer {
-  def stem(in: String): Tuple2[String, String] = {
-    (("00000" + in).reverse.slice(3, 5).reverse, in)
-  }
-}
-
-object SystemRestHelper extends RestHelper with Stemmer with Logger {
+object SystemRestHelper extends RestHelper with Logger {
   serve {
     case Req(List("history", service, server, serviceCheckName), _, _) => () => {
       val checks = HistoryServer.getHistory(None, service, server, serviceCheckName)
