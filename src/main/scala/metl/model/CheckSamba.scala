@@ -22,8 +22,8 @@ case class PingSamba(serviceCheckMode:ServiceCheckMode,incomingName:String,incom
       val fileList = file.list() match {
         case a:Array[String] if a.length == 0 => throw new DashboardException("Samba exception","resource empty")
         case a:Array[String] => a.toList
-        case null => throw new DashboardException("Samba exception","resource cannot be resolved")
-        case other => throw new DashboardException("Samba exception","unexpected response from SmbFile.list => %s".format(other))
+        case null => throw DashboardException("Samba exception","resource cannot be resolved")
+        case other => throw DashboardException("Samba exception","unexpected response from SmbFile.list => %s".format(other))
       }
       fileList.mkString(", ")
     }

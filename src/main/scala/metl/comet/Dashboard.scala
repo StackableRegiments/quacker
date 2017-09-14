@@ -96,8 +96,8 @@ trait CheckRenderHelper {
 object DashboardServer extends LiftActor with ListenerManager{
   def createUpdate = NodeSeq.Empty
   override def lowPriority = {
-    case c:CheckResult => updateListeners(c)
-		case s:StatusCall	=> updateListeners(s)
+    case c:CheckResult => sendListenersMessage(c)
+		case s:StatusCall	=> sendListenersMessage(s)
     case _ => {}
   } 
 }

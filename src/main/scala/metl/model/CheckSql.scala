@@ -191,6 +191,9 @@ case class PingOracle(serviceCheckMode:ServiceCheckMode,incomingName:String,inco
             (false,null.asInstanceOf[java.sql.Connection])
           }
         }
+
+/*
+        // Fruitless type test: a value of type (Boolean,Connection) cannot also be a List[Option[Option[Tuple2[Boolean,Connection]]]]
         result match {
           case l:List[Option[Option[Tuple2[Boolean,Connection]]]] if l.length > 0 => l.head match {
             case Some(Some((_,null))) => {
@@ -206,6 +209,7 @@ case class PingOracle(serviceCheckMode:ServiceCheckMode,incomingName:String,inco
             }
           }
         }
+*/
       })),Duration(connectionCreationTimeout,"millis"))
     } catch {
       case e:TimeoutException => {
