@@ -8,7 +8,7 @@ import scala.xml.Node
 object ServiceCheckConfigurator extends ConfigFileReader {
   def configureFromXml(xml:Node, serviceName:String = "unknown", serverName:String = "unknown"):List[VisualElement] = {
     (xml \\ "serviceCheck").map(sc => {
-warn("Configuring from:\n%s".format(sc))
+      debug("Configuring serviceCheck from:\n%s".format(sc))
       val periodInt = getInt(sc,"period").getOrElse(60) * 1000
       val period = new TimeSpan(periodInt)
       val serviceCheckName = getAttr(sc,"name").getOrElse("unnamed")
