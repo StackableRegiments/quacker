@@ -1,30 +1,7 @@
 package metl.model
 
-import metl.comet._
 import net.liftweb._
-import net.liftweb.actor._
-import net.liftweb.common._
-//import http._
-import net.liftweb.http.js._
-//import net.liftweb.http.js.JE._
-import json.JsonAST._
-import net.liftweb.util._
 import net.liftweb.util.Helpers._
-
-import xml._
-import scala.xml.Node
-
-//Http and other utils
-import com.metl.utils._
-//mysql
-import java.sql.{Connection,DriverManager}
-//LDAP
-import javax.naming._
-import javax.naming.directory._
-//PING
-import java.io.{BufferedInputStream,BufferedOutputStream}
-//TELNET
-import org.apache.commons.net.telnet._
 
 import java.io.{BufferedInputStream, BufferedOutputStream}
 import java.sql.{Connection, DriverManager}
@@ -34,7 +11,6 @@ import javax.naming.directory.{InitialDirContext, SearchControls}
 
 import GraphableData._
 import com.metl.utils.{CleanHttpClient, HTTPResponse, Http}
-import metl.model.JDBCFunctionalCheckDriverInitializations.error
 import net.liftweb.common.{Box, Empty, Full, Logger}
 import net.liftweb.util.Helpers.{now, tryo}
 import org.apache.commons.net.telnet.TelnetClient
@@ -42,7 +18,7 @@ import org.apache.commons.net.telnet.TelnetClient
 import scala.xml.Node
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future, TimeoutException}
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeoutException
 
@@ -215,6 +191,8 @@ case class JDBCFunctionalCheck(driver:String,url:String,username:String,password
             (false,null.asInstanceOf[java.sql.Connection])
           }
         }
+/*
+        // Fruitless type test: a value of type (Boolean,Connection) cannot also be a List[Option[Option[Tuple2[Boolean,Connection]]]]
         result match {
           case l:List[Option[Option[Tuple2[Boolean,Connection]]]] if l.length > 0 => l.head match {
             case Some(Some((_,null))) => {
@@ -229,7 +207,7 @@ case class JDBCFunctionalCheck(driver:String,url:String,username:String,password
               errors = errors ::: List(new DashboardException("SQL Connection failed","other: %s".format(other.toString)))
             }
           }
-        }
+        }*/
       })),Duration(connectionCreationTimeout,"millis"))
     } catch {
       case e:TimeoutException => {
@@ -523,9 +501,7 @@ case class MuninFunctionalCheck(host:String, port:Int, onlyFetch:List[MuninCateg
 }
 
 case class JmxFunctionalCheck(jmxServiceUrl:String,credentials:Option[Tuple2[String,String]] = None) extends FunctionalServiceCheck {
-  import java.lang.Thread.State
   import java.lang.management._
-  import java.lang.management.ManagementFactory._
   import javax.management.remote.{JMXServiceURL,JMXConnectorFactory}
   import collection.JavaConverters._
   override def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
