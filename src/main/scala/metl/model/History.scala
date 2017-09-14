@@ -1,21 +1,12 @@
 package metl.model
 
-import org.apache.commons.io.IOUtils
 import net.liftweb._
 import net.liftweb.actor._
-import net.liftweb.common._
-import http._
 import util._
 import Helpers._
-import net.liftweb.http.SHtml._
 import java.util.Date
-import collection.JavaConverters._
 import net.liftweb.common.Logger
-import net.liftweb.util.TimeHelpers
-//file writer
-import java.io._
 
-import metl.comet._
 import com.mongodb._
 import scala.xml._
 
@@ -38,7 +29,7 @@ abstract class PushingToRemoteHistoryListener(name:String) extends HistoryListen
 		if (tryImmediately){
 			internalResetEnvironment
 		} else {
-			ActorPing.schedule(this,Restart,1000) 
+			Schedule.schedule(this,Restart,1000)
 		}
 	}
 	protected def internalPerformRepeatedAtomicAction(cr:CheckResult):Unit = {
@@ -48,7 +39,7 @@ abstract class PushingToRemoteHistoryListener(name:String) extends HistoryListen
 		}
 	}
 	protected def performRepeatableAtomicAction(check:CheckResult):Boolean 
-	protected def internalResetEnvironment:Unit = {
+	protected def internalResetEnvironment():Unit = {
 		resetEnvironment
 		var remainingActions = List.empty[()=>Boolean]
 		pendingActions.foreach(pa => {
@@ -58,9 +49,9 @@ abstract class PushingToRemoteHistoryListener(name:String) extends HistoryListen
 		})
 		pendingActions = remainingActions
 	}
-	protected def resetEnvironment:Unit = {}
+	protected def resetEnvironment():Unit = {}
 	override def outputAction(cr:CheckResult):Unit = internalPerformRepeatedAtomicAction(cr)
-	override def messageHandler = {
+	override def messageHandler: PartialFunction[Any, Unit] = {
 		case c:CheckResult if filterAction(c) => outputAction(c)
 		case Restart => internalResetEnvironment
 		case _ => {}
@@ -107,9 +98,9 @@ class DebugHistoryListener(override val name:String) extends HistoryListener(nam
 
 
 class MongoHistoryListener(override val name:String,host:String,port:Int,database:String,collection:String) extends PushingToRemoteHistoryListener(name){
-	var mongo = new Mongo(host,port)
+	var mongo = new MongoClient(host,port)
 	//choosing to use the "normal" write concern.  http://api.mongodb.org/java/2.6/com/mongodb/WriteConcern.html for more information
-	val defaultWriteConcern = WriteConcern.valueOf("NORMAL")
+	val defaultWriteConcern: WriteConcern = WriteConcern.valueOf("NORMAL")
 	def withMongo[A](action:DBCollection=>A):Option[A] = {
 		try {
 			val db = mongo.getDB(database)
@@ -124,7 +115,7 @@ class MongoHistoryListener(override val name:String,host:String,port:Int,databas
 	}
 	override def resetEnvironment = {
 		mongo.close
-		mongo = new Mongo(host,port)
+		mongo = new MongoClient(host,port)
 	}
 	def crToDBObject(cr:CheckResult):DBObject = {
 		val dbo = new BasicDBObject

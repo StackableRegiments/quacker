@@ -206,7 +206,7 @@ abstract class Pinger(incomingName:String,incomingLabel:String,incomingMode:Serv
 	}
   protected def resetEnvironment = { }
   def schedule(interval:TimeSpan = pollInterval) = {
-    ActorPing.schedule(this,Check,interval)
+    Schedule.schedule(this,Check,interval)
   }
   def fail(why:String,detail:String = "") = {
 		val lastUp = lastUptime

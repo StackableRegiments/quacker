@@ -71,14 +71,14 @@ object Servers extends ConfigFileReader{
 		oldChecks.foreach(check => {
 			if (!checks.contains(check)){
 				check ! StopPinger
-//				ActorPing.schedule(check,StopPinger,60 seconds)
+//				Schedule.schedule(check,StopPinger,60 seconds)
 			}
 		})
 		checks.foreach(check => {
 			if (!check.isRunning){
 				check match {
 //	this is a thought to ensure that the dependency checks start after the things they depend on.  I'm thinking instead that it would be better to simply set a default sequential required failures on them.
-//					case d:DependencyCheck => ActorPing.schedule(d,StartPinger,30 seconds)
+//					case d:DependencyCheck => Schedule.schedule(d,StartPinger,30 seconds)
 					case p:Pinger => p ! StartPinger
 				}
 			}
