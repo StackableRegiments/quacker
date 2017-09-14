@@ -72,11 +72,11 @@ case class PingICMP(serviceCheckMode:ServiceCheckMode,incomingName:String,incomi
     }
     pingProcess.destroy
     if (output.length == 0)
-      throw new DashboardException("Ping failed","ping command failed - no response from OS")
+      throw DashboardException("Ping failed","ping command failed - no response from OS")
     if (output.contains("cannot resolve") || output.contains("Unknown host") || output.contains("could not find host"))
-      throw new DashboardException("Ping failed","Unknown host: "+output)
+      throw DashboardException("Ping failed","Unknown host: "+output)
     if (!(output.contains(" 0% packet loss") || output.contains("(0% loss)")))
-      throw new DashboardException("Ping failed","Packet loss recognised: "+output)
+      throw DashboardException("Ping failed","Packet loss recognised: "+output)
     val stringOutput = output.toString
     val timeTaken = pingTimeExtractor(stringOutput)
     (stringOutput,timeTaken)
