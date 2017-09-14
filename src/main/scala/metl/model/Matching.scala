@@ -190,7 +190,7 @@ object Matchers extends ConfigFileReader {
 				try {
 					converterFunc(a)
 				} catch {
-					case _ => default
+					case _: Throwable => default
 				}
 			}).getOrElse(default)
 		}
