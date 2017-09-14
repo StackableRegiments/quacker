@@ -1,29 +1,19 @@
 package metl.model
 
-import metl.model._
-import net.liftweb._
 import net.liftweb.common._
 import net.liftweb.http._
-import net.liftweb.http.js.JsCmds._
-import net.liftweb.util._
 import net.liftweb.util.Helpers._
-import net.liftweb.http.TemplateFinder
-import net.liftweb.http.TemplateFinder._
 import xml._
-import net.liftweb.http.SHtml._
-import S._
 import java.util.Date
-import net.liftweb.common.Logger
-import net.liftweb.util.TimeHelpers
-import net.liftweb.http.provider.HTTPCookie 
+import net.liftweb.http.provider.HTTPCookie
 //email
 import net.liftweb.util.Mailer
 import net.liftweb.util.Mailer._
 
 object BugReport {
 
-	private val successTemplate = TemplateFinder.findAnyTemplate(List("_bugReportSuccess")).openOr(NodeSeq.Empty)
-	private val failureTemplate = TemplateFinder.findAnyTemplate(List("_bugReportFailure")).openOr(NodeSeq.Empty)
+	private val successTemplate = Templates(List("_bugReportSuccess")).openOr(NodeSeq.Empty)
+	private val failureTemplate = Templates(List("_bugReportFailure")).openOr(NodeSeq.Empty)
 	private def constructNode(in:NodeSeq):Node = {
 		//S.skipXmlHeader_=(true)
 		in.theSeq.headOption.getOrElse(Text("failed to construct response message")) 

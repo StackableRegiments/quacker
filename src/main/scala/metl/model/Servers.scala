@@ -106,7 +106,7 @@ object Servers extends ConfigFileReader{
 						)
 					}).apply(serviceContent).toSeq
 				}).foldLeft(List.empty[Node])((acc,item) => acc ::: item.toList))
-			} }).apply(Templates.getStructureTemplate)
+			} }).apply(ViewTemplates.getStructureTemplate)
 		})
   }
   def getVisualElements:List[VisualElement] = {

@@ -21,13 +21,13 @@ case object Check
 case object StartPinger
 case object StopPinger
 
-object Templates {
+object ViewTemplates {
 	//change these to vals to speed up the process
-	def getStructureTemplate: NodeSeq = TemplateFinder.findAnyTemplate(List("_Service")).openOr(NodeSeq.Empty)
-	def getServiceTemplate: NodeSeq = TemplateFinder.findAnyTemplate(List("_Check")).openOr(NodeSeq.Empty)
-	def getInformationTemplate: NodeSeq = TemplateFinder.findAnyTemplate(List("_Information")).openOr(NodeSeq.Empty)
-	def getErrorInformationTemplate: NodeSeq = TemplateFinder.findAnyTemplate(List("_ErrorInformation")).openOr(NodeSeq.Empty)
-	def getEndpointInformationTemplate: NodeSeq = TemplateFinder.findAnyTemplate(List("_EndpointInformation")).openOr(NodeSeq.Empty)
+	def getStructureTemplate: NodeSeq = Templates(List("_Service")).openOr(NodeSeq.Empty)
+	def getServiceTemplate: NodeSeq = Templates(List("_Check")).openOr(NodeSeq.Empty)
+	def getInformationTemplate: NodeSeq = Templates(List("_Information")).openOr(NodeSeq.Empty)
+	def getErrorInformationTemplate: NodeSeq = Templates(List("_ErrorInformation")).openOr(NodeSeq.Empty)
+	def getEndpointInformationTemplate: NodeSeq = Templates(List("_EndpointInformation")).openOr(NodeSeq.Empty)
 }
 
 trait VisualElement {
@@ -69,17 +69,17 @@ trait VisualElement {
       ("server",Str(server)),
       ("service",Str(service)),
       ("label",Str(label))
-    ) ::: asJsExp):_*)      
+    ) ::: asJsExp):_*)
   }
   protected def asJsExp:List[Tuple2[String,JsExp]] = Nil
 }
 
 case class HtmlInformation(name:String,html:NodeSeq) extends VisualElement {
 	override val label: String = "%s information".format(name)
-	override def template: NodeSeq = Templates.getInformationTemplate
+	override def template: NodeSeq = ViewTemplates.getInformationTemplate
 	override def templateRenderer: CssBindFunc = {
 		".serviceStatus [title]" #> label &
-		".informationBody *" #> html 	
+		".informationBody *" #> html
 	}
   override def asJson = List(
     JField("type",JString("htmlInformation")),
@@ -93,10 +93,10 @@ case class HtmlInformation(name:String,html:NodeSeq) extends VisualElement {
 
 case class Information(name:String,message:String) extends VisualElement {
 	override val label: String = name
-	override def template: NodeSeq = Templates.getInformationTemplate
+	override def template: NodeSeq = ViewTemplates.getInformationTemplate
 	override def templateRenderer: CssBindFunc = {
 		".serviceStatus [title]" #> label &
-		".informationBody *" #> message 	
+		".informationBody *" #> message
 	}
   override def asJson = List(
     JField("type",JString("information")),
@@ -110,7 +110,7 @@ case class Information(name:String,message:String) extends VisualElement {
 
 case class ErrorInformation(name:String,expectedPeriod:String,sourceString:String,errors:List[String]) extends VisualElement {
 	override val label: String = "Error: %s".format(name)
-	override def template: NodeSeq = Templates.getErrorInformationTemplate
+	override def template: NodeSeq = ViewTemplates.getErrorInformationTemplate
 	override def templateRenderer: CssBindFunc = {
 		".expectedPeriod *" #> expectedPeriod &
 		".sourceString *" #> sourceString &
@@ -130,13 +130,13 @@ case class ErrorInformation(name:String,expectedPeriod:String,sourceString:Strin
     ("source",Str(sourceString)),
     ("expectedPeriod",Str(expectedPeriod)),
     ("errors",JsArray(errors.map(e => Str(e))))
-  )    
+  )
 }
 
 case class EndpointInformationWithString(name:String,htmlDescriptor:String,endpoints:List[EndpointDescriptor]) extends EndpointInformationWithHtml(name,Text(htmlDescriptor),endpoints)
 class EndpointInformationWithHtml(name:String,html:NodeSeq,endpoints:List[EndpointDescriptor]) extends VisualElement {
 	override val label: String = name
-	override def template: NodeSeq = Templates.getEndpointInformationTemplate
+	override def template: NodeSeq = ViewTemplates.getEndpointInformationTemplate
 	override def templateRenderer: CssBindFunc = {
 		".informationBody *" #> html &
 		".serviceStatus [title]" #> label &
@@ -162,7 +162,7 @@ class EndpointInformationWithHtml(name:String,html:NodeSeq,endpoints:List[Endpoi
       ("name",Str(ep.name)),
       ("description",Str(ep.description))
     ):_*))))
-  )    
+  )
 }
 
 case class EndpointDescriptor(name:String,endpoint:String,description:String)
@@ -178,7 +178,7 @@ abstract class Pinger(incomingName:String,incomingLabel:String,incomingMode:Serv
 	val mode: ServiceCheckMode = incomingMode
 	val name: String = incomingName
 	override val label: String = incomingLabel
-	override def template: NodeSeq = Templates.getServiceTemplate
+	override def template: NodeSeq = ViewTemplates.getServiceTemplate
 	var checkTimeout:Box[TimeSpan] = Empty
 	var failureTolerance = 1
 	var lastCheckBegin:Box[Date] = Empty
