@@ -143,12 +143,20 @@ function createChecks(){
             })
             .enter().append("g")
             .attr("class","server");
+        var labels = servers
+            .append("text")
+            .attr("class","label")
+            .attr("x",60)
+            .attr("y",function(d,i){
+                return dGroup.height/2 + i * 30;
+            })
+            .text(function(d){
+                return d.label;
+            });
         var rings = servers
-            .selectAll(".rings")
-            .enter().append("g")
-            .attr("class","rings")
+            .append("g")
             .data([30,60,90])
-            .enter().append("circle")
+            .append("circle")
             .attr("cx",dGroup.width/2)
             .attr("cy",dGroup.height/2)
             .attr("r",function(d){return d})
