@@ -2,7 +2,17 @@
   <head>
     <link rel="stylesheet" href="/static/main.css"></link>
     <link href="https://fonts.googleapis.com/css?family=Cabin" rel="stylesheet">
+    <script src="https://d3js.org/d3.v4.min.js"></script>
     <script src="/static/main.js"></script>
+    <style>
+      svg{
+      height:100vh;
+      width:100vw;
+      position:absolute;
+      top:0;
+      left:0;
+      }
+    </style>
   </head>
   <div class="lift:comet?type=Dashboard" name="dashboard">
     <div id="jsonStructureContainer"></div>
@@ -13,7 +23,7 @@
     <hr />
     <div id="enable" ></div>
     <div id="dashboardServerContainer">
-      <div id="serverContainer" class="alwaysOn">Loading.  This can take up to 10 seconds.</div>
+      <div id="serverContainer" class="alwaysOn"><!--Loading.  This can take up to 10 seconds.--></div>
     </div>
   </div>
 </div>
