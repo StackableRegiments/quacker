@@ -1,5 +1,4 @@
 var defaultExpandedServices = [];
-var defaultExpandedServers = [];
 var defaultExpandedChecks = [];
 pluginSystem.registerCommand('dataChanged',function(){},function(){});
 pluginSystem.registerCommand('createCheck',function(){
@@ -33,10 +32,6 @@ $(function (){
     if (queryParamExpandedServices != undefined){
         defaultExpandedServices = $.map(queryParamExpandedServices.split(","),function(item){return item.split("+").join(" ");});
     }
-    var queryParamExpandedServers = queryParams["expandedServers"];
-    if (queryParamExpandedServers != undefined){
-        defaultExpandedServers = $.map(queryParamExpandedServers.split(","),function(item){return item.split("+").join(" ");});
-    }
     var queryParamExpandedChecks = queryParams["expandedChecks"];
     if (queryParamExpandedChecks != undefined){
         defaultExpandedChecks = $.map(queryParamExpandedChecks.split(","),function(item){return item.split("+").join(" ");});
@@ -46,17 +41,6 @@ $(function (){
     pluginSystem.resumeCommand('layoutChanged');
 });
 function createChecks(){
-    var templateContainer = $("#templateContainer");
-    var serviceTemplate = templateContainer.find(".serviceTemplate").clone();
-    var serverTemplate = templateContainer.find(".serverTemplate").clone();
-    var checkTemplate = templateContainer.find(".checkTemplate").clone();
-    var checkDetailContainerTemplate = templateContainer.find(".checkDetailContainerTemplate").clone();
-    var collapserTemplate = templateContainer.find(".collapserTemplate").clone();
-    var pingerTemplate = templateContainer.find(".pingerTemplate").clone();
-    var informationTemplate = templateContainer.find(".informationTemplate").clone();
-    var furtherDetailTemplate = templateContainer.find(".furtherDetailTemplate").clone();
-    templateContainer.remove();
-
     var hideableClass = "hideable";
     var toggleableClass = "toggleable";
     var toggledInClass = "toggledIn";
@@ -68,18 +52,10 @@ function createChecks(){
     var furtherDetailClass = "furtherDetail";
     var furtherDetailHiddenClass = "furtherDetailHidden";
     var furtherDetailVisibleClass = "furtherDetailVisible";
-    var rootNode = $("#serverContainer");
-    var getCollapser = function(){return collapserTemplate.clone();};
-    var getCollapserClosed = function() {
-        var elem = getCollapser();
-        elem.find(".collapserState").text("+");
-        return elem;
-    };
-    var getCollapserOpen = function() {
-        var elem = getCollapser();
-        elem.find(".collapserState").text("-");
-        return elem;
-    };
+    var rootId = "#serverContainer";
+    var rootNode = $(rootId);
+    var getCollapserClosed = function(){return $("<span/>",{text:"[+]",'class':"collapser"})};
+    var getCollapserOpen = function(){return $("<span/>",{text:"[-]",'class':"collapser"})};
     var elem = function(extraClasses,hideable,toggleable,inner){
         var classes = extraClasses;
         if (hideable){
@@ -114,155 +90,160 @@ function createChecks(){
         return returnObj;
     };
     var furtherDetail = function(label,className,hideData,inner){
-        var fdRoot = furtherDetailTemplate.clone();
-        var innerDataSpan = fdRoot.find(".furtherDetailInner");
-        innerDataSpan.addClass(className);
+        var dataClasses = className;
         if (hideData){
-            innerDataSpan.addClass(furtherDetailClass);
+            dataClasses = dataClasses + furtherDetailClass;
         }
-        innerDataSpan.attr("title",label);
-        innerDataSpan.find(".serviceDataDescriptor").text(label);
-        innerDataSpan.find(".furtherDetailValue").append(inner);
-        return fdRoot;
-    };
-    var services = _.groupBy(jsonStructure,function(item){ return item.service; });
-    rootNode.html(_.map(services,function(checksInService,serviceName){
-        // console.log("service",serviceName,checksInService);
-        var serviceRootNode = serviceTemplate.clone();
-        var serviceExpanded = false;
-        var headerContainer = serviceRootNode.find(".serviceHeaderContainer");
-        var serviceCollapser = headerContainer.find(".serviceCollapser");
-        var serviceHeader = headerContainer.find(".serviceHeader");
-        var serviceNameElement = serviceHeader.find(".serviceName");
-        serviceNameElement.text(serviceName);
-        var serviceContent = serviceRootNode.find(".serviceContent");
-        var servers = _.groupBy(checksInService,function(item){ return item.server; });
-
-        var serviceToggleable = serviceRootNode.find('.'+toggleableClass);
-        var serviceHideable = serviceRootNode.find('.'+hideableClass);
-
-        serviceCollapser.html(getCollapserClosed());
-
-        var expandService = function(){
-            serviceToggleable.addClass(toggledInClass).removeClass(toggledOutClass);
-            serviceHideable.removeClass(hideableHiddenClass)
-            serviceCollapser.html(getCollapserOpen());
-            serviceExpanded = true;
-            pluginSystem.fireCommand('layoutChanged','core.expandService');
-        };
-        var collapseService = function(){
-            serviceToggleable.addClass(toggledOutClass).removeClass(toggledInClass);
-            serviceHideable.addClass(hideableHiddenClass)
-            serviceCollapser.html(getCollapserClosed());
-            serviceExpanded = false;
-            pluginSystem.fireCommand('layoutChanged','core.collapseService');
-        };
-        serviceCollapser.on('click',function(){
-            if (serviceExpanded){
-                collapseService();
-            } else {
-                expandService();
-            }
+        var innerObj = $("<span/>",{
+            'class':dataClasses,
+            'title':label
         });
-        serviceToggleable.addClass(toggledOutClass).removeClass(toggledInClass);
-        serviceHideable.addClass(hideableHiddenClass);
-        if (_.find(defaultExpandedServices,function(item){return item == serviceName;}) != undefined){
-            expandService();
+        var returnObj = $("<span/>",{
+            class:"detailContainer"
+        }).append($("<span/>",{
+            'class': 'serviceDataDescriptor '+ furtherDetailClass,
+            'text':label
+        })).append($("<span/>",{
+            'class': furtherDetailClass,
+            'text':': '
+        })).append("&nbsp;&nbsp;").append(innerObj);
+        if (inner != undefined){
+            innerObj.append(inner);
         }
-
-        serviceContent.html(
-            _.map(servers,function(checksInServer,serverName){
-                // console.log("server",serverName,checksInServer);
-                var serverRootNode = serverTemplate.clone();
-                var serverHeader = serverRootNode.find(".serverHeader");
-                serverHeader.find(".serverName").text(serverName);
-                var serverChecks = serverRootNode.find(".serverContent");
-
-                var serverToggleable = serverRootNode.find('.'+toggleableClass);
-                var serverHideable = serverRootNode.find('.'+hideableClass);
-
-                var serverCollapser = serverRootNode.find(".serverCollapser");
-                var serverExpanded = false;
-                serverCollapser.html(getCollapserClosed());
-
-                var expandServer = function(){
-                    serverToggleable.addClass(toggledInClass).removeClass(toggledOutClass);
-                    serverHideable.removeClass(hideableHiddenClass);
-                    serverCollapser.html(getCollapserOpen());
-                    serverExpanded = true;
-                    pluginSystem.fireCommand('layoutChanged','core.expandServer');
-                };
-                var collapseServer = function(){
-                    serverToggleable.addClass(toggledOutClass).removeClass(toggledInClass);
-                    serverHideable.addClass(hideableHiddenClass);
-                    serverCollapser.html(getCollapserClosed());
-                    serverExpanded = false;
-                    pluginSystem.fireCommand('layoutChanged','core.collapseServer');
-                };
-                serverCollapser.on('click',function(){
-                    if (serverExpanded){
-                        collapseServer();
-                    } else {
-                        expandServer();
-                    }
+        return returnObj;
+    };
+    var renderSvg = function(){
+        var svg = d3.select(rootId).append("svg");
+        var data = _.toPairs(_.groupBy(jsonStructure,function(item){ return item.service; }));
+        var dGroup = {
+            width:200,
+            height:200
+        }
+        var services = svg
+            .selectAll(".service")
+            .data(data)
+            .enter().append("g")
+            .attr("class","service")
+            .attr("height",dGroup.height)
+            .attr("width",dGroup.width)
+            .attr("transform",function(d,i){
+                return sprintf("translate(%s,%s)",i * dGroup.width, 0);
+            });
+        var serviceLabel = services.append("text")
+            .text(function(d){
+                return _.size(d[1]);
+            })
+            .attr("text-anchor","middle")
+            .attr("x",dGroup.width/2)
+            .attr("y",dGroup.height/2);
+        var servers = services
+            .selectAll(".server")
+            .data(function(d){
+                return d[1];
+            })
+            .enter().append("g")
+            .attr("class","server");
+        var labels = servers
+            .append("text")
+            .attr("class","label")
+            .attr("x",60)
+            .attr("y",function(d,i){
+                return dGroup.height/2 + i * 30;
+            })
+            .text(function(d){
+                return d.label;
+            });
+        var rings = servers
+            .append("g")
+            .data([30,60,90])
+            .append("circle")
+            .attr("cx",dGroup.width/2)
+            .attr("cy",dGroup.height/2)
+            .attr("r",function(d){return d})
+            .attr("stroke","black")
+            .attr("fill","none")
+            .attr("stroke-width",2);
+    }
+    var renderHtml = function(){
+        var services = _.groupBy(jsonStructure,function(item){ return item.service; });
+        var serviceNodes = [];
+        _.forIn(services,function(checksInService,serviceName){
+            var serviceRootNode = $("<div/>",{
+                'class':'serviceGroup'
+            });
+            var serviceExpanded = false;
+            var headerContainer = elem([],false,true);
+            var serviceCollapser = $("<span/>",{
+                'class':'serviceCollapser'
+            });
+            var serviceHeader = $("<span/>",{
+                'class':'serviceHeader',
+                'text':serviceName
+            });
+            var serviceContent = $("<span/>",{
+                'class':'serviceContent'
+            });
+            serviceRootNode.append(headerContainer.append(serviceCollapser).append(serviceHeader)).append(serviceContent);
+            var servers = _.groupBy(checksInService,function(item){ return item.server; });
+            _.forIn(servers,function(checksInServer,serverName){
+                var serverRootNode = elem(['serverGroup'],false,true);
+                var serverHeader = elem(['serverHeader'],true,true,serverName);
+                var serverChecks = $("<span/>",{
+                    'class':'serverChecks'
                 });
-                serverToggleable.addClass(toggledOutClass).removeClass(toggledInClass);
-                serverHideable.addClass(hideableHiddenClass);
-                if (_.find(defaultExpandedServers,function(item){return item == serverName;}) != undefined){
-                    expandServer();
-                }
-
-                serverChecks.html(_.map(checksInServer,function(check){
-                    var checkNode = checkTemplate.clone();
-                    checkNode.attr("id",check.id);
-                    // console.log("check: " + check.label + ", " + check.mode);
-
-                    var collapser = checkNode.find(".checkCollapser");
+                serverRootNode.append(serverHeader).append(serverChecks);
+                _.forEach(checksInServer,function(check){
+                    console.log("check: " + check.label + ", " + check.mode);
+                    var checkNode = $("<span/>",{
+                        'class': _.reduce(['serviceCheck','check',toggleableClass],function(acc,item){return acc + ' ' + item;},''),
+                        'id': check.id
+                    });
+                    var collapser = elem(['checkCollapser'],true,false);
                     collapser.html(getCollapserClosed());
                     var expanded = false;
-
+                    checkNode.append(collapser);
                     if ('type' in check){
                         if (check.type == "pinger"){
-                            var detailContainer = checkDetailContainerTemplate.clone();
+                            var summary = $("<span/>",{
+                                'class':'checkSummary'
+                            });
                             var tooltip = check.lastStatusCode +": "+ check.label + " (@"+check.lastChecked+") : "+check.lastWhy;
-                            detailContainer.attr('title',tooltip);
-
-                            var checkDetail = detailContainer.find(".checkDetail");
-                            checkDetail.find(".serviceWhy").append($("<span/>",{text:check.lastWhy}));
-                            checkDetail.find(".serviceDetail").append($("<span/>",{text:check.lastDetail}));
-                            checkNode.append(detailContainer);
-
-                            var pingerNode = pingerTemplate.clone();
-                            var checkStatus = furtherDetail('','checkStatus',false,check.lastStatusCode);
+                            var serviceStatus = furtherDetail('','serviceStatus',false,check.lastStatusCode).attr('title',tooltip);
                             switch (check.lastStatusCode){
-                                case 'Y':
-                                    checkStatus.addClass('serverOk');
-                                    break;
-                                case 'N':
-                                    checkStatus.addClass('serverError');
-                                    break;
-                                default:
+                            case 'Y':
+                                serviceStatus.addClass('serverOk');
+                                break;
+                            case 'N':
+                                serviceStatus.addClass('serverError');
+                                break;
+                            default:
                             }
-                            pingerNode.prepend(checkStatus);
-
-                            var summaryContainer = pingerNode.find(".pingerSummary");
-                            var summaryLine1 = summaryContainer.find(".summaryLine1");
+                            checkNode.prepend(serviceStatus);
+                            var summaryContainer = elem([],true,false);
+                            var summaryLine1 = checkElem([],false,false);
                             var capacity = furtherDetail('Purpose','serviceCapacity',true,check.label);
                             summaryLine1.append(capacity);
-                            var summaryLine2 = summaryContainer.find(".summaryLine2");
+                            var summaryLine2 = checkElem([],true,true);
                             var serviceClass = furtherDetail('Class','serviceClass',true,check.mode);
                             var lastChecked = furtherDetail('Last checked','serviceLastChecked',false,check.lastChecked);
                             var lastUp = furtherDetail('Last up','serviceLastUp',true,check.lastUp);
                             var frequency = furtherDetail('Frequency','servicePeriod',true,check.pollInterval);
                             summaryLine2.append(serviceClass).append(lastChecked).append(lastUp).append(frequency);
-
-                            checkNode.append(pingerNode);
+                            summaryContainer.append(summaryLine1).append(summaryLine2);
+                            summary.append(summaryContainer);
+                            var detailContainer = checkElem([],true,true);
+                            var checkDetail = $("<div/>",{
+                                'class':'checkDetail '+checkExpandableClass
+                            });
+                            var message = checkElem(['serviceWhy','furtherDetail'],false,true,$("<span/>",{text:check.lastWhy}));
+                            var detail = checkElem(['serviceDetail','furtherDetail'],false,true,$("<span/>",{text:check.lastDetail}));
+                            detailContainer.append(checkDetail.append(message).append(detail));
+                            checkNode.append(summary).append(detailContainer);
                         } else if (check.type == "information"){
-                            var informationNode = informationTemplate.clone();
-                            var serviceStatus = informationNode.find(".serviceStatus");
+                            var serviceStatus = elem([],true,false,"Information");
                             var header = furtherDetail('Information','serviceCapacity',true,check.label);
                             var information = checkElem(['information'],true,true,check.information);
-                            serviceStatus.append(checkElem([],true,false).append(checkElem([],false,true).append(header))).append(checkElem([],true,true).append(checkElem([],false,true).append(information)));
+                            checkNode.append(serviceStatus).append(checkElem([],true,false).append(checkElem([],false,true).append(header))).append(checkElem([],true,true).append(checkElem([],false,true).append(information)));
                         } else if (check.type == "htmlInformation"){
                             var serviceStatus = elem([],true,false,"Information");
                             var header = furtherDetail('Information','serviceCapacity',true,check.label);
@@ -339,13 +320,44 @@ function createChecks(){
                     if (_.find(defaultExpandedChecks,function(item){return item == check.label;}) != undefined){
                         expandCheck();
                     }
-                    return checkNode;
-                }));
-
-                return serverRootNode;
-            }));
-        return serviceRootNode;//serviceNodes.push(serviceRootNode);
-    }));
+                    serverChecks.append(checkNode);
+                });
+                serviceContent.append(serverRootNode);
+            });
+            var serviceToggleable = serviceRootNode.find('.'+toggleableClass);
+            var serviceHideable = serviceRootNode.find('.'+hideableClass);
+            serviceCollapser.html(getCollapserClosed());
+            var expandService = function(){
+                serviceToggleable.addClass(toggledInClass).removeClass(toggledOutClass);
+                serviceHideable.removeClass(hideableHiddenClass)
+                serviceCollapser.html(getCollapserOpen());
+                serviceExpanded = true;
+                pluginSystem.fireCommand('layoutChanged','core.expandService');
+            };
+            var collapseService = function(){
+                serviceToggleable.addClass(toggledOutClass).removeClass(toggledInClass);
+                serviceHideable.addClass(hideableHiddenClass)
+                serviceCollapser.html(getCollapserClosed());
+                serviceExpanded = false;
+                pluginSystem.fireCommand('layoutChanged','core.collapseService');
+            };
+            serviceCollapser.on('click',function(){
+                if (serviceExpanded){
+                    collapseService();
+                } else {
+                    expandService();
+                }
+            });
+            serviceToggleable.addClass(toggledOutClass).removeClass(toggledInClass);
+            serviceHideable.addClass(hideableHiddenClass);
+            if (_.find(defaultExpandedServices,function(item){return item == serviceName;}) != undefined){
+                expandService();
+            }
+            serviceNodes.push(serviceRootNode);
+        });
+        return serviceNodes;
+    }
+    rootNode.html(renderSvg());
 };
 function updateCheck(newCheck){
     pluginSystem.fireCommand('dataChanged','core.updateCheck',newCheck);
