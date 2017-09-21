@@ -5,20 +5,34 @@ svg {
     top:0;
     left:0;
 }
+
 .server {
     display:none;
 }
 
+.check {
+    display:none;
+}
+
 .serviceLabel {
-    font-family: Arial, sans-serif;
+    font-family: sans-serif;
     font-size: 1em;
-    stroke: #ffff00;
+    /*stroke: #0000ff;*/
+    /*stroke-width: 1px;*/
     fill: #0000ff;
 }
 
 .serverLabel {
-    font-family: Arial, sans-serif;
+    font-family: sans-serif;
+    font-size: 0.75em;
+    /*stroke: #0000ff;*/
+    /*stroke-width: 1px;*/
+    fill: #0000ff;
+}
+.checkLabel {
+    font-family: sans-serif;
     font-size: 0.5em;
-    stroke: #00ff00;
-    fill: #ff0000;
+    /*stroke: #0000ff;*/
+    /*stroke-width: 1px;*/
+    fill: #0000ff;
 }
