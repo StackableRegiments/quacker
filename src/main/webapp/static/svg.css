@@ -1,0 +1,24 @@
+svg {
+    height:100vh;
+    width:100vw;
+    position:absolute;
+    top:0;
+    left:0;
+}
+.server {
+    display:none;
+}
+
+.serviceLabel {
+    font-family: Arial, sans-serif;
+    font-size: 1em;
+    stroke: #ffff00;
+    fill: #0000ff;
+}
+
+.serverLabel {
+    font-family: Arial, sans-serif;
+    font-size: 0.5em;
+    stroke: #00ff00;
+    fill: #ff0000;
+}
