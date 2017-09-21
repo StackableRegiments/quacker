@@ -44,8 +44,18 @@ function createChecks(){
     var rootId = "#serverContainer";
     var rootNode = $(rootId);
     rootNode.html(renderSvg(rootId));
+    var redraw = function(){
+        rootNode.html(renderSvg(rootId));
+        requestAnimationFrame(redraw);
+    };
+    requestAnimationFrame(redraw);
 }
 function updateCheck(newCheck){
+    if ("id" in newCheck) {
+        var oldCheck = jsonStructure[newCheck.id];
+        console.log("updating:",oldCheck,newCheck);
+        jsonStructure[newCheck.id] = _.merge(oldCheck,newCheck);
+    }
     pluginSystem.fireCommand('dataChanged','core.updateCheck',newCheck);
 }
 function createCheck(obj){

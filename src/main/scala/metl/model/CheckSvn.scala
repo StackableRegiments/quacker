@@ -6,7 +6,7 @@ import org.tmatesoft.svn.core.io.SVNRepositoryFactory
 import org.tmatesoft.svn.core.wc.SVNWCUtil
 import net.liftweb.util.Helpers._
 
-case class PingSVN(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,server:String,username:String,password:String,time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
+case class PingSVN(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:ServiceCheckSeverity,incomingName:String,incomingLabel:String,server:String,username:String,password:String,time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode,serviceCheckSeverity){
   override val pollInterval = time
   SVNRepositoryFactoryImpl.setup
   private val authManager = SVNWCUtil.createDefaultAuthenticationManager(username,password)

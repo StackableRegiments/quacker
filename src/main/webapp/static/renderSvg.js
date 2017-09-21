@@ -1,4 +1,4 @@
-var renderSvg = function (rootId) {
+var renderSvg = function () {
     var isHidden = function (elem) {
         return !elem.is(":visible") || elem.is(":hidden") || elem.css("display") === "none";
     };
@@ -6,7 +6,16 @@ var renderSvg = function (rootId) {
     var serverLabelHeight = 15;
     var checkLabelHeight = 10;
 
-    var svg = d3.select(rootId).append("svg");
+    var severityRings = {
+        "impact":90,
+        "issue":60,
+        "alert":30
+    };
+    var severityCheck = function(check){
+        return severityRings[check.severity.toLowerCase()];
+    };
+    var rootElem = $("<div/>")[0];
+    var svg = d3.select(rootElem).append("svg");
     var data = _.toPairs(_.mapValues(_.groupBy(jsonStructure, function (item) {
         return item.service;
     }), function (v, k) {
@@ -42,7 +51,7 @@ var renderSvg = function (rootId) {
 
             }));
         }));
-        console.log("calculating offset:", serverIndex, checkIndex, result);
+        // console.log("calculating offset:", serverIndex, checkIndex, result);
         return result;
     }
 
@@ -78,18 +87,63 @@ var renderSvg = function (rootId) {
             return d[0];
         })
         .on("click", function (d, i) {
-            var selectorString = "#" + constructIdentity("service_" + d[0]) + " .server";
-            var selector = $(selectorString);
-            console.log("showing:", selectorString, selector, isHidden(selector));
-            if (isHidden(selector)) {
-                selector.show();
+            var serviceId = constructIdentity("service_" + d[0]);
+            var serverSelector = $("#" + serviceId + " .serverLabel");
+            var checkSelector = $("#" + serviceId + " .checkLabel");
+            if (isHidden(serverSelector)) {
+                serverSelector.show();
+                // checkSelector.show();
             } else {
-                selector.hide();
+                serverSelector.hide();
+                checkSelector.hide();
             }
         });
+
     services.each(function (service, serviceIndex) {
         var thisService = this;
-        console.log("each service", service, serviceIndex, thisService);
+        //console.log("each service", service, serviceIndex, thisService);
+        var ringData = _.flatMap(service[1],function(server){ return server[1];});
+        //console.log("built ringData",ringData);
+        var rings = d3.select(thisService).selectAll(".ring")
+            .data(ringData)
+            .enter()
+            .append("circle")
+            .attr("cx", dGroup.width / 2)
+            .attr("cy", dGroup.height / 2)
+            .attr("r", function (d) {
+                //console.log("r",d)
+                return severityCheck(d);
+            })
+            .attr("stroke", "black")
+            .attr("fill", "none")
+            .attr("stroke-width", 2);
+
+        function calcProportion(lastCheck, period) {
+            var now = new Date().getTime();
+            return (now - lastCheck) / period;
+        }
+
+        var indicators = d3.select(thisService).selectAll(".ringIndicator")
+            .data(ringData)
+            .enter()
+            .append("circle")
+            .attr("cx",function(d,i){
+                if ("lastCheck" in d && "period" in d){
+                    var position = dGroup.width * calcProportion(d.lastCheck,d.period);
+                    //console.log("drawing radius",d,i,proportion,position);
+                    return position;
+                } else {
+                    return 0;
+                }
+            })
+            .attr("cy",dGroup.height / 2)
+            .attr("class","checkIndicator")
+            .attr("r",5)
+            .attr("stroke","black")
+            .attr("fill",function(d){
+                return d.statusCode == "Y" ? "green" : "red";
+            })
+            .attr("stroke-width",1);
         var servers = d3.select(thisService).selectAll(".server")
             .data(service[1])
             .enter().append("g")
@@ -103,16 +157,16 @@ var renderSvg = function (rootId) {
             .attr("x", 60)
             .attr("y", function (d, i, coll, e) {
                 var above = calculateVerticalOffsetWithinService(serviceIndex, i);
-                console.log("serverLabels", d, i, coll, above);
+                // console.log("serverLabels", d, i, coll, above);
                 return dGroup.height + above;
             })
             .text(function (d) {
                 return d[0];
             })
             .on("click", function (d, i) {
-                var selectorString = "#" + constructIdentity("server_" + d[0]) + " .check";
+                var selectorString = "#" + constructIdentity("server_" + d[0]) + " .checkLabel";
                 var selector = $(selectorString);
-                console.log("showing:", selectorString, selector, isHidden(selector));
+                // console.log("showing:", selectorString, selector, isHidden(selector));
                 if (isHidden(selector)) {
                     selector.show();
                 } else {
@@ -121,7 +175,7 @@ var renderSvg = function (rootId) {
             });
         servers.each(function (server, serverIndex) {
             var thisServer = this;
-            console.log("each server", server, serverIndex, thisServer);
+            // console.log("each server", server, serverIndex, thisServer);
             var checks = d3.select(thisServer)
                 .selectAll(".check")
                 .data(server[1])
@@ -136,7 +190,7 @@ var renderSvg = function (rootId) {
                 .attr("x", 90)
                 .attr("y", function (sd, si, coll) {
                     var above = calculateVerticalOffsetWithinService(serviceIndex, serverIndex, si);
-                    console.log("checkLabels", sd, si, coll, above);
+                    // console.log("checkLabels", sd, si, coll, above);
                     return dGroup.height + above;
                 })
                 .text(function (d, i) {
@@ -146,17 +200,7 @@ var renderSvg = function (rootId) {
                     // console.log('mouseOverElem',this,d,i);
                 });
         });
+
     });
-    var rings = services
-        .append("g")
-        .data([30, 60, 90])
-        .append("circle")
-        .attr("cx", dGroup.width / 2)
-        .attr("cy", dGroup.height / 2)
-        .attr("r", function (d) {
-            return d
-        })
-        .attr("stroke", "black")
-        .attr("fill", "none")
-        .attr("stroke-width", 2);
+    return rootElem;
 };

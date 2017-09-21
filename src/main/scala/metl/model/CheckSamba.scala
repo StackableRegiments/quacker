@@ -5,7 +5,7 @@ import java.net.URI
 import jcifs.smb.{NtlmPasswordAuthentication, SmbFile}
 import net.liftweb.util.Helpers._
 
-case class PingSamba(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,hostname:String,domain:String,filename:String,username:String,password:String,time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode) {
+case class PingSamba(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:ServiceCheckSeverity,incomingName:String,incomingLabel:String,hostname:String,domain:String,filename:String,username:String,password:String,time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode,serviceCheckSeverity) {
   override val pollInterval = time
   def isForURI(uri:URI):Boolean = uri.getHost == hostname && uri.getScheme == "smb"
   val auth = new NtlmPasswordAuthentication(domain,username,password)

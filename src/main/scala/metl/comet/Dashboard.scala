@@ -60,8 +60,10 @@ trait CheckRenderHelper {
       case true => ""
       case _ => s.detail
     })),
+    JField("lastCheck",JInt(s.when.getTime())),
     JField("lastUp",JString(uptimeString(s.lastUp))),
     JField("mode",JString(s.mode.toString)),
+    JField("severity",JString(s.severity.toString)),
     JField("data",JArray(s.data.map(tup => {
       val when = tup._1
       val data = tup._2

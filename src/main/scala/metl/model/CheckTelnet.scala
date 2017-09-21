@@ -6,7 +6,7 @@ import java.util.Date
 import org.apache.commons.net.telnet.TelnetClient
 import net.liftweb.util.Helpers._
 
-class PingTelnet(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,host:String,port:Int,time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
+class PingTelnet(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:ServiceCheckSeverity,incomingName:String,incomingLabel:String,host:String,port:Int,time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode,serviceCheckSeverity){
   override val pollInterval = time
   protected val commandResponseTerminator:Option[String] = None
   protected def telnetBehaviour(tc:TelnetClient):List[String] = {

@@ -173,9 +173,10 @@ case object NullCheck extends VisualElement {
 	override val getServiceName:String = "null"
 }
 
-abstract class Pinger(incomingName:String,incomingLabel:String,incomingMode:ServiceCheckMode) extends LiftActor with VisualElement with metl.comet.CheckRenderHelper with Logger {
+abstract class Pinger(incomingName:String,incomingLabel:String,incomingMode:ServiceCheckMode,incomingSeverity:ServiceCheckSeverity) extends LiftActor with VisualElement with metl.comet.CheckRenderHelper with Logger {
   import GraphableData._
 	val mode: ServiceCheckMode = incomingMode
+	val severity: ServiceCheckSeverity = incomingSeverity
 	val name: String = incomingName
 	override val label: String = incomingLabel
 	override def template: NodeSeq = ViewTemplates.getServiceTemplate
@@ -213,7 +214,7 @@ abstract class Pinger(incomingName:String,incomingLabel:String,incomingMode:Serv
 		val now = updatedTime(false)
 		lastStatus = Full(false)
 		currentFailures = currentFailures + 1
-    val cr = CheckResult(id,name,label,getServiceName,getServerName,now,why,lastUp,detail,mode,false)
+    val cr = CheckResult(id,name,label,getServiceName,getServerName,now,why,lastUp,detail,mode,severity,false)
     DashboardServer ! cr
     HistoryServer ! cr
 		if (currentFailures >= failureTolerance){
@@ -232,7 +233,7 @@ abstract class Pinger(incomingName:String,incomingLabel:String,incomingMode:Serv
 		updatedTime(true,now)
 		lastStatus = Full(true)
 		currentFailures = 0
-    var cr =  CheckResult(id,name,label,getServiceName,getServerName,now,why,lastUp,"",mode,true,data)
+    var cr =  CheckResult(id,name,label,getServiceName,getServerName,now,why,lastUp,"",mode,severity,true,data)
     HistoryServer ! cr
 		DashboardServer ! cr 
 		ErrorRecorder ! cr 
@@ -275,14 +276,18 @@ abstract class Pinger(incomingName:String,incomingLabel:String,incomingMode:Serv
 			case true => (lastWhy.openOr("").take(500),lastDetail.openOr("").take(500))
 			case false => (lastWhy.openOr(""),lastDetail.openOr(""))
 		}).openOr(("",""))
+		val lastCheckTime:Long = lastCheck.map(_.getTime()).openOr(0L)
     List(
       JField("type",JString("pinger")),
       JField("lastChecked",JString(lastCheck.map(d => d.toString).openOr("NEVER"))),
       JField("lastSuccess",JBool(lastStatus.openOr(false))),
       JField("lastStatusCode",JString(lastStatusCode)),
       JField("lastUp",JString(lastUptimeString)),
+			JField("lastCheck",JInt(lastCheckTime)),
+			JField("period",JInt(pollInterval.millis)),
       JField("mode",JString(mode.toString)),
-      JField("lastWhy",JString(why)),
+      JField("severity",JString(severity.toString)),
+			JField("lastWhy",JString(why)),
       JField("lastDetail",JString(detail)),
       JField("pollInterval",JString(pollInterval.toString))
     )
@@ -298,9 +303,12 @@ abstract class Pinger(incomingName:String,incomingLabel:String,incomingMode:Serv
       ("lastSuccess",Str(lastStatus.openOr(false).toString)),
       ("lastStatusCode",Str(lastStatusCode)),
       ("lastUp",Str(lastUptimeString)),
-      ("mode",Str(mode.toString)),
-      ("lastWhy",Str(why)),
-      ("lastDetail",Str(detail)),
+			("lastCheck",Num(lastCheck.map(_.getTime()).getOrElse(0L))),
+			("period",Num(pollInterval.millis)),
+			("mode",Str(mode.toString)),
+			("severity",Str(severity.toString)),
+			("lastWhy",Str(why)),
+			("lastDetail",Str(detail)),
       ("pollInterval",Str(pollInterval.toString))
     )    
   }
@@ -340,12 +348,12 @@ abstract class Pinger(incomingName:String,incomingLabel:String,incomingMode:Serv
     case _ => {}
   }
 }
-case class CheckUnexceptional(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,condition:Function0[Any],time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
+case class CheckUnexceptional(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:ServiceCheckSeverity, incomingName:String,incomingLabel:String,condition:Function0[Any],time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode,serviceCheckSeverity){
   override val pollInterval = time
   def status = condition()
 	override def performCheck = succeed("Was expected")
 }
-case class CheckDoesnt(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,condition:Function0[Option[String]], time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
+case class CheckDoesnt(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:ServiceCheckSeverity, incomingName:String,incomingLabel:String,condition:Function0[Option[String]], time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode,serviceCheckSeverity){
   override val pollInterval = 5 seconds
 	override def performCheck = {
 		condition() match {
@@ -356,7 +364,7 @@ case class CheckDoesnt(serviceCheckMode:ServiceCheckMode,incomingName:String,inc
 		}
 	}
 }
-case class MatcherCheck(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,matcher:Matcher,time:TimeSpan) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
+case class MatcherCheck(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:ServiceCheckSeverity,incomingName:String,incomingLabel:String,matcher:Matcher,time:TimeSpan) extends Pinger(incomingName,incomingLabel,serviceCheckMode,serviceCheckSeverity){
 	override val pollInterval = time
 	failureTolerance = 3
 	def status = "%s is %s".format(matcher.describe,matcher.verify(true).toString)

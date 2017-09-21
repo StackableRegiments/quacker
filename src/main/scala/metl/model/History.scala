@@ -128,6 +128,7 @@ class MongoHistoryListener(override val name:String,host:String,port:Int,databas
 		cr.lastUp.map(lu => dbo.put("lastUp",lu))
 		dbo.put("detail",cr.detail)
 		dbo.put("mode",cr.mode.toString)
+		dbo.put("severity",cr.severity.toString)
 		dbo.put("success",cr.success)
 		dbo.put("data",toDBObject(cr.data))
 		dbo
@@ -144,6 +145,7 @@ class MongoHistoryListener(override val name:String,host:String,port:Int,databas
       lastUp = tryo(dbo.get("lastUp").asInstanceOf[Date]),
       detail = dbo.get("detail").asInstanceOf[String],
       mode = ServiceCheckMode.parse(dbo.get("mode").asInstanceOf[String]),
+      severity = ServiceCheckSeverity.parse(dbo.get("severity").asInstanceOf[String]),
       success = dbo.get("success").asInstanceOf[Boolean],
       data = Nil
     )

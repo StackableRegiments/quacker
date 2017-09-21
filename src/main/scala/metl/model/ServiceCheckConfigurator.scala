@@ -14,6 +14,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
       val serviceCheckName = getAttr(sc,"name").getOrElse("unnamed")
       val label = getText(sc,"label").getOrElse("no label")
       val mode = ServiceCheckMode.parse(getText(sc,"mode").getOrElse("test"))
+      val severity = ServiceCheckSeverity.parse(getText(sc,"severity").getOrElse("alert"))
       val timeout = getInt(sc,"timeout").map(t => new TimeSpan(t))
       val acceptedFailures = getInt(sc,"requiredSequentialFailures")
       val expectFail = getBool(sc,"expectFail")
@@ -55,7 +56,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
           case "icmp" => {
             val host = getOrError(getText(sc,"host"),"","host not specified")
             val ipv6 = getBool(sc,"ipv6").getOrElse(false)
-            PingICMP(mode,serviceCheckName,label,host,ipv6,period)
+            PingICMP(mode,severity,serviceCheckName,label,host,ipv6,period)
           }
           case "xmpp" => {
             val host = getOrError(getText(sc,"host"),"","host not specified")
@@ -64,7 +65,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
               case _ => Empty
             }
             val allowAnonymousAccess = false
-            PingXmpp(mode,serviceCheckName,label,host,domain,allowAnonymousAccess,period)
+            PingXmpp(mode,severity,serviceCheckName,label,host,domain,allowAnonymousAccess,period)
           }
           case "oracle" => {
             val uri = getOrError(getText(sc,"connectionUri"),"","connection string not specified")
@@ -76,7 +77,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
               val tsMap = Matchers.configureFromXml(ts)
               VerifiableSqlResultSetDefinition(rowBehaviour,tsMap)
             })
-            PingOracle(mode,serviceCheckName,label,uri,username,password,query,thresholds,period)
+            PingOracle(mode,severity,serviceCheckName,label,uri,username,password,query,thresholds,period)
           }
           case "mysql" => {
             val host = getOrError(getText(sc,"host"),"","host not specified")
@@ -89,18 +90,18 @@ object ServiceCheckConfigurator extends ConfigFileReader {
               val tsMap = Matchers.configureFromXml(ts)
               VerifiableSqlResultSetDefinition(rowBehaviour,tsMap)
             })
-            PingMySQL(mode,serviceCheckName,label,host,db,query,username,password,thresholds,period)
+            PingMySQL(mode,severity,serviceCheckName,label,host,db,query,username,password,thresholds,period)
           }
           case "mongo" => {
             val host = getOrError(getText(sc,"host"),"","host not specified")
             val port = getOrError(getInt(sc,"port"),-1,"port not specified")
             val db = getOrError(getText(sc,"database"),"","database not specified")
             val table = getOrError(getText(sc,"table"),"","table not specified")
-            PingMongo(mode,serviceCheckName,label,host,port,db,table,period)
+            PingMongo(mode,severity,serviceCheckName,label,host,port,db,table,period)
           }
           case "memcached" => {
             val host = getOrError(getText(sc,"host"),"","host not specified")
-            PingMemCached(mode,serviceCheckName,label,host,period)
+            PingMemCached(mode,severity,serviceCheckName,label,host,period)
           }
           case "ldap" => {
             val host = getOrError(getText(sc,"host"),"","host not specified")
@@ -108,12 +109,12 @@ object ServiceCheckConfigurator extends ConfigFileReader {
             val password = getOrError(getText(sc,"password"),"","password not specified")
             val searchTerm = getOrError(getText(sc,"searchTerm"),"","searchTerm not specified")
             val searchBase = getOrError(getText(sc,"searchBase"),"","searchTerm not specified")
-            new PingLDAP(mode,serviceCheckName,label,host,username,password,searchBase,searchTerm,period)
+            new PingLDAP(mode,severity,serviceCheckName,label,host,username,password,searchBase,searchTerm,period)
           }
           case "munin" => {
             val host = getOrError(getText(sc,"host"),"localhost","host not specified")
             val port = getOrError(getInt(sc,"port"),4949,"port not specified")
-            new PingMunin(mode,serviceCheckName,label,host,port,List(MuninCategoryDefinition("cpu",PercentageCounter),MuninCategoryDefinition("memory",Guage)),period)
+            new PingMunin(mode,severity,serviceCheckName,label,host,port,List(MuninCategoryDefinition("cpu",PercentageCounter),MuninCategoryDefinition("memory",Guage)),period)
           }
           case "munin_threshold" => {
             val host = getOrError(getText(sc,"host"),"localhost","host not specified")
@@ -124,7 +125,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
               val tsMap = Matchers.configureFromXml(ts)
               (tsName,MuninCategoryDefinition(tsName,MuninFieldType.parse(tsType),tsMap))
             }):_*)
-            PingMuninAgainstThreshhold(mode,serviceCheckName,label,host,port,thresholds,period)
+            PingMuninAgainstThreshhold(mode,severity,serviceCheckName,label,host,port,thresholds,period)
           }
           case "samba" => {
             val host = getOrError(getText(sc,"host"),"localhost","host not specified")
@@ -132,13 +133,13 @@ object ServiceCheckConfigurator extends ConfigFileReader {
             val file = getOrError(getText(sc,"file"),"serverStatus","host not specified")
             val username = getOrError(getText(sc,"username"),"","host not specified")
             val password = getOrError(getText(sc,"password"),"","host not specified")
-            PingSamba(mode,serviceCheckName,label,host,domain,file,username,password,period)
+            PingSamba(mode,severity,serviceCheckName,label,host,domain,file,username,password,period)
           }
           case "svn" => {
             val host = getOrError(getText(sc,"host"),"","host not specified")
             val username = getOrError(getText(sc,"username"),"","username not specified")
             val password = getOrError(getText(sc,"password"),"","password not specified")
-            PingSVN(mode,serviceCheckName,label,host,username,password,period)
+            PingSVN(mode,severity,serviceCheckName,label,host,username,password,period)
           }
           case "http" => {
             val url = getOrError(getText(sc,"url"),"","url not specified")
@@ -151,7 +152,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
                 case _ => false
               }
             }).toList
-            HttpCheck(mode,serviceCheckName,label,url,additionalHeaders,matcher,period)
+            HttpCheck(mode,severity,serviceCheckName,label,url,additionalHeaders,matcher,period)
           }
           case "http_with_credentials" => {
             val url = getOrError(getText(sc,"url"),"","url not specified")
@@ -166,7 +167,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
                 case _ => false
               }
             }).toList
-            HttpCheckWithBasicAuth(mode,serviceCheckName,label,url,username,password,additionalHeaders,matcher,period)
+            HttpCheckWithBasicAuth(mode,severity,serviceCheckName,label,url,username,password,additionalHeaders,matcher,period)
           }
           case "dependency" => {
             val matchers:Map[DependencyDescription,DependencyMatcher] = Map(getNodes(sc,"thresholds").map(t => {
@@ -178,20 +179,20 @@ object ServiceCheckConfigurator extends ConfigFileReader {
               val matcher = DependencyMatchers.configureFromXml(t)
               (desc,matcher)
             }):_*)
-            DependencyCheck(mode,serviceCheckName,label,matchers,period)
+            DependencyCheck(mode,severity,serviceCheckName,label,matchers,period)
           }
           case "matcher" => {
             getImmediateNodes(sc,"matcher").map(mNodes => {
               Matchers.configureFromXml(mNodes).headOption.map(ho => {
                 val matcher = ho._2
-                MatcherCheck(mode,serviceCheckName,label,matcher,period)
+                MatcherCheck(mode,severity,serviceCheckName,label,matcher,period)
               }).getOrElse(NullCheck)
             }).headOption.getOrElse(NullCheck)
           }
           case "script" => {
             val interpolator = Interpolator.configureFromXml( <interpolators>{getImmediateNodes(sc,"interpolator")}</interpolators> )
             val sequence = FunctionalServiceCheck.configureFromXml( <steps>{getImmediateNodes(sc,"step")}</steps> )
-            ScriptedCheck(mode,serviceCheckName,label,sequence,interpolator.getOrElse(EmptyInterpolator),period)
+            ScriptedCheck(mode,severity,serviceCheckName,label,sequence,interpolator.getOrElse(EmptyInterpolator),period)
           }
           case other => {
             failed = true

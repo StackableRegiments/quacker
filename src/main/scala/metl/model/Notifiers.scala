@@ -38,6 +38,20 @@ object ServiceCheckMode {
 	}
 }
 
+abstract class ServiceCheckSeverity
+case object IMPACT extends ServiceCheckSeverity
+case object ISSUE extends ServiceCheckSeverity
+case object ALERT extends ServiceCheckSeverity
+
+object ServiceCheckSeverity {
+	def parse(s:String):ServiceCheckSeverity = s.toLowerCase.trim  match {
+		case "impact" => IMPACT
+		case "issue" => ISSUE
+		case "alert" => ALERT
+		case _ => ALERT
+	}
+}
+
 sealed trait GraphableDatum {
   def getAsString:String
 }
@@ -126,7 +140,7 @@ object GraphableData {
   implicit def convert(in:Boolean) = GraphableBoolean(in)
 }
 
-case class CheckResult(id:String,serviceCheck:String,label:String,service:String,server:String,when:Date,why:String,lastUp:Box[Date],detail:String,mode:ServiceCheckMode,success:Boolean,data:List[Tuple2[Long,Map[String,GraphableDatum]]] = Nil)
+case class CheckResult(id:String,serviceCheck:String,label:String,service:String,server:String,when:Date,why:String,lastUp:Box[Date],detail:String,mode:ServiceCheckMode,severity:ServiceCheckSeverity,success:Boolean,data:List[Tuple2[Long,Map[String,GraphableDatum]]] = Nil)
 
 abstract class ErrorActor(name:String) extends LiftActor {
 	protected def outputAction(cr:CheckResult) = {

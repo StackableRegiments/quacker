@@ -98,7 +98,7 @@ class HTTPResponseMatcher{
   }
 }
 
-case class HttpCheck(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,uri:String,headers:List[Tuple2[String,String]] = List.empty[Tuple2[String,String]], matcher:HTTPResponseMatcher = HTTPResponseMatchers.default, time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
+case class HttpCheck(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:ServiceCheckSeverity,incomingName:String,incomingLabel:String,uri:String,headers:List[Tuple2[String,String]] = List.empty[Tuple2[String,String]], matcher:HTTPResponseMatcher = HTTPResponseMatchers.default, time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode,serviceCheckSeverity){
   override val pollInterval = time
   def getClient = Http.getClient
   var client = getClient
@@ -117,7 +117,7 @@ case class HttpCheck(serviceCheckMode:ServiceCheckMode,incomingName:String,incom
   }
   override def performCheck = succeed(status._1.toString,status._2)
 }
-case class HttpCheckWithBasicAuth(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,uri:String,username:String,password:String, headers:List[Tuple2[String,String]] = List.empty[Tuple2[String,String]], matcher:HTTPResponseMatcher = HTTPResponseMatchers.default, time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
+case class HttpCheckWithBasicAuth(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:ServiceCheckSeverity,incomingName:String,incomingLabel:String,uri:String,username:String,password:String, headers:List[Tuple2[String,String]] = List.empty[Tuple2[String,String]], matcher:HTTPResponseMatcher = HTTPResponseMatchers.default, time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode,serviceCheckSeverity){
   override val pollInterval = time
   def getClient = Http.getAuthedClient(username,password)
   var client = getClient

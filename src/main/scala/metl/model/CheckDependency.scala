@@ -2,7 +2,7 @@ package metl.model
 
 import net.liftweb.util.Helpers._
 
-case class DependencyCheck(serviceCheckMode:ServiceCheckMode,incomingName:String,incomingLabel:String,dependencies:Map[DependencyDescription,DependencyMatcher],time:TimeSpan) extends Pinger(incomingName,incomingLabel,serviceCheckMode){
+case class DependencyCheck(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:ServiceCheckSeverity,incomingName:String,incomingLabel:String,dependencies:Map[DependencyDescription,DependencyMatcher],time:TimeSpan) extends Pinger(incomingName,incomingLabel,serviceCheckMode,serviceCheckSeverity){
   override val pollInterval = time
   failureTolerance = 3
   def status = {
