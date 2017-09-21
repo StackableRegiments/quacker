@@ -53,7 +53,6 @@ function createChecks(){
 function updateCheck(newCheck){
     if ("id" in newCheck) {
         var oldCheck = jsonStructure[newCheck.id];
-        console.log("updating:",oldCheck,newCheck);
         jsonStructure[newCheck.id] = _.merge(oldCheck,newCheck);
     }
     pluginSystem.fireCommand('dataChanged','core.updateCheck',newCheck);

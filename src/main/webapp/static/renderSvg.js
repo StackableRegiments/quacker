@@ -53,7 +53,7 @@ var renderSvg = function () {
         }));
         // console.log("calculating offset:", serverIndex, checkIndex, result);
         return result;
-    }
+    };
 
     var constructIdentity = function (inString) {
         return _.replace(inString, " ", "_");
@@ -128,18 +128,28 @@ var renderSvg = function () {
             .enter()
             .append("circle")
             .attr("cx",function(d,i){
-                if ("lastCheck" in d && "period" in d){
-                    var position = dGroup.width * calcProportion(d.lastCheck,d.period);
-                    //console.log("drawing radius",d,i,proportion,position);
-                    return position;
+                if ("lastCheck" in d && "period" in d && "severity" in d){
+                    var center = dGroup.width / 2;
+                    var radius = severityCheck(d);
+                    var theta = (2 * Math.PI * calcProportion(d.lastCheck,d.period)) - (Math.PI / 2);
+                    return center + radius * Math.cos(theta);
                 } else {
                     return 0;
                 }
             })
-            .attr("cy",dGroup.height / 2)
+            .attr("cy",function(d,i){
+                if ("lastCheck" in d && "period" in d && "severity" in d){
+                    var center = dGroup.height / 2;
+                    var radius = severityCheck(d);
+                    var theta = (2 * Math.PI * calcProportion(d.lastCheck,d.period)) - (Math.PI / 2);
+                    return center + radius * Math.sin(theta);
+                } else {
+                    return 0;
+                }
+            })
             .attr("class","checkIndicator")
             .attr("r",5)
-            .attr("stroke","black")
+            .attr("stroke","grey")
             .attr("fill",function(d){
                 return d.statusCode == "Y" ? "green" : "red";
             })
