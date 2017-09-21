@@ -50,6 +50,7 @@ function createChecks(){
     var serviceTemplate = templateContainer.find(".serviceTemplate").clone();
     var serverTemplate = templateContainer.find(".serverTemplate").clone();
     var checkTemplate = templateContainer.find(".checkTemplate").clone();
+    var checkDetailContainerTemplate = templateContainer.find(".checkDetailContainerTemplate").clone();
     var collapserTemplate = templateContainer.find(".collapserTemplate").clone();
     var pingerTemplate = templateContainer.find(".pingerTemplate").clone();
     var informationTemplate = templateContainer.find(".informationTemplate").clone();
@@ -73,12 +74,12 @@ function createChecks(){
         var elem = getCollapser();
         elem.find(".collapserState").text("+");
         return elem;
-    }
+    };
     var getCollapserOpen = function() {
         var elem = getCollapser();
         elem.find(".collapserState").text("-");
         return elem;
-    }
+    };
     var elem = function(extraClasses,hideable,toggleable,inner){
         var classes = extraClasses;
         if (hideable){
@@ -126,7 +127,7 @@ function createChecks(){
     };
     var services = _.groupBy(jsonStructure,function(item){ return item.service; });
     rootNode.html(_.map(services,function(checksInService,serviceName){
-        console.log("service",serviceName,checksInService);
+        // console.log("service",serviceName,checksInService);
         var serviceRootNode = serviceTemplate.clone();
         var serviceExpanded = false;
         var headerContainer = serviceRootNode.find(".serviceHeaderContainer");
@@ -136,7 +137,6 @@ function createChecks(){
         serviceNameElement.text(serviceName);
         var serviceContent = serviceRootNode.find(".serviceContent");
         var servers = _.groupBy(checksInService,function(item){ return item.server; });
-
 
         var serviceToggleable = serviceRootNode.find('.'+toggleableClass);
         var serviceHideable = serviceRootNode.find('.'+hideableClass);
@@ -172,7 +172,7 @@ function createChecks(){
 
         serviceContent.html(
             _.map(servers,function(checksInServer,serverName){
-                console.log("server",serverName,checksInServer);
+                // console.log("server",serverName,checksInServer);
                 var serverRootNode = serverTemplate.clone();
                 var serverHeader = serverRootNode.find(".serverHeader");
                 serverHeader.find(".serverName").text(serverName);
@@ -187,14 +187,14 @@ function createChecks(){
 
                 var expandServer = function(){
                     serverToggleable.addClass(toggledInClass).removeClass(toggledOutClass);
-                    serverHideable.removeClass(hideableHiddenClass)
+                    serverHideable.removeClass(hideableHiddenClass);
                     serverCollapser.html(getCollapserOpen());
                     serverExpanded = true;
                     pluginSystem.fireCommand('layoutChanged','core.expandServer');
                 };
                 var collapseServer = function(){
                     serverToggleable.addClass(toggledOutClass).removeClass(toggledInClass);
-                    serverHideable.addClass(hideableHiddenClass)
+                    serverHideable.addClass(hideableHiddenClass);
                     serverCollapser.html(getCollapserClosed());
                     serverExpanded = false;
                     pluginSystem.fireCommand('layoutChanged','core.collapseServer');
@@ -208,7 +208,6 @@ function createChecks(){
                 });
                 serverToggleable.addClass(toggledOutClass).removeClass(toggledInClass);
                 serverHideable.addClass(hideableHiddenClass);
-                console.log("serverHideable",serverHideable);
                 if (_.find(defaultExpandedServers,function(item){return item == serverName;}) != undefined){
                     expandServer();
                 }
@@ -216,7 +215,7 @@ function createChecks(){
                 serverChecks.html(_.map(checksInServer,function(check){
                     var checkNode = checkTemplate.clone();
                     checkNode.attr("id",check.id);
-                    console.log("check: " + check.label + ", " + check.mode);
+                    // console.log("check: " + check.label + ", " + check.mode);
 
                     var collapser = checkNode.find(".checkCollapser");
                     collapser.html(getCollapserClosed());
@@ -224,46 +223,46 @@ function createChecks(){
 
                     if ('type' in check){
                         if (check.type == "pinger"){
-                            var pingerRoot = pingerTemplate.clone();
-                            var summary = pingerTemplate.find(".checkSummary");
+                            var detailContainer = checkDetailContainerTemplate.clone();
                             var tooltip = check.lastStatusCode +": "+ check.label + " (@"+check.lastChecked+") : "+check.lastWhy;
+                            detailContainer.attr('title',tooltip);
 
-                            var serviceStatus = furtherDetail('','serviceStatus',false,check.lastStatusCode).attr('title',tooltip);
+                            var checkDetail = detailContainer.find(".checkDetail");
+                            checkDetail.find(".serviceWhy").append($("<span/>",{text:check.lastWhy}));
+                            checkDetail.find(".serviceDetail").append($("<span/>",{text:check.lastDetail}));
+                            checkNode.append(detailContainer);
+
+                            var pingerNode = pingerTemplate.clone();
+                            var checkStatus = furtherDetail('','checkStatus',false,check.lastStatusCode);
                             switch (check.lastStatusCode){
                                 case 'Y':
-                                    serviceStatus.addClass('serverOk');
+                                    checkStatus.addClass('serverOk');
                                     break;
                                 case 'N':
-                                    serviceStatus.addClass('serverError');
+                                    checkStatus.addClass('serverError');
                                     break;
                                 default:
                             }
-                            checkNode.prepend(serviceStatus);
-                            var summaryContainer = elem([],true,false);
-                            var summaryLine1 = checkElem([],false,false);
+                            pingerNode.prepend(checkStatus);
+
+                            var summaryContainer = pingerNode.find(".pingerSummary");
+                            var summaryLine1 = summaryContainer.find(".summaryLine1");
                             var capacity = furtherDetail('Purpose','serviceCapacity',true,check.label);
                             summaryLine1.append(capacity);
-                            var summaryLine2 = checkElem([],true,true);
+                            var summaryLine2 = summaryContainer.find(".summaryLine2");
                             var serviceClass = furtherDetail('Class','serviceClass',true,check.mode);
                             var lastChecked = furtherDetail('Last checked','serviceLastChecked',false,check.lastChecked);
                             var lastUp = furtherDetail('Last up','serviceLastUp',true,check.lastUp);
                             var frequency = furtherDetail('Frequency','servicePeriod',true,check.pollInterval);
                             summaryLine2.append(serviceClass).append(lastChecked).append(lastUp).append(frequency);
-                            summaryContainer.append(summaryLine1).append(summaryLine2);
-                            summary.append(summaryContainer);
-                            var detailContainer = checkElem([],true,true);
-                            var checkDetail = $("<div/>",{
-                                'class':'checkDetail '+checkExpandableClass
-                            });
-                            var message = checkElem(['serviceWhy','furtherDetail'],false,true,$("<span/>",{text:check.lastWhy}));
-                            var detail = checkElem(['serviceDetail','furtherDetail'],false,true,$("<span/>",{text:check.lastDetail}));
-                            detailContainer.append(checkDetail.append(message).append(detail));
-                            checkNode.append(summary).append(detailContainer);
+
+                            checkNode.append(pingerNode);
                         } else if (check.type == "information"){
-                            var serviceStatus = elem([],true,false,"Information");
+                            var informationNode = informationTemplate.clone();
+                            var serviceStatus = informationNode.find(".serviceStatus");
                             var header = furtherDetail('Information','serviceCapacity',true,check.label);
                             var information = checkElem(['information'],true,true,check.information);
-                            checkNode.append(serviceStatus).append(checkElem([],true,false).append(checkElem([],false,true).append(header))).append(checkElem([],true,true).append(checkElem([],false,true).append(information)));
+                            serviceStatus.append(checkElem([],true,false).append(checkElem([],false,true).append(header))).append(checkElem([],true,true).append(checkElem([],false,true).append(information)));
                         } else if (check.type == "htmlInformation"){
                             var serviceStatus = elem([],true,false,"Information");
                             var header = furtherDetail('Information','serviceCapacity',true,check.label);

@@ -5,7 +5,7 @@ body{
 .serviceStatus{
     padding:0 1em;
 }
-.serverChecks{
+.serverContent{
     margin-left:2em;
     display:block;
 }
@@ -31,7 +31,7 @@ body{
 .tableHeader {
     font-color: darkgray;
 }
-.serviceHeader {
+.serviceHeader .serviceName {
     font-size: 200%;
     display:inline-block;
 }
