@@ -61,7 +61,7 @@ function createCheck(obj){
     pluginSystem.fireCommand('createCheck','core.createCheck',obj);
 }
 function internalUpdateCheck(newCheck,targetNode){
-    console.log("newCheck: " + newCheck["label"] + ", " + newCheck["mode"]);
+    //console.log("newCheck: " + newCheck["label"] + ", " + newCheck["mode"]);
 
     var rootNode = targetNode;
     var id = newCheck["id"];

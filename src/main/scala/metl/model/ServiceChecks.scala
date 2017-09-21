@@ -33,28 +33,18 @@ object ViewTemplates {
 trait VisualElement {
 	val id:String = nextFuncName
 	val label:String
-	protected var internalServiceName = "unknown"
-	protected var internalServerName = "unknown"
+	val serviceName:String
+	val serverName:String
 	protected def template: NodeSeq = NodeSeq.Empty
 	def classDescriptor(server:String,service:String):String = List("check",service,server,"toggleable").mkString(" ")
-	def getServerName:String = internalServerName
-	def serverName(newName:String):VisualElement = {
-		internalServerName = newName
-		this
-	}
-	def getServiceName:String = internalServiceName
-	def serviceName(newName:String):VisualElement = {
-		internalServiceName = newName
-		this
-	}
-	def renderVisualElement(service:String = internalServiceName,server:String = internalServerName):NodeSeq = (
+	def renderVisualElement(service:String = serviceName,server:String = serverName):NodeSeq = (
 		".serviceCheck [id]" #> id &
 		".serviceCheck [class+]" #> classDescriptor(server,service) &
 		".serviceCapacity *" #> label &
 		templateRenderer
 	).apply(template).toSeq
 	protected def templateRenderer:CssSel = ClearClearable
-  def jsonRenderer(service:String = internalServiceName,server:String = internalServerName):JObject = {
+  def jsonRenderer(service:String = serviceName,server:String = serverName):JObject = {
     JObject(List(
       JField("id",JString(id)),
       JField("server",JString(server)),
@@ -63,7 +53,7 @@ trait VisualElement {
     ) ::: asJson)
   }
   protected def asJson:List[JField] = Nil
-  def jsExpRenderer(service:String = internalServiceName,server:String = internalServerName):JsObj = {
+  def jsExpRenderer(service:String = serviceName,server:String = serverName):JsObj = {
     JsObj((List(
       ("id", Str(id)),
       ("server",Str(server)),
@@ -74,7 +64,9 @@ trait VisualElement {
   protected def asJsExp:List[Tuple2[String,JsExp]] = Nil
 }
 
-case class HtmlInformation(name:String,html:NodeSeq) extends VisualElement {
+case class HtmlInformation(metadata:PingerMetaData,name:String,html:NodeSeq) extends VisualElement {
+	override val serviceName = metadata.service
+	override val serverName = metadata.server
 	override val label: String = "%s information".format(name)
 	override def template: NodeSeq = ViewTemplates.getInformationTemplate
 	override def templateRenderer: CssBindFunc = {
@@ -91,7 +83,9 @@ case class HtmlInformation(name:String,html:NodeSeq) extends VisualElement {
   )
 }
 
-case class Information(name:String,message:String) extends VisualElement {
+case class Information(metadata:PingerMetaData,name:String,message:String) extends VisualElement {
+	override val serviceName = metadata.service
+	override val serverName = metadata.server
 	override val label: String = name
 	override def template: NodeSeq = ViewTemplates.getInformationTemplate
 	override def templateRenderer: CssBindFunc = {
@@ -108,7 +102,9 @@ case class Information(name:String,message:String) extends VisualElement {
   )
 }
 
-case class ErrorInformation(name:String,expectedPeriod:String,sourceString:String,errors:List[String]) extends VisualElement {
+case class ErrorInformation(metadata:PingerMetaData,name:String,expectedPeriod:String,sourceString:String,errors:List[String]) extends VisualElement {
+	override val serviceName = metadata.service
+	override val serverName = metadata.server
 	override val label: String = "Error: %s".format(name)
 	override def template: NodeSeq = ViewTemplates.getErrorInformationTemplate
 	override def templateRenderer: CssBindFunc = {
@@ -133,8 +129,13 @@ case class ErrorInformation(name:String,expectedPeriod:String,sourceString:Strin
   )
 }
 
-case class EndpointInformationWithString(name:String,htmlDescriptor:String,endpoints:List[EndpointDescriptor]) extends EndpointInformationWithHtml(name,Text(htmlDescriptor),endpoints)
-class EndpointInformationWithHtml(name:String,html:NodeSeq,endpoints:List[EndpointDescriptor]) extends VisualElement {
+case class EndpointInformationWithString(metadata:PingerMetaData,name:String,htmlDescriptor:String,endpoints:List[EndpointDescriptor]) extends EndpointInformationWithHtml(metadata,name,Text(htmlDescriptor),endpoints){
+	override val serviceName = metadata.service
+	override val serverName = metadata.server
+}
+class EndpointInformationWithHtml(metadata:PingerMetaData,name:String,html:NodeSeq,endpoints:List[EndpointDescriptor]) extends VisualElement {
+	override val serviceName = metadata.service
+	override val serverName = metadata.server
 	override val label: String = name
 	override def template: NodeSeq = ViewTemplates.getEndpointInformationTemplate
 	override def templateRenderer: CssBindFunc = {
@@ -169,19 +170,23 @@ case class EndpointDescriptor(name:String,endpoint:String,description:String)
 
 case object NullCheck extends VisualElement {
 	override val label = "null"
-	override val getServerName:String = "null"
-	override val getServiceName:String = "null"
+	override val serverName:String = "null"
+	override val serviceName:String = "null"
 }
 
-abstract class Pinger(incomingName:String,incomingLabel:String,incomingMode:ServiceCheckMode,incomingSeverity:ServiceCheckSeverity) extends LiftActor with VisualElement with metl.comet.CheckRenderHelper with Logger {
+case class PingerMetaData(name:String,label:String,mode:ServiceCheckMode,severity:ServiceCheckSeverity,service:String,server:String,expectFail:Boolean = false,timeout:Option[TimeSpan] = None,acceptedFailures:Int = 1)
+
+abstract class Pinger(metadata:PingerMetaData) extends LiftActor with VisualElement with metl.comet.CheckRenderHelper with Logger {
   import GraphableData._
-	val mode: ServiceCheckMode = incomingMode
-	val severity: ServiceCheckSeverity = incomingSeverity
-	val name: String = incomingName
-	override val label: String = incomingLabel
+	override val serviceName = metadata.service
+	override val serverName = metadata.server
+	val mode: ServiceCheckMode = metadata.mode
+	val severity: ServiceCheckSeverity = metadata.severity
+	val name: String = metadata.name
+	override val label: String = metadata.label
 	override def template: NodeSeq = ViewTemplates.getServiceTemplate
-	var checkTimeout:Box[TimeSpan] = Empty
-	var failureTolerance = 1
+	var checkTimeout:Box[TimeSpan] = metadata.timeout
+	var failureTolerance = metadata.acceptedFailures
 	var lastCheckBegin:Box[Date] = Empty
 	var lastUptime:Box[Date] = Empty
 	def lastUptimeString: String = lastUptime.map(t => t.toString).openOr("NEVER")
@@ -211,10 +216,10 @@ abstract class Pinger(incomingName:String,incomingLabel:String,incomingMode:Serv
   }
   def fail(why:String,detail:String = "") = {
 		val lastUp = lastUptime
-		val now = updatedTime(false)
+		val now = updatedTime(success = false)
 		lastStatus = Full(false)
 		currentFailures = currentFailures + 1
-    val cr = CheckResult(id,name,label,getServiceName,getServerName,now,why,lastUp,detail,mode,severity,false)
+    val cr = CheckResult(id,name,label,serviceName,serverName,now,why,lastUp,detail,mode,severity,success = false)
     DashboardServer ! cr
     HistoryServer ! cr
 		if (currentFailures >= failureTolerance){
@@ -226,14 +231,14 @@ abstract class Pinger(incomingName:String,incomingLabel:String,incomingMode:Serv
 		val checkDuration = timeTaken.openOr((new Date().getTime - lastCheckBegin.openOr(now).getTime).toDouble)
 		checkTimeout.map(c => {
 			if (checkDuration >= c.millis){
-				throw new DashboardException("Timeout","This check passed, but took %sms when it is not permitted to take %s or longer: %s".format(checkDuration, c, why))
+				throw DashboardException("Timeout", "This check passed, but took %sms when it is not permitted to take %s or longer: %s".format(checkDuration, c, why))
 			}
 		})
 		val lastUp = lastUptime
-		updatedTime(true,now)
+		updatedTime(success = true,now)
 		lastStatus = Full(true)
 		currentFailures = 0
-    var cr =  CheckResult(id,name,label,getServiceName,getServerName,now,why,lastUp,"",mode,severity,true,data)
+    var cr =  CheckResult(id,name,label,serviceName,serverName,now,why,lastUp,"",mode,severity,success = true,data)
     HistoryServer ! cr
 		DashboardServer ! cr 
 		ErrorRecorder ! cr 
@@ -289,6 +294,7 @@ abstract class Pinger(incomingName:String,incomingLabel:String,incomingMode:Serv
       JField("severity",JString(severity.toString)),
 			JField("lastWhy",JString(why)),
       JField("lastDetail",JString(detail)),
+			JField("expectFail",JBool(metadata.expectFail)),
       JField("pollInterval",JString(pollInterval.toString))
     )
   }
@@ -308,6 +314,7 @@ abstract class Pinger(incomingName:String,incomingLabel:String,incomingMode:Serv
 			("mode",Str(mode.toString)),
 			("severity",Str(severity.toString)),
 			("lastWhy",Str(why)),
+			("expectFail", metadata.expectFail),
 			("lastDetail",Str(detail)),
       ("pollInterval",Str(pollInterval.toString))
     )    
@@ -348,12 +355,12 @@ abstract class Pinger(incomingName:String,incomingLabel:String,incomingMode:Serv
     case _ => {}
   }
 }
-case class CheckUnexceptional(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:ServiceCheckSeverity, incomingName:String,incomingLabel:String,condition:Function0[Any],time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode,serviceCheckSeverity){
+case class CheckUnexceptional(metadata:PingerMetaData,condition:Function0[Any],time:TimeSpan = 5 seconds) extends Pinger(metadata){
   override val pollInterval = time
   def status = condition()
 	override def performCheck = succeed("Was expected")
 }
-case class CheckDoesnt(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:ServiceCheckSeverity, incomingName:String,incomingLabel:String,condition:Function0[Option[String]], time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode,serviceCheckSeverity){
+case class CheckDoesnt(metadata:PingerMetaData,condition:Function0[Option[String]], time:TimeSpan = 5 seconds) extends Pinger(metadata){
   override val pollInterval = 5 seconds
 	override def performCheck = {
 		condition() match {
@@ -364,9 +371,16 @@ case class CheckDoesnt(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:Se
 		}
 	}
 }
-case class MatcherCheck(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:ServiceCheckSeverity,incomingName:String,incomingLabel:String,matcher:Matcher,time:TimeSpan) extends Pinger(incomingName,incomingLabel,serviceCheckMode,serviceCheckSeverity){
+case class MatcherCheck(metadata:PingerMetaData,matcher:Matcher,time:TimeSpan) extends Pinger(metadata){
 	override val pollInterval = time
 	failureTolerance = 3
 	def status = "%s is %s".format(matcher.describe,matcher.verify(true).toString)
 	override def performCheck = succeed(status)
 }
+/*
+case class InvertedCheck(pinger:Pinger) extends Pinger(pinger.name,pinger.label,pinger.mode,pinger.severity) {
+	override def performCheck = {
+		pinger.performCheck
+	}
+}
+*/

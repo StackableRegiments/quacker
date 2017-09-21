@@ -3,9 +3,9 @@ package metl.model
 import net.liftweb.util.Helpers._
 import org.jivesoftware.smack.{ConnectionConfiguration, SASLAuthentication, SmackConfiguration, XMPPConnection}
 
-case class PingXmpp(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:ServiceCheckSeverity,incomingName:String,incomingLabel:String,resource:String,serviceName:Option[String]=None,allowAnonymousAccess:Boolean=false,time:TimeSpan = 10 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode,serviceCheckSeverity){
+case class PingXmpp(metadata:PingerMetaData,resource:String,xmppServiceName:Option[String]=None,allowAnonymousAccess:Boolean=false,time:TimeSpan = 10 seconds) extends Pinger(metadata){
   val hostname = resource
-  val service = serviceName.getOrElse(hostname)
+  val service = xmppServiceName.getOrElse(hostname)
   override val pollInterval = time
   XMPPConnection.DEBUG_ENABLED = false
   SmackConfiguration.setPacketReplyTimeout(15000)

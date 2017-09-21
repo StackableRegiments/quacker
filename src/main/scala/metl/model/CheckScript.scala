@@ -1263,7 +1263,7 @@ class ScriptEngine(interpolator:Interpolator) {
   }
 }
 
-case class ScriptedCheck(serviceCheckMode:ServiceCheckMode, serviceCheckSeverity:ServiceCheckSeverity, incomingName:String, incomingLabel:String, sequence:List[FunctionalServiceCheck], interpolator:Interpolator, time:TimeSpan) extends Pinger(incomingName,incomingLabel,serviceCheckMode,serviceCheckSeverity){
+case class ScriptedCheck(metadata:PingerMetaData, sequence:List[FunctionalServiceCheck], interpolator:Interpolator, time:TimeSpan) extends Pinger(metadata){
   override val pollInterval = time
   val scriptEngine = new ScriptEngine(interpolator)
   def status = {

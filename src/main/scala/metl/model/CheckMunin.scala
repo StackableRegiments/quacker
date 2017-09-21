@@ -27,7 +27,7 @@ case object PercentageGuage extends MuninFieldType
 
 case class MuninCategoryDefinition(name:String,fieldType:MuninFieldType,matchers:Map[String,Matcher] = Map.empty[String,Matcher])
 
-class PingMunin(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:ServiceCheckSeverity,incomingName:String,incomingLabel:String, host:String, port:Int, onlyFetch:List[MuninCategoryDefinition] = List(MuninCategoryDefinition("cpu",Counter),MuninCategoryDefinition("memory",Guage)), time:TimeSpan = 5 seconds) extends PingTelnet(serviceCheckMode,serviceCheckSeverity,incomingName,incomingLabel,host,port,time){
+class PingMunin(metadata:PingerMetaData, host:String, port:Int, onlyFetch:List[MuninCategoryDefinition] = List(MuninCategoryDefinition("cpu",Counter),MuninCategoryDefinition("memory",Guage)), time:TimeSpan = 5 seconds) extends PingTelnet(metadata,host,port,time){
   protected val previous = {
     val map = new MSMap[String,MSMap[String,Double]]()
     onlyFetch.map(munCatDef => map.put(munCatDef.name,new MSMap[String,scala.Double]()))
@@ -125,7 +125,7 @@ class PingMunin(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:ServiceCh
   }
 }
 
-case class PingMuninAgainstThreshhold(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:ServiceCheckSeverity,incomingName:String,incomingLabel:String, host:String, port:Int, thresholds:Map[String,MuninCategoryDefinition] = Map.empty[String,MuninCategoryDefinition], time:TimeSpan = 5 seconds) extends PingMunin(serviceCheckMode,serviceCheckSeverity,incomingName,incomingLabel,host,port,thresholds.values.toList,time){
+case class PingMuninAgainstThreshhold(metadata:PingerMetaData, host:String, port:Int, thresholds:Map[String,MuninCategoryDefinition] = Map.empty[String,MuninCategoryDefinition], time:TimeSpan = 5 seconds) extends PingMunin(metadata,host,port,thresholds.values.toList,time){
   override def telnetBehaviour(tc:TelnetClient):List[String] = {
     val completeOutput = interpretMuninData(tc)
     var errors = List.empty[String]

@@ -61,8 +61,8 @@ class ServicePermission(serviceName:String,serviceCheckModeWhitelist:Option[List
 			serviceCheckModeWhitelisted && !serviceCheckModeBlacklisted && serverWhitelisted && !serverBlacklisted && serviceOkay
 		}
 		case p:Pinger => {
-			val pServerName = p.getServerName
-			val pServiceName = p.getServiceName
+			val pServerName = p.serverName
+			val pServiceName = p.serviceName
 			val serverWhitelisted = serverWhitelist.map(sw => sw.contains(pServerName)).getOrElse(true)
 			val serverBlacklisted = serverBlacklist.map(sb => sb.contains(pServerName)).getOrElse(false)
 			val serviceCheckModeWhitelisted = serviceCheckModeWhitelist.map(scmw => scmw.contains(p.mode)).getOrElse(true)
@@ -72,8 +72,8 @@ class ServicePermission(serviceName:String,serviceCheckModeWhitelist:Option[List
 			result
 		}
 		case ve:VisualElement => {
-			val vServerName = ve.getServerName
-			val vServiceName = ve.getServiceName
+			val vServerName = ve.serverName
+			val vServiceName = ve.serviceName
 			val serverWhitelisted = serverWhitelist.map(sw => sw.contains(vServerName)).getOrElse(true)
 			val serverBlacklisted = serverBlacklist.map(sb => sb.contains(vServerName)).getOrElse(false)
 			val serviceOkay = serviceName == vServiceName

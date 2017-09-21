@@ -5,7 +5,7 @@ import java.net.InetSocketAddress
 import net.spy.memcached.MemcachedClient
 import net.liftweb.util.Helpers._
 
-case class PingMemCached(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:ServiceCheckSeverity,incomingName:String,incomingLabel:String,uri:String, time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode,serviceCheckSeverity){
+case class PingMemCached(metadata:PingerMetaData,uri:String, time:TimeSpan = 5 seconds) extends Pinger(metadata){
   override val pollInterval = time
   private	val port = 11211
   private val address = new InetSocketAddress(uri,11211)

@@ -111,6 +111,7 @@ object Servers extends ConfigFileReader{
   }
   def getVisualElements:List[VisualElement] = {
     val myRestriction = Globals.currentUserAccessRestriction
+		println("getVisualElements: %s\r\nPermissions:%s".format(services,myRestriction))
     services.filter(service => myRestriction.permit(service)).map(service => {
       service.servers.filter(server => myRestriction.permit(server)).map(server => {
         server.checks.filter(check => myRestriction.permit(check))
@@ -121,7 +122,7 @@ object Servers extends ConfigFileReader{
 		checks.filter(c => {
 			c match {
 				case p:Pinger => {
-					pingerName == p.label && serviceName.map(svcName => svcName == p.getServiceName).getOrElse(true) && serverName.map(svrName => svrName == p.getServerName).getOrElse(true) && serviceCheckMode.map(svcMode => svcMode == p.mode).getOrElse(true)
+					pingerName == p.label && serviceName.map(svcName => svcName == p.serviceName).getOrElse(true) && serverName.map(svrName => svrName == p.serverName).getOrElse(true) && serviceCheckMode.map(svcMode => svcMode == p.mode).getOrElse(true)
 				}
 				case _ => false
 			}

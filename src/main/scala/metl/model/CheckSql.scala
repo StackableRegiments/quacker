@@ -159,7 +159,7 @@ import java.util.concurrent.TimeoutException
 
 import scala.concurrent.{Await, Future}
 
-case class PingOracle(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:ServiceCheckSeverity,incomingName:String,incomingLabel:String,uri:String,username:String,password:String, query:String, thresholds:List[VerifiableSqlResultSetDefinition] = List.empty[VerifiableSqlResultSetDefinition], time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode,serviceCheckSeverity){
+case class PingOracle(metadata:PingerMetaData,uri:String,username:String,password:String, query:String, thresholds:List[VerifiableSqlResultSetDefinition] = List.empty[VerifiableSqlResultSetDefinition], time:TimeSpan = 5 seconds) extends Pinger(metadata){
   override val pollInterval = time
   OracleSetup.initialize
   protected val connectionCreationTimeout = 10000L
@@ -229,7 +229,7 @@ object MySQLSetup {
   def initialize = {}
 }
 
-case class PingMySQL(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:ServiceCheckSeverity,incomingName:String,incomingLabel:String,uri:String,database:String,query:String,username:String,password:String,thresholds:List[VerifiableSqlResultSetDefinition] = List.empty[VerifiableSqlResultSetDefinition], time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode,serviceCheckSeverity){
+case class PingMySQL(metadata:PingerMetaData,uri:String,database:String,query:String,username:String,password:String,thresholds:List[VerifiableSqlResultSetDefinition] = List.empty[VerifiableSqlResultSetDefinition], time:TimeSpan = 5 seconds) extends Pinger(metadata){
   override val pollInterval = time
   MySQLSetup.initialize
   var sqlConnection:Option[Connection] = None

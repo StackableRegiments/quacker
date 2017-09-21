@@ -6,7 +6,7 @@ import net.liftweb.common.{Box, Empty}
 import net.liftweb.util.Helpers.tryo
 import net.liftweb.util.Helpers._
 
-case class PingICMP(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:ServiceCheckSeverity,incomingName:String,incomingLabel:String,uri:String,ipv6:Boolean = false,time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode,serviceCheckSeverity){
+case class PingICMP(metadata:PingerMetaData,uri:String,ipv6:Boolean = false,time:TimeSpan = 5 seconds) extends Pinger(metadata){
   //pinging is done via ipv4 at present.  ipv6 in some networks results in unexpected results for some subnets
   private val pingCmd = (ServiceConfigurator.isWindows,ServiceConfigurator.isLinux,ServiceConfigurator.isOSX,ipv6) match {
     case (true,false,false,false) => "ping -4 -n 1 "+uri

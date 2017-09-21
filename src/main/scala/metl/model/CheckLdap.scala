@@ -4,7 +4,7 @@ import javax.naming.{Context, NamingEnumeration}
 import javax.naming.directory.{InitialDirContext, SearchControls}
 import net.liftweb.util.Helpers._
 
-class PingLDAP(serviceCheckMode:ServiceCheckMode,serviceCheckSeverity:ServiceCheckSeverity,incomingName:String,incomingLabel:String,host:String,username:String,password:String,searchBase:String,searchTerm:String,time:TimeSpan = 5 seconds) extends Pinger(incomingName,incomingLabel,serviceCheckMode,serviceCheckSeverity){
+class PingLDAP(metadata:PingerMetaData,host:String,username:String,password:String,searchBase:String,searchTerm:String,time:TimeSpan = 5 seconds) extends Pinger(metadata){
   override val pollInterval = time
   private val infoGroups = Seq("cn","uid","sn","givenname","mail")
   private val env = new java.util.Hashtable[String,String]();
