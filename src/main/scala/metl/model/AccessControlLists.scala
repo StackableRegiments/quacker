@@ -60,7 +60,7 @@ class ServicePermission(serviceName:String,serviceCheckModeWhitelist:Option[List
 			val serviceOkay = serviceName == cr.service
 			serviceCheckModeWhitelisted && !serviceCheckModeBlacklisted && serverWhitelisted && !serverBlacklisted && serviceOkay
 		}
-		case p:Pinger => {
+		case p:Sensor => {
 			val pServerName = p.serverName
 			val pServiceName = p.serviceName
 			val serverWhitelisted = serverWhitelist.map(sw => sw.contains(pServerName)).getOrElse(true)

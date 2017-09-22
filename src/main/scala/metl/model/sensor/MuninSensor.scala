@@ -1,8 +1,9 @@
-package metl.model
+package metl.model.sensor
 
 import java.io.{BufferedInputStream, BufferedOutputStream}
-import net.liftweb.util.Helpers._
-import net.liftweb.util.Helpers.tryo
+
+import metl.model._
+import net.liftweb.util.Helpers.{tryo, _}
 import org.apache.commons.net.telnet.TelnetClient
 
 class MSMap[A,B](defaultFunc:A=>B = (a:A) => null.asInstanceOf[B]) extends scala.collection.mutable.HashMap[A,B] with scala.collection.mutable.SynchronizedMap[A,B]{
@@ -27,7 +28,7 @@ case object PercentageGuage extends MuninFieldType
 
 case class MuninCategoryDefinition(name:String,fieldType:MuninFieldType,matchers:Map[String,Matcher] = Map.empty[String,Matcher])
 
-class PingMunin(metadata:PingerMetaData, host:String, port:Int, onlyFetch:List[MuninCategoryDefinition] = List(MuninCategoryDefinition("cpu",Counter),MuninCategoryDefinition("memory",Guage)), time:TimeSpan = 5 seconds) extends PingTelnet(metadata,host,port,time){
+class MuninSensor(metadata:SensorMetaData, host:String, port:Int, onlyFetch:List[MuninCategoryDefinition] = List(MuninCategoryDefinition("cpu",Counter),MuninCategoryDefinition("memory",Guage)), time:TimeSpan = 5 seconds) extends TelnetSensor(metadata,host,port,time){
   protected val previous = {
     val map = new MSMap[String,MSMap[String,Double]]()
     onlyFetch.map(munCatDef => map.put(munCatDef.name,new MSMap[String,scala.Double]()))
@@ -125,7 +126,7 @@ class PingMunin(metadata:PingerMetaData, host:String, port:Int, onlyFetch:List[M
   }
 }
 
-case class PingMuninAgainstThreshhold(metadata:PingerMetaData, host:String, port:Int, thresholds:Map[String,MuninCategoryDefinition] = Map.empty[String,MuninCategoryDefinition], time:TimeSpan = 5 seconds) extends PingMunin(metadata,host,port,thresholds.values.toList,time){
+case class MuninSensorAgainstThreshhold(metadata:SensorMetaData, host:String, port:Int, thresholds:Map[String,MuninCategoryDefinition] = Map.empty[String,MuninCategoryDefinition], time:TimeSpan = 5 seconds) extends MuninSensor(metadata,host,port,thresholds.values.toList,time){
   override def telnetBehaviour(tc:TelnetClient):List[String] = {
     val completeOutput = interpretMuninData(tc)
     var errors = List.empty[String]

@@ -6,7 +6,6 @@ import net.liftweb.actor._
 import net.liftweb.common._
 import http._
 import js._
-import JE._
 import json.JsonAST._
 import util.{Helpers, _}
 import Helpers._
@@ -18,8 +17,8 @@ import net.liftweb.common.Logger
 
 case class DashboardException(reason:String,detail:String,exceptions:List[Exception] = Nil) extends Exception(reason)
 case object Check
-case object StartPinger
-case object StopPinger
+case object StartSensor
+case object StopSensor
 
 trait VisualElement {
 	val id:String = nextFuncName
@@ -37,7 +36,7 @@ trait VisualElement {
   protected def asJson:List[JField] = Nil
 }
 
-case class HtmlInformation(metadata:PingerMetaData,name:String,html:NodeSeq) extends VisualElement {
+case class HtmlInformation(metadata:SensorMetaData, name:String, html:NodeSeq) extends VisualElement {
 	override val serviceName = metadata.service
 	override val serverName = metadata.server
 	override val label: String = "%s information".format(name)
@@ -47,7 +46,7 @@ case class HtmlInformation(metadata:PingerMetaData,name:String,html:NodeSeq) ext
   )
 }
 
-case class Information(metadata:PingerMetaData,name:String,message:String) extends VisualElement {
+case class Information(metadata:SensorMetaData, name:String, message:String) extends VisualElement {
 	override val serviceName = metadata.service
 	override val serverName = metadata.server
 	override val label: String = name
@@ -57,7 +56,7 @@ case class Information(metadata:PingerMetaData,name:String,message:String) exten
   )
 }
 
-case class ErrorInformation(metadata:PingerMetaData,name:String,expectedPeriod:String,sourceString:String,errors:List[String]) extends VisualElement {
+case class ErrorInformation(metadata:SensorMetaData, name:String, expectedPeriod:String, sourceString:String, errors:List[String]) extends VisualElement {
 	override val serviceName = metadata.service
 	override val serverName = metadata.server
 	override val label: String = "Error: %s".format(name)
@@ -69,11 +68,11 @@ case class ErrorInformation(metadata:PingerMetaData,name:String,expectedPeriod:S
   )
 }
 
-case class EndpointInformationWithString(metadata:PingerMetaData,name:String,htmlDescriptor:String,endpoints:List[EndpointDescriptor]) extends EndpointInformationWithHtml(metadata,name,Text(htmlDescriptor),endpoints){
+case class EndpointInformationWithString(metadata:SensorMetaData, name:String, htmlDescriptor:String, endpoints:List[EndpointDescriptor]) extends EndpointInformationWithHtml(metadata,name,Text(htmlDescriptor),endpoints){
 	override val serviceName = metadata.service
 	override val serverName = metadata.server
 }
-class EndpointInformationWithHtml(metadata:PingerMetaData,name:String,html:NodeSeq,endpoints:List[EndpointDescriptor]) extends VisualElement {
+class EndpointInformationWithHtml(metadata:SensorMetaData, name:String, html:NodeSeq, endpoints:List[EndpointDescriptor]) extends VisualElement {
 	override val serviceName = metadata.service
 	override val serverName = metadata.server
 	override val label: String = name
@@ -96,9 +95,9 @@ case object NullCheck extends VisualElement {
 	override val serviceName:String = "null"
 }
 
-case class PingerMetaData(name:String,label:String,mode:ServiceCheckMode,severity:ServiceCheckSeverity,service:String,server:String,expectFail:Boolean = false,timeout:Option[TimeSpan] = None,acceptedFailures:Int = 1)
+case class SensorMetaData(name:String, label:String, mode:ServiceCheckMode, severity:ServiceCheckSeverity, service:String, server:String, expectFail:Boolean = false, timeout:Option[TimeSpan] = None, acceptedFailures:Int = 1)
 
-abstract class Pinger(metadata:PingerMetaData) extends LiftActor with VisualElement with metl.comet.CheckRenderHelper with Logger {
+abstract class Sensor(metadata:SensorMetaData) extends LiftActor with VisualElement with metl.comet.CheckRenderHelper with Logger {
   import GraphableData._
 	override val serviceName = metadata.service
 	override val serverName = metadata.server
@@ -158,14 +157,14 @@ abstract class Pinger(metadata:PingerMetaData) extends LiftActor with VisualElem
 		currentFailures = 0
     var cr =  CheckResult(id,name,label,serviceName,serverName,now,why,lastUp,"",mode,severity,success = true,data)
     HistoryServer ! cr
-		DashboardServer ! cr 
-		ErrorRecorder ! cr 
+		DashboardServer ! cr
+		ErrorRecorder ! cr
   }
   override protected def exceptionHandler:PartialFunction[Throwable,Unit] = {
 		case DashboardException(reason,detail,innerExceptions) => {
 			fail(reason,detail)
 			internalResetEnvironment
-			schedule()	
+			schedule()
 		}
     case t:Throwable =>{
       fail(t.toString)
@@ -210,14 +209,14 @@ abstract class Pinger(metadata:PingerMetaData) extends LiftActor with VisualElem
 				schedule()
 			}
     }
-		case StopPinger => {
+		case StopSensor => {
 			if (!isStopped){
 				debug("stopping pinger: %s:%s (%s)".format(label,mode,id))
 				DashboardServer ! RemoveCheck(this)
 				isStopped = true
 			}
 		}
-		case StartPinger => {
+		case StartSensor => {
 			if (isStopped){
 				debug("starting pinger: %s:%s (%s)".format(label,mode,id))
 				isStopped = false
@@ -229,12 +228,12 @@ abstract class Pinger(metadata:PingerMetaData) extends LiftActor with VisualElem
     case _ => {}
   }
 }
-case class CheckUnexceptional(metadata:PingerMetaData,condition:Function0[Any],time:TimeSpan = 5 seconds) extends Pinger(metadata){
+case class CheckUnexceptional(metadata:SensorMetaData, condition:Function0[Any], time:TimeSpan = 5 seconds) extends Sensor(metadata){
   override val pollInterval = time
   def status = condition()
 	override def performCheck = succeed("Was expected")
 }
-case class CheckDoesnt(metadata:PingerMetaData,condition:Function0[Option[String]], time:TimeSpan = 5 seconds) extends Pinger(metadata){
+case class CheckDoesnt(metadata:SensorMetaData, condition:Function0[Option[String]], time:TimeSpan = 5 seconds) extends Sensor(metadata){
   override val pollInterval = 5 seconds
 	override def performCheck = {
 		condition() match {
@@ -245,7 +244,7 @@ case class CheckDoesnt(metadata:PingerMetaData,condition:Function0[Option[String
 		}
 	}
 }
-case class MatcherCheck(metadata:PingerMetaData,matcher:Matcher,time:TimeSpan) extends Pinger(metadata){
+case class MatcherCheck(metadata:SensorMetaData, matcher:Matcher, time:TimeSpan) extends Sensor(metadata){
 	override val pollInterval = time
 	failureTolerance = 3
 	def status = "%s is %s".format(matcher.describe,matcher.verify(true).toString)

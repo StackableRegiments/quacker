@@ -1,5 +1,6 @@
-package metl.model
+package metl.model.sensor
 
+import metl.model._
 import net.liftweb.util.Helpers._
 
 case class SQLResultSet(rows:Map[Int,SQLRow]){
@@ -152,14 +153,13 @@ class CombinedExceptionsException(exceptions:List[Throwable]) extends DashboardE
 }))
 
 import java.sql.{Connection, DriverManager}
+import java.util.concurrent.TimeoutException
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
-import java.util.concurrent.TimeoutException
-
 import scala.concurrent.{Await, Future}
 
-case class PingOracle(metadata:PingerMetaData,uri:String,username:String,password:String, query:String, thresholds:List[VerifiableSqlResultSetDefinition] = List.empty[VerifiableSqlResultSetDefinition], time:TimeSpan = 5 seconds) extends Pinger(metadata){
+case class OracleSensor(metadata:SensorMetaData, uri:String, username:String, password:String, query:String, thresholds:List[VerifiableSqlResultSetDefinition] = List.empty[VerifiableSqlResultSetDefinition], time:TimeSpan = 5 seconds) extends Sensor(metadata){
   override val pollInterval = time
   OracleSetup.initialize
   protected val connectionCreationTimeout = 10000L
@@ -229,7 +229,7 @@ object MySQLSetup {
   def initialize = {}
 }
 
-case class PingMySQL(metadata:PingerMetaData,uri:String,database:String,query:String,username:String,password:String,thresholds:List[VerifiableSqlResultSetDefinition] = List.empty[VerifiableSqlResultSetDefinition], time:TimeSpan = 5 seconds) extends Pinger(metadata){
+case class MySQLSensor(metadata:SensorMetaData, uri:String, database:String, query:String, username:String, password:String, thresholds:List[VerifiableSqlResultSetDefinition] = List.empty[VerifiableSqlResultSetDefinition], time:TimeSpan = 5 seconds) extends Sensor(metadata){
   override val pollInterval = time
   MySQLSetup.initialize
   var sqlConnection:Option[Connection] = None

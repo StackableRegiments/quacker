@@ -1,10 +1,11 @@
-package metl.model
+package metl.model.sensor
 
 import com.mongodb.MongoClient
+import metl.model.{Sensor, SensorMetaData}
 import net.liftweb.util.Helpers
 import net.liftweb.util.Helpers._
 
-case class PingMongo(metadata:PingerMetaData,hostname:String,port:Int,database:String,table:String,time:TimeSpan = 5 seconds) extends Pinger(metadata){
+case class PingMongo(metadata:SensorMetaData, hostname:String, port:Int, database:String, table:String, time:TimeSpan = 5 seconds) extends Sensor(metadata){
   override val pollInterval: Helpers.TimeSpan = time
   var mongo = new MongoClient(hostname,port)
   def status = {

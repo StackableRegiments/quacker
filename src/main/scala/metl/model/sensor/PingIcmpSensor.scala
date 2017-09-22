@@ -1,12 +1,12 @@
-package metl.model
+package metl.model.sensor
 
 import java.io.BufferedInputStream
 
+import metl.model.{DashboardException, Sensor, SensorMetaData, ServiceConfigurator}
 import net.liftweb.common.{Box, Empty}
-import net.liftweb.util.Helpers.tryo
-import net.liftweb.util.Helpers._
+import net.liftweb.util.Helpers.{tryo, _}
 
-case class PingICMP(metadata:PingerMetaData,uri:String,ipv6:Boolean = false,time:TimeSpan = 5 seconds) extends Pinger(metadata){
+case class PingICMPSensor(metadata:SensorMetaData, uri:String, ipv6:Boolean = false, time:TimeSpan = 5 seconds) extends Sensor(metadata){
   //pinging is done via ipv4 at present.  ipv6 in some networks results in unexpected results for some subnets
   private val pingCmd = (ServiceConfigurator.isWindows,ServiceConfigurator.isLinux,ServiceConfigurator.isOSX,ipv6) match {
     case (true,false,false,false) => "ping -4 -n 1 "+uri

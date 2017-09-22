@@ -1,11 +1,12 @@
-package metl.model
+package metl.model.sensor
 
 import java.net.URI
 
 import jcifs.smb.{NtlmPasswordAuthentication, SmbFile}
+import metl.model.{DashboardException, Sensor, SensorMetaData}
 import net.liftweb.util.Helpers._
 
-case class PingSamba(metadata:PingerMetaData,hostname:String,domain:String,filename:String,username:String,password:String,time:TimeSpan = 5 seconds) extends Pinger(metadata) {
+case class SambaSensor(metadata:SensorMetaData, hostname:String, domain:String, filename:String, username:String, password:String, time:TimeSpan = 5 seconds) extends Sensor(metadata) {
   override val pollInterval = time
   def isForURI(uri:URI):Boolean = uri.getHost == hostname && uri.getScheme == "smb"
   val auth = new NtlmPasswordAuthentication(domain,username,password)

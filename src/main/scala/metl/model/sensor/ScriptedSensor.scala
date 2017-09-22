@@ -1,7 +1,4 @@
-package metl.model
-
-import net.liftweb._
-import net.liftweb.util.Helpers._
+package metl.model.sensor
 
 import java.io.{BufferedInputStream, BufferedOutputStream}
 import java.sql.{Connection, DriverManager}
@@ -9,18 +6,20 @@ import java.util.Date
 import javax.naming.Context
 import javax.naming.directory.{InitialDirContext, SearchControls}
 
-import GraphableData._
+import metl.model.GraphableData._
 import com.metl.utils.{CleanHttpClient, HTTPResponse, Http}
 import net.liftweb.common.{Box, Empty, Full, Logger}
 import net.liftweb.util.Helpers.{now, tryo}
+import net.liftweb.util.Helpers._
 import org.apache.commons.net.telnet.TelnetClient
 
 import scala.xml.Node
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeoutException
+
+import metl.model._
 
 case class ScriptStepResult(body:String,metaData:Map[String,String] = Map.empty[String,String],statusCode:Int = 0,duration:Double = 0.0)
 
@@ -502,7 +501,8 @@ case class MuninFunctionalCheck(host:String, port:Int, onlyFetch:List[MuninCateg
 
 case class JmxFunctionalCheck(jmxServiceUrl:String,credentials:Option[Tuple2[String,String]] = None) extends FunctionalServiceCheck {
   import java.lang.management._
-  import javax.management.remote.{JMXServiceURL,JMXConnectorFactory}
+  import javax.management.remote.{JMXConnectorFactory, JMXServiceURL}
+
   import collection.JavaConverters._
   override def innerAct(fcr:FunctionalCheckReturn,interpolator:Interpolator) = {
     val previousResult = fcr.result
@@ -1263,7 +1263,7 @@ class ScriptEngine(interpolator:Interpolator) {
   }
 }
 
-case class ScriptedCheck(metadata:PingerMetaData, sequence:List[FunctionalServiceCheck], interpolator:Interpolator, time:TimeSpan) extends Pinger(metadata){
+case class ScriptedSensor(metadata:SensorMetaData, sequence:List[FunctionalServiceCheck], interpolator:Interpolator, time:TimeSpan) extends Sensor(metadata){
   override val pollInterval = time
   val scriptEngine = new ScriptEngine(interpolator)
   def status = {

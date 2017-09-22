@@ -1,10 +1,12 @@
-package metl.model
+package metl.model.sensor
 
-import javax.naming.{Context, NamingEnumeration}
 import javax.naming.directory.{InitialDirContext, SearchControls}
+import javax.naming.{Context, NamingEnumeration}
+
+import metl.model.{Sensor, SensorMetaData}
 import net.liftweb.util.Helpers._
 
-class PingLDAP(metadata:PingerMetaData,host:String,username:String,password:String,searchBase:String,searchTerm:String,time:TimeSpan = 5 seconds) extends Pinger(metadata){
+class LdapSensor(metadata:SensorMetaData, host:String, username:String, password:String, searchBase:String, searchTerm:String, time:TimeSpan = 5 seconds) extends Sensor(metadata){
   override val pollInterval = time
   private val infoGroups = Seq("cn","uid","sn","givenname","mail")
   private val env = new java.util.Hashtable[String,String]();

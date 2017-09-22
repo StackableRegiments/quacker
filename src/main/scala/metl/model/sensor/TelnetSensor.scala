@@ -1,12 +1,13 @@
-package metl.model
+package metl.model.sensor
 
 import java.io.{BufferedInputStream, BufferedOutputStream}
 import java.util.Date
 
-import org.apache.commons.net.telnet.TelnetClient
+import metl.model.{Sensor, SensorMetaData}
 import net.liftweb.util.Helpers._
+import org.apache.commons.net.telnet.TelnetClient
 
-class PingTelnet(metadata:PingerMetaData,host:String,port:Int,time:TimeSpan = 5 seconds) extends Pinger(metadata){
+class TelnetSensor(metadata:SensorMetaData, host:String, port:Int, time:TimeSpan = 5 seconds) extends Sensor(metadata){
   override val pollInterval = time
   protected val commandResponseTerminator:Option[String] = None
   protected def telnetBehaviour(tc:TelnetClient):List[String] = {

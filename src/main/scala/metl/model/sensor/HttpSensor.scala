@@ -1,6 +1,7 @@
-package metl.model
+package metl.model.sensor
 
 import com.metl.utils.{HTTPResponse, Http}
+import metl.model._
 import net.liftweb.common.Full
 import net.liftweb.util.Helpers._
 
@@ -98,7 +99,7 @@ class HTTPResponseMatcher{
   }
 }
 
-case class HttpCheck(metadata:PingerMetaData,uri:String,headers:List[Tuple2[String,String]] = List.empty[Tuple2[String,String]], matcher:HTTPResponseMatcher = HTTPResponseMatchers.default, time:TimeSpan = 5 seconds) extends Pinger(metadata){
+case class HttpSensor(metadata:SensorMetaData, uri:String, headers:List[Tuple2[String,String]] = List.empty[Tuple2[String,String]], matcher:HTTPResponseMatcher = HTTPResponseMatchers.default, time:TimeSpan = 5 seconds) extends Sensor(metadata){
   override val pollInterval = time
   def getClient = Http.getClient
   var client = getClient
@@ -117,7 +118,7 @@ case class HttpCheck(metadata:PingerMetaData,uri:String,headers:List[Tuple2[Stri
   }
   override def performCheck = succeed(status._1.toString,status._2)
 }
-case class HttpCheckWithBasicAuth(metadata:PingerMetaData,uri:String,username:String,password:String, headers:List[Tuple2[String,String]] = List.empty[Tuple2[String,String]], matcher:HTTPResponseMatcher = HTTPResponseMatchers.default, time:TimeSpan = 5 seconds) extends Pinger(metadata){
+case class HttpSensorWithBasicAuth(metadata:SensorMetaData, uri:String, username:String, password:String, headers:List[Tuple2[String,String]] = List.empty[Tuple2[String,String]], matcher:HTTPResponseMatcher = HTTPResponseMatchers.default, time:TimeSpan = 5 seconds) extends Sensor(metadata){
   override val pollInterval = time
   def getClient = Http.getAuthedClient(username,password)
   var client = getClient

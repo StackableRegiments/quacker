@@ -1,9 +1,10 @@
-package metl.model
+package metl.model.sensor
 
+import metl.model.{DashboardException, Sensor, SensorMetaData}
 import net.liftweb.util.Helpers._
 import org.jivesoftware.smack.{ConnectionConfiguration, SASLAuthentication, SmackConfiguration, XMPPConnection}
 
-case class PingXmpp(metadata:PingerMetaData,resource:String,xmppServiceName:Option[String]=None,allowAnonymousAccess:Boolean=false,time:TimeSpan = 10 seconds) extends Pinger(metadata){
+case class XmppSensor(metadata:SensorMetaData, resource:String, xmppServiceName:Option[String]=None, allowAnonymousAccess:Boolean=false, time:TimeSpan = 10 seconds) extends Sensor(metadata){
   val hostname = resource
   val service = xmppServiceName.getOrElse(hostname)
   override val pollInterval = time

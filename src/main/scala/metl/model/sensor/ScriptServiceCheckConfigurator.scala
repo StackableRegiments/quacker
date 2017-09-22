@@ -1,5 +1,6 @@
-package metl.model
+package metl.model.sensor
 
+import metl.model.{ConfigFileReader, Matchers}
 import net.liftweb.common.Logger
 
 import scala.xml.Node

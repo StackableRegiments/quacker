@@ -1,11 +1,12 @@
-package metl.model
+package metl.model.sensor
 
 import java.net.InetSocketAddress
 
-import net.spy.memcached.MemcachedClient
+import metl.model.{Sensor, SensorMetaData}
 import net.liftweb.util.Helpers._
+import net.spy.memcached.MemcachedClient
 
-case class PingMemCached(metadata:PingerMetaData,uri:String, time:TimeSpan = 5 seconds) extends Pinger(metadata){
+case class PingMemCached(metadata:SensorMetaData, uri:String, time:TimeSpan = 5 seconds) extends Sensor(metadata){
   override val pollInterval = time
   private	val port = 11211
   private val address = new InetSocketAddress(uri,11211)

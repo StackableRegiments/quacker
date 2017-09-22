@@ -1,5 +1,7 @@
 package metl.model
 
+import metl.model.sensor.VerificationResponse
+
 import scala.xml._
 import scala.util.matching.Regex
 

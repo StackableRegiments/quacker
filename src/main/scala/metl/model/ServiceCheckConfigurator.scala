@@ -1,5 +1,6 @@
 package metl.model
 
+import metl.model.sensor._
 import net.liftweb.common.{Empty, Full}
 import net.liftweb.util.Helpers._
 
@@ -20,7 +21,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
       val expectFail = getBool(sc,"expectFail")
       var failed = false
       var errors = List.empty[String]
-      val metadata = PingerMetaData(serviceCheckName,label,mode,severity,serviceName,serverName,expectFail.getOrElse(false),timeout)
+      val metadata = SensorMetaData(serviceCheckName,label,mode,severity,serviceName,serverName,expectFail.getOrElse(false),timeout)
       def getOrError[A](value:Option[A],default:A,error:String):A = value.getOrElse({
         failed = true
         errors = error :: errors
@@ -57,7 +58,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
           case "icmp" => {
             val host = getOrError(getText(sc,"host"),"","host not specified")
             val ipv6 = getBool(sc,"ipv6").getOrElse(false)
-            PingICMP(metadata,host,ipv6,period)
+            PingICMPSensor(metadata,host,ipv6,period)
           }
           case "xmpp" => {
             val host = getOrError(getText(sc,"host"),"","host not specified")
@@ -66,7 +67,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
               case _ => Empty
             }
             val allowAnonymousAccess = false
-            PingXmpp(metadata,host,domain,allowAnonymousAccess,period)
+            XmppSensor(metadata,host,domain,allowAnonymousAccess,period)
           }
           case "oracle" => {
             val uri = getOrError(getText(sc,"connectionUri"),"","connection string not specified")
@@ -78,7 +79,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
               val tsMap = Matchers.configureFromXml(ts)
               VerifiableSqlResultSetDefinition(rowBehaviour,tsMap)
             })
-            PingOracle(metadata,uri,username,password,query,thresholds,period)
+            OracleSensor(metadata,uri,username,password,query,thresholds,period)
           }
           case "mysql" => {
             val host = getOrError(getText(sc,"host"),"","host not specified")
@@ -91,7 +92,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
               val tsMap = Matchers.configureFromXml(ts)
               VerifiableSqlResultSetDefinition(rowBehaviour,tsMap)
             })
-            PingMySQL(metadata,host,db,query,username,password,thresholds,period)
+            MySQLSensor(metadata,host,db,query,username,password,thresholds,period)
           }
           case "mongo" => {
             val host = getOrError(getText(sc,"host"),"","host not specified")
@@ -110,12 +111,12 @@ object ServiceCheckConfigurator extends ConfigFileReader {
             val password = getOrError(getText(sc,"password"),"","password not specified")
             val searchTerm = getOrError(getText(sc,"searchTerm"),"","searchTerm not specified")
             val searchBase = getOrError(getText(sc,"searchBase"),"","searchTerm not specified")
-            new PingLDAP(metadata,host,username,password,searchBase,searchTerm,period)
+            new LdapSensor(metadata,host,username,password,searchBase,searchTerm,period)
           }
           case "munin" => {
             val host = getOrError(getText(sc,"host"),"localhost","host not specified")
             val port = getOrError(getInt(sc,"port"),4949,"port not specified")
-            new PingMunin(metadata,host,port,List(MuninCategoryDefinition("cpu",PercentageCounter),MuninCategoryDefinition("memory",Guage)),period)
+            new MuninSensor(metadata,host,port,List(MuninCategoryDefinition("cpu",PercentageCounter),MuninCategoryDefinition("memory",Guage)),period)
           }
           case "munin_threshold" => {
             val host = getOrError(getText(sc,"host"),"localhost","host not specified")
@@ -126,7 +127,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
               val tsMap = Matchers.configureFromXml(ts)
               (tsName,MuninCategoryDefinition(tsName,MuninFieldType.parse(tsType),tsMap))
             }):_*)
-            PingMuninAgainstThreshhold(metadata,host,port,thresholds,period)
+            MuninSensorAgainstThreshhold(metadata,host,port,thresholds,period)
           }
           case "samba" => {
             val host = getOrError(getText(sc,"host"),"localhost","host not specified")
@@ -134,13 +135,13 @@ object ServiceCheckConfigurator extends ConfigFileReader {
             val file = getOrError(getText(sc,"file"),"serverStatus","host not specified")
             val username = getOrError(getText(sc,"username"),"","host not specified")
             val password = getOrError(getText(sc,"password"),"","host not specified")
-            PingSamba(metadata,host,domain,file,username,password,period)
+            SambaSensor(metadata,host,domain,file,username,password,period)
           }
           case "svn" => {
             val host = getOrError(getText(sc,"host"),"","host not specified")
             val username = getOrError(getText(sc,"username"),"","username not specified")
             val password = getOrError(getText(sc,"password"),"","password not specified")
-            PingSVN(metadata,host,username,password,period)
+            SvnSensor(metadata,host,username,password,period)
           }
           case "http" => {
             val url = getOrError(getText(sc,"url"),"","url not specified")
@@ -153,7 +154,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
                 case _ => false
               }
             }).toList
-            HttpCheck(metadata,url,additionalHeaders,matcher,period)
+            HttpSensor(metadata,url,additionalHeaders,matcher,period)
           }
           case "http_with_credentials" => {
             val url = getOrError(getText(sc,"url"),"","url not specified")
@@ -168,7 +169,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
                 case _ => false
               }
             }).toList
-            HttpCheckWithBasicAuth(metadata,url,username,password,additionalHeaders,matcher,period)
+            HttpSensorWithBasicAuth(metadata,url,username,password,additionalHeaders,matcher,period)
           }
           case "dependency" => {
             val matchers:Map[DependencyDescription,DependencyMatcher] = Map(getNodes(sc,"thresholds").map(t => {
@@ -180,7 +181,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
               val matcher = DependencyMatchers.configureFromXml(t)
               (desc,matcher)
             }):_*)
-            DependencyCheck(metadata,matchers,period)
+            DependencySensor(metadata,matchers,period)
           }
           case "matcher" => {
             getImmediateNodes(sc,"matcher").map(mNodes => {
@@ -193,7 +194,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
           case "script" => {
             val interpolator = Interpolator.configureFromXml( <interpolators>{getImmediateNodes(sc,"interpolator")}</interpolators> )
             val sequence = FunctionalServiceCheck.configureFromXml( <steps>{getImmediateNodes(sc,"step")}</steps> )
-            ScriptedCheck(metadata,sequence,interpolator.getOrElse(EmptyInterpolator),period)
+            ScriptedSensor(metadata,sequence,interpolator.getOrElse(EmptyInterpolator),period)
           }
           case other => {
             failed = true

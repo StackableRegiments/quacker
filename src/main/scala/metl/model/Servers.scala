@@ -36,7 +36,7 @@ object Servers extends ConfigFileReader{
 			(servicesXml \\ "service").foreach(serviceXml => {
 				val serviceName = getAttr(serviceXml,"name").getOrElse("unknown")
 				val servicesToStop = services.filter(s => s.name == serviceName)
-				servicesToStop.foreach(sts => sts.servers.foreach(s => s.checks.filter(c => c.isInstanceOf[Pinger]).map(c => c.asInstanceOf[Pinger]).foreach(c => c ! StopPinger)))
+				servicesToStop.foreach(sts => sts.servers.foreach(s => s.checks.filter(c => c.isInstanceOf[Sensor]).map(c => c.asInstanceOf[Sensor]).foreach(c => c ! StopSensor)))
 				val newServers = (serviceXml \ "server").map(serverXml => {
 					val serverName = getAttr(serverXml,"name").getOrElse("unknown")
 					val serviceChecks = (serverXml \ "serviceCheck").map(serviceCheckXml => ServiceCheckConfigurator.configureFromXml(serviceCheckXml,serviceName,serverName)).toList.flatten.toList
@@ -67,10 +67,10 @@ object Servers extends ConfigFileReader{
 	}
 	def rebuildChecks = {
 		val oldChecks = checks
-		checks = services.map(service => service.servers).map(servers => servers.map(server => server.checks).flatten.filter(_.isInstanceOf[Pinger]).map(_.asInstanceOf[Pinger])).flatten.toList
+		checks = services.map(service => service.servers).map(servers => servers.map(server => server.checks).flatten.filter(_.isInstanceOf[Sensor]).map(_.asInstanceOf[Sensor])).flatten.toList
 		oldChecks.foreach(check => {
 			if (!checks.contains(check)){
-				check ! StopPinger
+				check ! StopSensor
 //				Schedule.schedule(check,StopPinger,60 seconds)
 			}
 		})
@@ -79,12 +79,12 @@ object Servers extends ConfigFileReader{
 				check match {
 //	this is a thought to ensure that the dependency checks start after the things they depend on.  I'm thinking instead that it would be better to simply set a default sequential required failures on them.
 //					case d:DependencyCheck => Schedule.schedule(d,StartPinger,30 seconds)
-					case p:Pinger => p ! StartPinger
+					case p:Sensor => p ! StartSensor
 				}
 			}
 		})
 	}
-	protected var checks = List.empty[Pinger] 
+	protected var checks = List.empty[Sensor]
   def getVisualElements:List[VisualElement] = {
     val myRestriction = Globals.currentUserAccessRestriction
 		println("getVisualElements: %s\r\nPermissions:%s".format(services,myRestriction))
@@ -94,15 +94,15 @@ object Servers extends ConfigFileReader{
       }).flatten
     }).flatten.toList
   }
-	def checksFor(pingerName:String,serviceName:Option[String] = None,serverName:Option[String] = None,serviceCheckMode:Option[ServiceCheckMode]):List[Pinger] = {
+	def checksFor(pingerName:String,serviceName:Option[String] = None,serverName:Option[String] = None,serviceCheckMode:Option[ServiceCheckMode]):List[Sensor] = {
 		checks.filter(c => {
 			c match {
-				case p:Pinger => {
+				case p:Sensor => {
 					pingerName == p.label && serviceName.map(svcName => svcName == p.serviceName).getOrElse(true) && serverName.map(svrName => svrName == p.serverName).getOrElse(true) && serviceCheckMode.map(svcMode => svcMode == p.mode).getOrElse(true)
 				}
 				case _ => false
 			}
-		}).map(ve => ve.asInstanceOf[Pinger]).toList
+		}).map(ve => ve.asInstanceOf[Sensor]).toList
 	}
   def breakSomething(count:Int = 3) = shuffle(checks).take(count).foreach(_.fail("This is a drill"))
 }

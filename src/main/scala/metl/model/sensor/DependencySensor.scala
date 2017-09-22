@@ -1,8 +1,9 @@
-package metl.model
+package metl.model.sensor
 
+import metl.model._
 import net.liftweb.util.Helpers._
 
-case class DependencyCheck(metadata:PingerMetaData,dependencies:Map[DependencyDescription,DependencyMatcher],time:TimeSpan) extends Pinger(metadata){
+case class DependencySensor(metadata:SensorMetaData, dependencies:Map[DependencyDescription,DependencyMatcher], time:TimeSpan) extends Sensor(metadata){
   override val pollInterval = time
   failureTolerance = 3
   def status = {
