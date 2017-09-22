@@ -9,6 +9,7 @@ import util._
 import Helpers._
 import net.liftweb.http.SHtml._
 import java.util.Date
+
 import collection.JavaConverters._
 import net.liftweb.common.Logger
 import net.liftweb.util.TimeHelpers
@@ -140,7 +141,38 @@ object GraphableData {
   implicit def convert(in:Boolean) = GraphableBoolean(in)
 }
 
-case class CheckResult(id:String,serviceCheck:String,label:String,service:String,server:String,when:Date,why:String,lastUp:Box[Date],detail:String,mode:ServiceCheckMode,severity:ServiceCheckSeverity,success:Boolean,data:List[Tuple2[Long,Map[String,GraphableDatum]]] = Nil)
+case class CheckResult(id:String,serviceCheck:String,label:String,service:String,server:String,when:Date,why:String,lastUp:Box[Date],detail:String,mode:ServiceCheckMode,severity:ServiceCheckSeverity,success:Boolean,data:List[Tuple2[Long,Map[String,GraphableDatum]]] = Nil) {
+	def generateJson:JValue = {
+		JObject(List(
+			JField("id",JString(id)),
+			JField("status",JBool(success)),
+			JField("label",JString(label)),
+			JField("now",JInt(now.getTime())),
+			JField("why",JString(why)),
+			JField("detail",JString(success match {
+				case true => ""
+				case _ => detail
+			})),
+			JField("lastCheck",JInt(when.getTime())),
+			JField("data",JArray(data.map(tup => {
+				JObject(List(
+					JField("when",JInt(tup._1)),
+					JField("values",JObject(tup._2.toList.map(dTup => {
+						JField(dTup._1,dTup._2 match {
+							case GraphableFloat(f) => JDouble(f)
+							case GraphableDouble(d) => JDouble(d)
+							case GraphableInt(i) => JInt(i)
+							case GraphableLong(l) => JInt(l)
+							case GraphableString(s) => JString(s)
+							case GraphableBoolean(b) => JBool(b)
+						})
+					})))
+				))
+			}))))
+			::: lastUp.map(lu => JField("lastUp",JInt(lu.getTime()))).toList
+		)
+	}
+}
 
 abstract class ErrorActor(name:String) extends LiftActor {
 	protected def outputAction(cr:CheckResult) = {

@@ -21,29 +21,11 @@ case object Check
 case object StartPinger
 case object StopPinger
 
-object ViewTemplates {
-	//change these to vals to speed up the process
-	def getStructureTemplate: NodeSeq = Templates(List("_Service")).openOr(NodeSeq.Empty)
-	def getServiceTemplate: NodeSeq = Templates(List("_Check")).openOr(NodeSeq.Empty)
-	def getInformationTemplate: NodeSeq = Templates(List("_Information")).openOr(NodeSeq.Empty)
-	def getErrorInformationTemplate: NodeSeq = Templates(List("_ErrorInformation")).openOr(NodeSeq.Empty)
-	def getEndpointInformationTemplate: NodeSeq = Templates(List("_EndpointInformation")).openOr(NodeSeq.Empty)
-}
-
 trait VisualElement {
 	val id:String = nextFuncName
 	val label:String
 	val serviceName:String
 	val serverName:String
-	protected def template: NodeSeq = NodeSeq.Empty
-	def classDescriptor(server:String,service:String):String = List("check",service,server,"toggleable").mkString(" ")
-	def renderVisualElement(service:String = serviceName,server:String = serverName):NodeSeq = (
-		".serviceCheck [id]" #> id &
-		".serviceCheck [class+]" #> classDescriptor(server,service) &
-		".serviceCapacity *" #> label &
-		templateRenderer
-	).apply(template).toSeq
-	protected def templateRenderer:CssSel = ClearClearable
   def jsonRenderer(service:String = serviceName,server:String = serverName):JObject = {
     JObject(List(
       JField("id",JString(id)),
@@ -53,33 +35,15 @@ trait VisualElement {
     ) ::: asJson)
   }
   protected def asJson:List[JField] = Nil
-  def jsExpRenderer(service:String = serviceName,server:String = serverName):JsObj = {
-    JsObj((List(
-      ("id", Str(id)),
-      ("server",Str(server)),
-      ("service",Str(service)),
-      ("label",Str(label))
-    ) ::: asJsExp):_*)
-  }
-  protected def asJsExp:List[Tuple2[String,JsExp]] = Nil
 }
 
 case class HtmlInformation(metadata:PingerMetaData,name:String,html:NodeSeq) extends VisualElement {
 	override val serviceName = metadata.service
 	override val serverName = metadata.server
 	override val label: String = "%s information".format(name)
-	override def template: NodeSeq = ViewTemplates.getInformationTemplate
-	override def templateRenderer: CssBindFunc = {
-		".serviceStatus [title]" #> label &
-		".informationBody *" #> html
-	}
   override def asJson = List(
     JField("type",JString("htmlInformation")),
     JField("html",JString(html.toString))
-  )
-  override def asJsExp = List(
-    ("type",Str("htmlInformation")),
-    ("html", Str(html.toString))
   )
 }
 
@@ -87,18 +51,9 @@ case class Information(metadata:PingerMetaData,name:String,message:String) exten
 	override val serviceName = metadata.service
 	override val serverName = metadata.server
 	override val label: String = name
-	override def template: NodeSeq = ViewTemplates.getInformationTemplate
-	override def templateRenderer: CssBindFunc = {
-		".serviceStatus [title]" #> label &
-		".informationBody *" #> message
-	}
   override def asJson = List(
     JField("type",JString("information")),
     JField("information",JString(message))
-  )
-  override def asJsExp = List(
-    ("type",Str("information")),
-    ("information",Str(message))
   )
 }
 
@@ -106,26 +61,11 @@ case class ErrorInformation(metadata:PingerMetaData,name:String,expectedPeriod:S
 	override val serviceName = metadata.service
 	override val serverName = metadata.server
 	override val label: String = "Error: %s".format(name)
-	override def template: NodeSeq = ViewTemplates.getErrorInformationTemplate
-	override def templateRenderer: CssBindFunc = {
-		".expectedPeriod *" #> expectedPeriod &
-		".sourceString *" #> sourceString &
-		".serviceStatus [title]" #> label &
-		".errorList *" #> errors.map(e => {
-			<span class="errorItem">{e}</span>
-		})
-	}
   override def asJson = List(
     JField("type",JString("error")),
     JField("source",JString(sourceString)),
     JField("expectedPeriod",JString(expectedPeriod)),
     JField("errors",JArray(errors.map(e => JString(e))))
-  )
-  override def asJsExp = List(
-    ("type",Str("error")),
-    ("source",Str(sourceString)),
-    ("expectedPeriod",Str(expectedPeriod)),
-    ("errors",JsArray(errors.map(e => Str(e))))
   )
 }
 
@@ -137,15 +77,6 @@ class EndpointInformationWithHtml(metadata:PingerMetaData,name:String,html:NodeS
 	override val serviceName = metadata.service
 	override val serverName = metadata.server
 	override val label: String = name
-	override def template: NodeSeq = ViewTemplates.getEndpointInformationTemplate
-	override def templateRenderer: CssBindFunc = {
-		".informationBody *" #> html &
-		".serviceStatus [title]" #> label &
-		".servicesList *" #> endpoints.map(ep => {
-			".endpointName *" #> <a href={ep.endpoint}>{ep.name}</a> &
-			".endpointName [title]" #> ep.description
-		})
-	}
   override def asJson = List(
     JField("type",JString("endpoints")),
     JField("information",JString(html.toString)),
@@ -154,15 +85,6 @@ class EndpointInformationWithHtml(metadata:PingerMetaData,name:String,html:NodeS
       JField("name",JString(ep.name)),
       JField("description",JString(ep.description))
     )))))
-  )
-  override def asJsExp = List(
-    ("type",Str("endpoints")),
-    ("information",Str(html.toString)),
-    ("endpoints",JsArray(endpoints.map(ep => JsObj(List(
-      ("url",Str(ep.endpoint)),
-      ("name",Str(ep.name)),
-      ("description",Str(ep.description))
-    ):_*))))
   )
 }
 
@@ -184,20 +106,16 @@ abstract class Pinger(metadata:PingerMetaData) extends LiftActor with VisualElem
 	val severity: ServiceCheckSeverity = metadata.severity
 	val name: String = metadata.name
 	override val label: String = metadata.label
-	override def template: NodeSeq = ViewTemplates.getServiceTemplate
 	var checkTimeout:Box[TimeSpan] = metadata.timeout
 	var failureTolerance = metadata.acceptedFailures
 	var lastCheckBegin:Box[Date] = Empty
 	var lastUptime:Box[Date] = Empty
-	def lastUptimeString: String = lastUptime.map(t => t.toString).openOr("NEVER")
 	var lastCheck:Box[Date] = Empty
 	var lastStatus:Box[Boolean] = Empty
 	var lastWhy:Box[String] = Empty
 	var lastDetail:Box[String] = Empty
 	var currentFailures = 0
-	def lastStatusClass: String = statusClassFromStatus(lastStatus)
-	def lastStatusCode: String = statusCodeFromStatus(lastStatus)
-  protected val pollInterval: Helpers.TimeSpan = 5 seconds
+	protected val pollInterval: Helpers.TimeSpan = 5 seconds
   private def updatedTime(success:Boolean,now:Date = new Date()):Date = {
     val now = new Date()
 		lastCheck = Full(now)
@@ -256,68 +174,22 @@ abstract class Pinger(metadata:PingerMetaData) extends LiftActor with VisualElem
     }
     case _ => {}
   }
-	override def templateRenderer = {
-		val (why,detail) = lastStatus.map(s => s match {
-			case true => (lastWhy.openOr("").take(500),lastDetail.openOr("").take(500))
-			case false => (lastWhy.openOr(""),lastDetail.openOr(""))
-		}).openOr(("",""))
-		val tooltip = lastStatusCode + ": "+label+" (@"+now.toString+") : "+why
-		(
-			".serviceCapacity *" #> label &
-			".serviceLastChecked *" #> now.toString &
-			".serviceLastUp *" #> lastUptimeString &
-			".serviceStatus *" #> lastStatusCode &
-			".serviceStatus [title]" #> tooltip &
-			".serviceStatus [class+]" #> lastStatusClass &
-			".serviceLastUp *" #> lastUptimeString &	
-			".serviceClass *" #> mode.toString &
-			".serviceWhy *" #> why &
-			".serviceDetail *" #> detail &
-			".servicePeriod *" #> pollInterval.toString 
-		)
-	}
   override def asJson = {
 		val (why,detail) = lastStatus.map(s => s match {
 			case true => (lastWhy.openOr("").take(500),lastDetail.openOr("").take(500))
 			case false => (lastWhy.openOr(""),lastDetail.openOr(""))
 		}).openOr(("",""))
-		val lastCheckTime:Long = lastCheck.map(_.getTime()).openOr(0L)
-    List(
+		List(
       JField("type",JString("pinger")),
-      JField("lastChecked",JString(lastCheck.map(d => d.toString).openOr("NEVER"))),
-      JField("lastSuccess",JBool(lastStatus.openOr(false))),
-      JField("lastStatusCode",JString(lastStatusCode)),
-      JField("lastUp",JString(lastUptimeString)),
-			JField("lastCheck",JInt(lastCheckTime)),
-			JField("period",JInt(pollInterval.millis)),
+      JField("period",JInt(pollInterval.millis)),
       JField("mode",JString(mode.toString)),
       JField("severity",JString(severity.toString)),
 			JField("lastWhy",JString(why)),
       JField("lastDetail",JString(detail)),
-			JField("expectFail",JBool(metadata.expectFail)),
-      JField("pollInterval",JString(pollInterval.toString))
-    )
-  }
-  override def asJsExp = {
-		val (why,detail) = lastStatus.map(s => s match {
-			case true => (lastWhy.openOr("").take(500),lastDetail.openOr("").take(500))
-			case false => (lastWhy.openOr(""),lastDetail.openOr(""))
-		}).openOr(("",""))
-    List(
-      ("type",Str("pinger")),
-      ("lastChecked",Str(lastCheck.map(d => d.toString).openOr("NEVER"))),
-      ("lastSuccess",Str(lastStatus.openOr(false).toString)),
-      ("lastStatusCode",Str(lastStatusCode)),
-      ("lastUp",Str(lastUptimeString)),
-			("lastCheck",Num(lastCheck.map(_.getTime()).getOrElse(0L))),
-			("period",Num(pollInterval.millis)),
-			("mode",Str(mode.toString)),
-			("severity",Str(severity.toString)),
-			("lastWhy",Str(why)),
-			("expectFail", metadata.expectFail),
-			("lastDetail",Str(detail)),
-      ("pollInterval",Str(pollInterval.toString))
-    )    
+			JField("expectFail",JBool(metadata.expectFail))
+    ) ::: lastUptime.map(lu => JField("lastUp",JInt(lu.getTime))).toList :::
+			lastStatus.map(ls => JField("status",JBool(ls))).toList :::
+			lastCheck.map(lc => JField("lastCheck",JInt(lc.getTime()))).toList
   }
 	private var isStopped = true
 	def isRunning:Boolean = !isStopped
@@ -341,6 +213,7 @@ abstract class Pinger(metadata:PingerMetaData) extends LiftActor with VisualElem
 		case StopPinger => {
 			if (!isStopped){
 				debug("stopping pinger: %s:%s (%s)".format(label,mode,id))
+				DashboardServer ! RemoveCheck(this)
 				isStopped = true
 			}
 		}
@@ -349,6 +222,7 @@ abstract class Pinger(metadata:PingerMetaData) extends LiftActor with VisualElem
 				debug("starting pinger: %s:%s (%s)".format(label,mode,id))
 				isStopped = false
 				resetEnvironment
+				DashboardServer ! CreateCheck(this)
 				schedule(2 seconds)
 			}
 		}

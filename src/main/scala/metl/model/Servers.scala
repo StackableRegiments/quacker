@@ -85,30 +85,6 @@ object Servers extends ConfigFileReader{
 		})
 	}
 	protected var checks = List.empty[Pinger] 
-	def structure = {
-		val myRestriction = Globals.currentUserAccessRestriction 
-		val myServices = services.filter(service => myRestriction.permit(service))
-		myServices.map(service => {
-			(".serviceGroup [id]" #> service.name &
-			".serviceHeader *" #> service.name &
-			".serviceContent *" #> { (serviceContent:NodeSeq) => {
-				val myServers = service.servers.filter(server => myRestriction.permit(server))
-				NodeSeq.fromSeq(myServers.map(server => {
-					(".serverGroup [id]" #> server.name &
-					"serverHeader *" #> server.name &
-					".serverChecks *" #> {
-						val checkList = server.checks.filter(check => myRestriction.permit(check))
-						val classDescriptor = List("check",service.name,server.name,"toggleable").mkString(" ")
-						NodeSeq.fromSeq(checkList.map{
-								case ve:VisualElement => ve.renderVisualElement()
-								case _ => NodeSeq.Empty
-							}.foldLeft(List.empty[Node])((acc,item) => acc ::: item.toList)
-						)
-					}).apply(serviceContent).toSeq
-				}).foldLeft(List.empty[Node])((acc,item) => acc ::: item.toList))
-			} }).apply(ViewTemplates.getStructureTemplate)
-		})
-  }
   def getVisualElements:List[VisualElement] = {
     val myRestriction = Globals.currentUserAccessRestriction
 		println("getVisualElements: %s\r\nPermissions:%s".format(services,myRestriction))

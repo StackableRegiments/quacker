@@ -1,5 +1,6 @@
 var defaultExpandedServices = [];
 var defaultExpandedChecks = [];
+var jsonStructure = {};
 pluginSystem.registerCommand('dataChanged',function(){},function(){});
 pluginSystem.registerCommand('createCheck',function(){
     pluginSystem.suspendCommand('dataChanged');
@@ -8,6 +9,7 @@ pluginSystem.registerCommand('createCheck',function(){
     pluginSystem.resumeCommand('dataChanged');
     pluginSystem.resumeCommand('layoutChanged');
 });
+pluginSystem.registerCommand('removeCheck',function(){},function(){});
 pluginSystem.registerCommand('checkCreated',function(){},function(){});
 pluginSystem.registerCommand('layoutChanged',function(){},function(){});
 $(function (){
@@ -40,25 +42,43 @@ $(function (){
     pluginSystem.resumeCommand('dataChanged');
     pluginSystem.resumeCommand('layoutChanged');
 });
-function createChecks(){
-    var rootId = "#serverContainer";
-    var rootNode = $(rootId);
-    rootNode.html(renderSvg(rootId));
-    var redraw = function(){
+var renderChecks = _.once(function(){
+        var rootId = "#serverContainer";
+        var rootNode = $(rootId);
         rootNode.html(renderSvg(rootId));
+        var redraw = function () {
+            rootNode.html(renderSvg(rootId));
+            requestAnimationFrame(redraw);
+        };
         requestAnimationFrame(redraw);
-    };
-    requestAnimationFrame(redraw);
-}
+});
 function updateCheck(newCheck){
     if ("id" in newCheck) {
         var oldCheck = jsonStructure[newCheck.id];
-        jsonStructure[newCheck.id] = _.merge(oldCheck,newCheck);
+        if (oldCheck !== undefined) {
+            jsonStructure[newCheck.id] = _.merge(oldCheck, newCheck);
+        }
     }
     pluginSystem.fireCommand('dataChanged','core.updateCheck',newCheck);
 }
-function createCheck(obj){
-    pluginSystem.fireCommand('createCheck','core.createCheck',obj);
+function createChecks(newChecks){
+    if (_.isArray(newChecks)){
+        _.forEach(newChecks,function(check){
+            createCheck(check);
+        });
+    }
+    renderChecks();
+}
+function createCheck(newCheck){
+    if ("id" in newCheck) {
+        jsonStructure[newCheck.id] = newCheck;
+    }
+    pluginSystem.fireCommand('createCheck','core.createCheck',newCheck);
+    renderChecks();
+}
+function removeCheck(checkId){
+    delete jsonStructure[checkId];
+    pluginSystem.fireCommand('removeCheck','core.removeCheck',checkId);
 }
 function internalUpdateCheck(newCheck,targetNode){
     //console.log("newCheck: " + newCheck["label"] + ", " + newCheck["mode"]);

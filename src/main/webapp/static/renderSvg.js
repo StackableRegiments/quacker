@@ -124,23 +124,21 @@ var renderSvg = function () {
         }
 
         function calcIndicatorColor(d) {
-            console.log("Calcing color",d.lastCheck,d.lastChecked,d.statusCode,d.label);
+            console.log("Calcing color",d,d.lastCheck,d.status,d.label);
             if("lastCheck" in d && "period" in d) {
                 var nextCheck = (d.lastCheck + d.period);
                 if (d.lastCheck == 0 || new Date().getTime() > nextCheck) {
                     return "grey";
                 }
             }
-            if("statusCode" in d) {
-                if(d.statusCode == undefined) {
-                    return "orange";
-                } else if (d.statusCode == "Y") {
+            if("status" in d) {
+                if (d.status == true) {
                     return "green";
                 } else {
                     return "red";
                 }
             }
-            return "red";
+            return "orange";
         }
 
         var indicators = d3.select(thisService).selectAll(".ringIndicator")
