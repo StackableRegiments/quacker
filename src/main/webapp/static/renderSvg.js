@@ -118,9 +118,13 @@ var renderSvg = function () {
             .attr("fill", "none")
             .attr("stroke-width", 2);
 
-        function calcProportion(lastCheck, period) {
-            var now = new Date().getTime();
-            return (now - lastCheck) / period;
+        function calcProportion(d) {
+            if("lastCheck" in d && "period" in d) {
+                var now = new Date().getTime();
+                return (now - d.lastCheck) / d.period;
+            } else {
+                return 0;
+            }
         }
 
         function calcIndicatorColor(d) {
@@ -149,20 +153,20 @@ var renderSvg = function () {
                 if ("lastCheck" in d && "period" in d && "severity" in d){
                     var center = dGroup.width / 2;
                     var radius = severityCheck(d);
-                    var theta = (2 * Math.PI * calcProportion(d.lastCheck,d.period)) - (Math.PI / 2);
+                    var theta = (2 * Math.PI * calcProportion(d)) - (Math.PI / 2);
                     return center + radius * Math.cos(theta);
                 } else {
-                    return 0;
+                    return 25;
                 }
             })
             .attr("cy",function(d,i){
                 if ("lastCheck" in d && "period" in d && "severity" in d){
                     var center = dGroup.height / 2;
                     var radius = severityCheck(d);
-                    var theta = (2 * Math.PI * calcProportion(d.lastCheck,d.period)) - (Math.PI / 2);
+                    var theta = (2 * Math.PI * calcProportion(d)) - (Math.PI / 2);
                     return center + radius * Math.sin(theta);
                 } else {
-                    return 0;
+                    return 25;
                 }
             })
             .attr("class","checkIndicator")

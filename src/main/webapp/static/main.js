@@ -99,15 +99,15 @@ function internalUpdateCheck(newCheck,targetNode){
     rootNode.find(".serviceCapacity").text(label);
     rootNode.find(".serviceLastChecked").text(newCheck["now"]);
     var statusNode = rootNode.find(".serviceStatus").attr("title",tooltip).text(statusCode);
-    if (statusClasses["serverError"] == true){
+    if (statusClasses["serverError"] == true) {
         statusNode.addClass("serverError").removeClass("serverUnknown").removeClass("serverOk");
         rootNode.find(".serviceWhy").text(why);
         rootNode.find(".serviceDetail").text(detail);
-    } else if (statusClasses["serverOk"] == true){
+    } else if (statusClasses["serverOk"] == true) {
         statusNode.addClass("serverOk").removeClass("serverUnknown").removeClass("serverError");
         rootNode.find(".serviceWhy").text(truncate(why,500));
         rootNode.find(".serviceDetail").text(truncate(detail,500));
-    }       else {
+    } else {
         statusNode.addClass("serverUnknown").removeClass("serverOk").removeClass("serverError");
         rootNode.find(".serviceWhy").text("");
         rootNode.find(".serviceDetail").text("");
