@@ -123,6 +123,26 @@ var renderSvg = function () {
             return (now - lastCheck) / period;
         }
 
+        function calcIndicatorColor(d) {
+            console.log("Calcing color",d.lastCheck,d.lastChecked,d.statusCode,d.label);
+            if("lastCheck" in d && "period" in d) {
+                var nextCheck = (d.lastCheck + d.period);
+                if (d.lastCheck == 0 || new Date().getTime() > nextCheck) {
+                    return "grey";
+                }
+            }
+            if("statusCode" in d) {
+                if(d.statusCode == undefined) {
+                    return "orange";
+                } else if (d.statusCode == "Y") {
+                    return "green";
+                } else {
+                    return "red";
+                }
+            }
+            return "red";
+        }
+
         var indicators = d3.select(thisService).selectAll(".ringIndicator")
             .data(ringData)
             .enter()
@@ -151,7 +171,7 @@ var renderSvg = function () {
             .attr("r",5)
             .attr("stroke","grey")
             .attr("fill",function(d){
-                return d.statusCode == "Y" ? "green" : "red";
+                return calcIndicatorColor(d);
             })
             .attr("stroke-width",1);
         var servers = d3.select(thisService).selectAll(".server")
