@@ -29,9 +29,9 @@ echo $RELEASE $PROJECT $REPOSITORY $VERSION $TAG
 git pull
 
 #Create the release artifact
-./sbt clean
-./sbt compile
-./sbt package
+sbt.sh clean
+sbt.sh compile
+sbt.sh package
 mkdir -p webapps
 cp target/scala-2.11/*.war webapps/quacker.war
 
