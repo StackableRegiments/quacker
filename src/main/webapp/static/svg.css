@@ -1,11 +1,16 @@
 svg {
-    height:100vh;
-    width:100vw;
-    position:absolute;
-    top:0;
-    left:0;
+    /*height:100vh;*/
+    /*width:100vw;*/
+    /*height:250px;*/
+    /*width:250px;*/
+    /*position:absolute;*/
+    /*top:0;*/
+    /*left:0;*/
+    height:200px;
+    /*display:block;*/
 }
 
+/*
 .serviceLabel {
     font-family: sans-serif;
     font-size: 1em;
@@ -16,11 +21,11 @@ svg {
     font-family: sans-serif;
     font-size: 0.75em;
     fill: #0000ff;
-    display:none;
+    //display:none;
 }
 .checkLabel {
     font-family: sans-serif;
     font-size: 0.5em;
     fill: #0000ff;
-    display:none;
-}
+    //display:none;
+}*/

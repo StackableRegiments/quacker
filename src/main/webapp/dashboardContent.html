@@ -1,73 +1,20 @@
 <div>
   <head>
     <link data-lift="with-resource-id" rel="stylesheet" href="/static/main.css"></link>
-    <link data-lift="with-resource-id" href="https://fonts.googleapis.com/css?family=Cabin" rel="stylesheet">
+    <link data-lift="with-resource-id" href="https://fonts.googleapis.com/css?family=Cabin" rel="stylesheet"></link>
     <script data-lift="with-resource-id" src="https://d3js.org/d3.v4.min.js"></script>
     <script data-lift="with-resource-id" src="/static/renderHtml.js"></script>
     <script data-lift="with-resource-id" src="/static/renderSvg.js"></script>
     <script data-lift="with-resource-id" src="/static/main.js"></script>
-    <link data-lift="with-resource-id" href="/static/svg.css" rel="stylesheet">
+    <link data-lift="with-resource-id" href="/static/svg.css" rel="stylesheet"></link>
   </head>
   <div>
     <div id="recipients" class="editingOnly"></div>
     <div id="updated" class="alwaysOn"></div>
     <div id="breakSomething" class="editingOnly"></div>
     <div id="reloadXml" class="editingOnly"></div>
-    <hr />
-    <div id="templateContainer" class="hideableHidden">
-      <span class="checkTemplate checkSummary template">
-        <!--<span class="pingerSummary checkSummary">-->
-        <span class="checkLabel"></span>
-          <span class="hideable">
-            <span class="summaryLine1"></span>
-            <span class="summaryLine2 hideable toggleable"></span>
-          </span>
-        <!--</span>-->
-      </span>
-      <span class="furtherDetailTemplate template">
-        <span class="furtherDetailInner">
-          <span class="serviceDataDescriptor"></span>
-          <span class="furtherDetail">: </span>
-          &nbsp;&nbsp;
-          <span class="furtherDetailValue"></span>
-        </span>
-      </span>
-      <span class="checkDetailContainerTemplate detailContainer toggleable template">
-        <div class="checkDetail checkExpandable">
-          <span class="serviceWhy furtherDetail toggleable"></span>
-          <span class="serviceDetail furtherDetail toggleable"></span>
-        </div>
-      </span>
-      </span>
-      <div class="informationTemplate template">
-        <div class="serviceStatus hideable">
-          Information
-        </div>
-      </div>
-      <span class="collapserTemplate collapser template">[<span class="collapserState"></span>]</span>
-      <span class="checkTemplate serviceCheck check toggleable">
-        <span class="checkCollapser hideable"></span>
-        <div class="checkContent hideable">
-          <span class="checkDetail"></span>
-        </div>
-      </span>
-      <span class="serverTemplate serverGroup toggleable template">
-        <!--<span class="serverCollapser"></span>-->
-        <span class="serverHeader">
-          <span class="serverName"></span>
-        </span>
-        <span class="checks"></span>
-      </span>
-      <div class="serviceTemplate serviceGroup template">
-        <div class="serviceHeaderContainer toggleable">
-          <span class="serviceCollapser"></span>
-          <span class="serviceHeader">
-            <span class="serviceName"></span>
-          </span>
-        </div>
-        <span class="servers hideable"></span>
-      </div>
-    </div>
+    <!--<hr />-->
+    <div class="lift:embed?what=_templates"></div>
     <div id="enable" ></div>
     <div id="dashboardServerContainer">
       <div id="serverContainerSvg" class="alwaysOn"></div>

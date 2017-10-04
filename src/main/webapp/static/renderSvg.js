@@ -63,7 +63,8 @@ var renderSvg = function () {
         width: 200,
         height: 250
     };
-    var services = svg
+    var serviceCount = _.size(data);
+    var services = svg.attr("viewBox",sprintf("0 0 %s %s",dGroup.width * serviceCount, dGroup.height))
         .selectAll(".service")
         .data(data)
         .enter().append("g")
@@ -76,12 +77,13 @@ var renderSvg = function () {
         .attr("transform", function (d, i) {
             return sprintf("translate(%s,%s)", i * dGroup.width, 0);
         });
-    var serviceLabels = services
-        .append("text")
+/*    var serviceLabels = html.selectAll(".service")
+        .data(data)
+        .enter().append("p")
         .attr("class", "serviceLabel")
         .attr("text-anchor", "middle")
-        .attr("x", dGroup.width / 2)
-        .attr("y", dGroup.height)
+        // .attr("x", dGroup.width / 2)
+        // .attr("y", dGroup.height)
         .text(function (d, i) {
             //console.log("Service label:",d,i);
             return d[0];
@@ -97,7 +99,7 @@ var renderSvg = function () {
                 serverSelector.hide();
                 checkSelector.hide();
             }
-        });
+        });*/
 
     services.each(function (service, serviceIndex) {
         var thisService = this;
@@ -128,7 +130,7 @@ var renderSvg = function () {
         }
 
         function calcIndicatorColor(d) {
-            console.log("Calcing color",d,d.lastCheck,d.status,d.label);
+            // console.log("Calcing color",d,d.lastCheck,d.status,d.label);
             if("lastCheck" in d && "period" in d) {
                 var nextCheck = (d.lastCheck + d.period);
                 if (d.lastCheck == 0 || new Date().getTime() > nextCheck) {
@@ -176,15 +178,18 @@ var renderSvg = function () {
                 return calcIndicatorColor(d);
             })
             .attr("stroke-width",1);
-        var servers = d3.select(thisService).selectAll(".server")
+        var servers = d3.select(thisService)
+            .selectAll(".server")
             .data(service[1])
             .enter().append("g")
             .attr("class", "server")
             .attr("id", function (d, i) {
                 return constructIdentity("server_" + d[0]);
             });
-        var serverLabels = servers
-            .append("text")
+/*        var serverLabels = d3.select(thisService)
+            .selectAll(".server")
+            .data(service[1])
+            .append("p")
             .attr("class", "serverLabel")
             .attr("x", 60)
             .attr("y", function (d, i, coll, e) {
@@ -204,7 +209,7 @@ var renderSvg = function () {
                 } else {
                     selector.hide();
                 }
-            });
+            });*/
         servers.each(function (server, serverIndex) {
             var thisServer = this;
             // console.log("each server", server, serverIndex, thisServer);
@@ -216,8 +221,10 @@ var renderSvg = function () {
                 .attr("id", function (d, i) {
                     return constructIdentity("check_" + d.id);
                 });
-            var checkLabels = checks
-                .append("text")
+/*            var checkLabels = d3.select(thisServer)
+                .selectAll(".check")
+                .data(server[1])
+                .append("p")
                 .attr("class", "checkLabel")
                 .attr("x", 90)
                 .attr("y", function (sd, si, coll) {
@@ -230,7 +237,7 @@ var renderSvg = function () {
                 })
                 .on("mouseover", function (d, i) {
                     // console.log('mouseOverElem',this,d,i);
-                });
+                });*/
         });
 
     });

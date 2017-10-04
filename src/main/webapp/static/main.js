@@ -1,4 +1,5 @@
 var defaultExpandedServices = [];
+var defaultExpandedServers = [];
 var defaultExpandedChecks = [];
 var jsonStructure = {};
 pluginSystem.registerCommand('dataChanged',function(){},function(){});
@@ -31,11 +32,15 @@ $(function (){
     };
     queryParams = getQueryParameters();
     var queryParamExpandedServices = queryParams["expandedServices"];
-    if (queryParamExpandedServices != undefined){
+    if (queryParamExpandedServices !== undefined){
         defaultExpandedServices = $.map(queryParamExpandedServices.split(","),function(item){return item.split("+").join(" ");});
     }
+    var queryParamExpandedServers = queryParams["expandedServers"];
+    if (queryParamExpandedServers !== undefined){
+        defaultExpandedServers = $.map(queryParamExpandedServers.split(","),function(item){return item.split("+").join(" ");});
+    }
     var queryParamExpandedChecks = queryParams["expandedChecks"];
-    if (queryParamExpandedChecks != undefined){
+    if (queryParamExpandedChecks !== undefined){
         defaultExpandedChecks = $.map(queryParamExpandedChecks.split(","),function(item){return item.split("+").join(" ");});
     }
     createChecks();
@@ -43,14 +48,17 @@ $(function (){
     pluginSystem.resumeCommand('layoutChanged');
 });
 var renderChecks = _.once(function(){
-        var rootId = "#serverContainer";
-        var rootNode = $(rootId);
-        rootNode.html(renderSvg(rootId));
-        var redraw = function () {
-            rootNode.html(renderSvg(rootId));
+    var svgRootNode = $("#serverContainerSvg");
+    //svgRootNode.html(renderSvg(svgRootId));
+    var htmlRootSelectorString = "#serverContainerHtml";
+    var htmlRootNode = $(htmlRootSelectorString);
+    //renderHtml(htmlRootId,jsonStructure);
+    var redraw = function () {
+        svgRootNode.html(renderSvg());
+        renderHtml(htmlRootSelectorString,jsonStructure);
             requestAnimationFrame(redraw);
-        };
-        requestAnimationFrame(redraw);
+    };
+    requestAnimationFrame(redraw);
 });
 function updateCheck(newCheck){
     if ("id" in newCheck) {
