@@ -15,6 +15,10 @@ var renderHtml = (function(rootSelectorString,jsonStructure) {
         console.log("found templates",templates);
     });
 
+    var toggledInClass = "toggledIn";
+    var toggledOutClass = "toggledOut";
+    var hideableHiddenClass = "hideableHidden";
+
     function getCollapser(char) {
         var collapser = templates["collapser"].clone();
         collapser.find(".collapserState").text(char);
@@ -22,6 +26,42 @@ var renderHtml = (function(rootSelectorString,jsonStructure) {
     }
     var getCollapserClosed = function(){return getCollapser("+");};
     var getCollapserOpen = function(){return getCollapser("-");};
+    function setupCollapser(containerNode, containerName, collapserSelector, hideableSelector, expandCommand, collapseCommand, defaultExpanded) {
+        var collapser = containerNode.find(collapserSelector);
+        collapser.html(getCollapserClosed());
+
+        var hideable = containerNode.find(hideableSelector);
+        var expanded = false;
+
+        var expand = function () {
+            collapser.addClass(toggledInClass).removeClass(toggledOutClass);
+            hideable.removeClass(hideableHiddenClass);
+            collapser.html(getCollapserOpen());
+            expanded = true;
+            pluginSystem.fireCommand('layoutChanged', expandCommand);
+        };
+        var collapse = function () {
+            collapser.addClass(toggledOutClass).removeClass(toggledInClass);
+            hideable.addClass(hideableHiddenClass);
+            collapser.html(getCollapserClosed());
+            expanded = false;
+            pluginSystem.fireCommand('layoutChanged', collapseCommand);
+        };
+        collapser.on('click', function () {
+            if (expanded) {
+                collapse();
+            } else {
+                expand();
+            }
+        });
+
+        collapse();
+        if (_.find(defaultExpanded, function (item) {
+                return item == containerName;
+            }) != undefined) {
+            expand();
+        }
+    }
 
     var generateServiceId = function(serviceName){return safetyId("service_"+serviceName);};
     var createServiceElem = function(servers,serviceName,withElem) {
@@ -29,6 +69,7 @@ var renderHtml = (function(rootSelectorString,jsonStructure) {
         serviceNode.attr("id",generateServiceId(serviceName));
         serviceNode.find(".serviceCollapser").html(getCollapserOpen());
         serviceNode.find(".serviceName").text(serviceName);
+        setupCollapser(serviceNode, serviceName, ".serviceCollapser", ".serviceHideable", "core.expandService", "core.collapseService", defaultExpandedServices);
         return withElem(serviceNode,serviceName,servers);
     };
     var updateServiceElem = function(elem,serviceName,servers){
@@ -43,43 +84,7 @@ var renderHtml = (function(rootSelectorString,jsonStructure) {
         var serverNode = templates["server"].clone();
         serverNode.attr("id",generateServerId(serverName));
         serverNode.find(".serverName").text(serverName);
-
-        var serverToggleable = serverNode.find('.' + toggleableClass);
-        var serverHideable = serverNode.find('.' + hideableClass);
-
-        var serverCollapser = serverNode.find(".serverCollapser");
-        var serverExpanded = false;
-        serverCollapser.html(getCollapserClosed());
-
-        var expandServer = function () {
-            serverToggleable.addClass(toggledInClass).removeClass(toggledOutClass);
-            serverHideable.removeClass(hideableHiddenClass);
-            serverCollapser.html(getCollapserOpen());
-            serverExpanded = true;
-            pluginSystem.fireCommand('layoutChanged', 'core.expandServer');
-        };
-        var collapseServer = function () {
-            serverToggleable.addClass(toggledOutClass).removeClass(toggledInClass);
-            serverHideable.addClass(hideableHiddenClass);
-            serverCollapser.html(getCollapserClosed());
-            serverExpanded = false;
-            pluginSystem.fireCommand('layoutChanged', 'core.collapseServer');
-        };
-        serverCollapser.on('click', function () {
-            if (serverExpanded) {
-                collapseServer();
-            } else {
-                expandServer();
-            }
-        });
-        serverToggleable.addClass(toggledOutClass).removeClass(toggledInClass);
-        serverHideable.addClass(hideableHiddenClass);
-        if (_.find(defaultExpandedServers, function (item) {
-                return item == serverName;
-            }) != undefined) {
-            expandServer();
-        }
-
+        setupCollapser(serverNode, serverName, ".serverCollapser", ".serverHideable", "core.expandServer", "core.collapseServer", defaultExpandedServers);
         return withElem(serverNode,serverName,checks);
     };
 
@@ -87,11 +92,71 @@ var renderHtml = (function(rootSelectorString,jsonStructure) {
     var createCheckElem = function(check,withElem){
         var checkNode = templates["check"].clone();
         checkNode.attr("id",generateCheckId(check));
+        checkNode.find(".checkName").text(check.name);
         checkNode.find(".checkLabel").text(check.label);
         checkNode.find(".checkService").text(check.service);
         checkNode.find(".checkServer").text(check.server);
         checkNode.find(".checkSeverity").text(check.severity);
         checkNode.find(".checkMode").text(check.mode);
+        setupCollapser(checkNode, check.name, ".checkCollapser", ".checkHideable", "core.expandCheck", "core.collapseCheck", defaultExpandedChecks);
+/*
+// Pinger
+
+                var pingerNode = pingerTemplate.clone();
+                var checkStatus = furtherDetail('', 'checkStatus', false, check.lastStatusCode);
+                switch (check.lastStatusCode) {
+                    case 'Y':
+                        checkStatus.addClass('serverOk');
+                        break;
+                    case 'N':
+                        checkStatus.addClass('serverError');
+                        break;
+                    default:
+                }
+                pingerNode.prepend(checkStatus);
+
+        var summaryContainer = pingerNode.find(".pingerSummary");
+        var summaryLine1 = summaryContainer.find(".summaryLine1");
+        var capacity = furtherDetail('Purpose', 'serviceCapacity', true, check.label);
+        summaryLine1.append(capacity);
+        var summaryLine2 = summaryContainer.find(".summaryLine2");
+        var serviceClass = furtherDetail('Class', 'serviceClass', true, check.mode);
+        var lastChecked = furtherDetail('Last checked', 'serviceLastChecked', false, check.lastChecked);
+        var lastUp = furtherDetail('Last up', 'serviceLastUp', true, check.lastUp);
+        var frequency = furtherDetail('Frequency', 'servicePeriod', true, check.pollInterval);
+        summaryLine2.append(serviceClass).append(lastChecked).append(lastUp).append(frequency);
+*/
+
+/*
+//Information
+        var informationNode = informationTemplate.clone();
+        var serviceStatus = informationNode.find(".serviceStatus");
+        var header = furtherDetail('Information', 'serviceCapacity', true, check.label);
+        var information = checkElem(['information'], true, true, check.information);
+        serviceStatus.append(checkElem([], true, false).append(checkElem([], false, true).append(header))).append(checkElem([], true, true).append(checkElem([], false, true).append(information)));
+    } else if (check.type == "htmlInformation") {
+        var serviceStatus = elem([], true, false, "Information");
+        var header = furtherDetail('Information', 'serviceCapacity', true, check.label);
+        var information = checkElem(['information'], true, true, check.information);
+        checkNode.append(serviceStatus).append(checkElem([], true, false).append(checkElem([], false, true).append(header))).append(checkElem([], true, true).append(checkElem([], false, true).append(information)));
+*/
+
+/*
+//Error
+        var info = elem([], false, true, "Errors");
+        var description = furtherDetail('Description', 'serviceCapacity', false, check.label);
+        var sourceItem = furtherDetail('Source', 'errorSource', false, check.source);
+        var expectedPeriod = furtherDetail('Expected period', 'errorPeriod', false, check.expectedPeriod);
+        var errorContainer = furtherDetail('Errors', 'errorList', false);
+        _.forEach(check.errors, function (item) {
+            errorContainer.append($("<span/>", {
+                'class': 'errorItem',
+                'text': item
+            }));
+        });
+        checkNode.append(info).append(checkElem([], true, false).append(checkElem([], false, true).append(description))).append(checkElem([], true, true).append(checkElem([], false, true).append(sourceItem)).append(checkElem([], false, true).append(expectedPeriod)).append(checkElem([], false, true).append(errorContainer)).append($("<hr/>")));
+*/
+
         return withElem(checkNode,check);
     };
     var updateCheckElem = function(elem,check){
@@ -131,7 +196,6 @@ var renderHtml = (function(rootSelectorString,jsonStructure) {
                 var serverRoot = serverContainer.find("#"+generateServerId(serverName));
                 if (serverRoot[0] === undefined){
                     serverRoot = createServerElem(checks,serverName,updateServerElem);
-                    // serverRoot.append("<br/>");
                     serverContainer.append(serverRoot)
                 } else {
                     updateServerElem(serverRoot,serverName,checks);
@@ -140,9 +204,8 @@ var renderHtml = (function(rootSelectorString,jsonStructure) {
                 _.forEach(checks,function(check){
                    var checkRoot = checksContainer.find("#"+generateCheckId(check));
                    if (checkRoot[0] === undefined){
-                       // checkRoot.append("<br/>");
                        checkRoot = createCheckElem(check,updateCheckElem);
-                       checksContainer.append(checkRoot)/*.append("<br/>")*/;
+                       checksContainer.append(checkRoot);
                    } else {
                        updateCheckElem(checkRoot,check);
                    }
@@ -151,233 +214,6 @@ var renderHtml = (function(rootSelectorString,jsonStructure) {
         });
     };
 
-    var hideableClass = "hideable";
-    var toggleableClass = "toggleable";
-    var toggledInClass = "toggledIn";
-    var toggledOutClass = "toggledOut";
-    var hideableHiddenClass = "hideableHidden";
-    var checkExpandableClass = "checkExpandable";
-    var checkExpandedClass = "checkExpanded";
-    var checkCollapsedClass = "checkCollapsed";
-    var furtherDetailClass = "furtherDetail";
-    var furtherDetailHiddenClass = "furtherDetailHidden";
-    var furtherDetailVisibleClass = "furtherDetailVisible";
-
-
-/*
-    var services = _.groupBy(jsonStructure, function (item) {
-        return item.service;
-    });
-
-    rootElem.append(_.map(services, function (checksInService, serviceName) {
-        templates["service"].clone();
-
-
-        var serviceRootNode = $("<div/>", {
-            'class': 'serviceGroup'
-        });
-        var serviceExpanded = false;
-        var headerContainer = elem([], false, true);
-        var serviceCollapser = $("<span/>", {
-            'class': 'serviceCollapser'
-        });
-        var serviceHeader = $("<span/>", {
-            'class': 'serviceHeader',
-            'text': serviceName
-        });
-        var serviceContent = $("<span/>", {
-            'class': 'serviceContent'
-        });
-        serviceRootNode.append(headerContainer.append(serviceCollapser).append(serviceHeader)).append(serviceContent);
-        var servers = _.groupBy(checksInService, function (item) {
-            return item.server;
-        });
-        serviceContent.html(_.map(servers, function (checksInServer, serverName) {
-            // console.log("server",serverName,checksInServer);
-            var serverRootNode = serverTemplate.clone();
-            var serverHeader = serverRootNode.find(".serverHeader");
-            serverHeader.find(".serverName").text(serverName);
-            var serverChecks = serverRootNode.find(".serverContent");
-
-            var serverToggleable = serverRootNode.find('.' + toggleableClass);
-            var serverHideable = serverRootNode.find('.' + hideableClass);
-
-            var serverCollapser = serverRootNode.find(".serverCollapser");
-            var serverExpanded = false;
-            serverCollapser.html(getCollapserClosed());
-
-            var expandServer = function () {
-                serverToggleable.addClass(toggledInClass).removeClass(toggledOutClass);
-                serverHideable.removeClass(hideableHiddenClass);
-                serverCollapser.html(getCollapserOpen());
-                serverExpanded = true;
-                pluginSystem.fireCommand('layoutChanged', 'core.expandServer');
-            };
-            var collapseServer = function () {
-                serverToggleable.addClass(toggledOutClass).removeClass(toggledInClass);
-                serverHideable.addClass(hideableHiddenClass);
-                serverCollapser.html(getCollapserClosed());
-                serverExpanded = false;
-                pluginSystem.fireCommand('layoutChanged', 'core.collapseServer');
-            };
-            serverCollapser.on('click', function () {
-                if (serverExpanded) {
-                    collapseServer();
-                } else {
-                    expandServer();
-                }
-            });
-            serverToggleable.addClass(toggledOutClass).removeClass(toggledInClass);
-            serverHideable.addClass(hideableHiddenClass);
-            if (_.find(defaultExpandedServers, function (item) {
-                    return item == serverName;
-                }) != undefined) {
-                expandServer();
-            }
-
-            serverChecks.html(_.map(checksInServer, renderCheck));
-
-            return serverRootNode;
-        }));
-        return serviceRootNode;
-    }));
-*/
-/*
-
-    var renderCheck = function(check){
-        var checkNode = templates["checkDetail"].clone();
-        checkNode.attr("id", check.id);
-        console.log("check: " + check.label + ", " + check.mode);
-
-        var collapser = checkNode.find(".checkCollapser");
-        collapser.html(getCollapserClosed());
-        var expanded = false;
-
-        if ('type' in check) {
-            if (check.type == "pinger") {
-                var checkDetailContainerNode = templates["checkDetailContainer"].clone();
-                var tooltip = check.lastStatusCode + ": " + check.label + " (@" + check.lastChecked + ") : " + check.lastWhy;
-                checkDetailContainerNode.attr('title', tooltip);
-
-                var checkDetail = checkDetailContainerNode.find(".checkDetail");
-                checkDetail.find(".serviceWhy").append($("<span/>", {text: check.lastWhy}));
-                checkDetail.find(".serviceDetail").append($("<span/>", {text: check.lastDetail}));
-                checkNode.append(checkDetailContainerNode);
-
-                var pingerNode = pingerTemplate.clone();
-                var checkStatus = furtherDetail('', 'checkStatus', false, check.lastStatusCode);
-                switch (check.lastStatusCode) {
-                    case 'Y':
-                        checkStatus.addClass('serverOk');
-                        break;
-                    case 'N':
-                        checkStatus.addClass('serverError');
-                        break;
-                    default:
-                }
-                pingerNode.prepend(checkStatus);
-
-                var summaryContainer = pingerNode.find(".pingerSummary");
-                var summaryLine1 = summaryContainer.find(".summaryLine1");
-                var capacity = furtherDetail('Purpose', 'serviceCapacity', true, check.label);
-                summaryLine1.append(capacity);
-                var summaryLine2 = summaryContainer.find(".summaryLine2");
-                var serviceClass = furtherDetail('Class', 'serviceClass', true, check.mode);
-                var lastChecked = furtherDetail('Last checked', 'serviceLastChecked', false, check.lastChecked);
-                var lastUp = furtherDetail('Last up', 'serviceLastUp', true, check.lastUp);
-                var frequency = furtherDetail('Frequency', 'servicePeriod', true, check.pollInterval);
-                summaryLine2.append(serviceClass).append(lastChecked).append(lastUp).append(frequency);
-
-                checkNode.append(pingerNode);
-            } else if (check.type == "information") {
-                var informationNode = informationTemplate.clone();
-                var serviceStatus = informationNode.find(".serviceStatus");
-                var header = furtherDetail('Information', 'serviceCapacity', true, check.label);
-                var information = checkElem(['information'], true, true, check.information);
-                serviceStatus.append(checkElem([], true, false).append(checkElem([], false, true).append(header))).append(checkElem([], true, true).append(checkElem([], false, true).append(information)));
-            } else if (check.type == "htmlInformation") {
-                var serviceStatus = elem([], true, false, "Information");
-                var header = furtherDetail('Information', 'serviceCapacity', true, check.label);
-                var information = checkElem(['information'], true, true, check.information);
-                checkNode.append(serviceStatus).append(checkElem([], true, false).append(checkElem([], false, true).append(header))).append(checkElem([], true, true).append(checkElem([], false, true).append(information)));
-            } else if (check.type == "endpoints") {
-                var serviceStatus = elem([], true, false, "Endpoints");
-                var headerContainer = furtherDetail('Endpoint Information', 'serviceCapacity', true);
-                var endpointContainer = checkElem([], true, true);
-                var information = checkElem(['information'], true, true, check.information);
-                _.forEach(check.endpoints, function (ep) {
-                    var ep = checkElem([], true, true, $("<a/>", {
-                        href: ep.url,
-                        target: "_blank",
-                        title: ep.description,
-                        text: ep.name
-                    }));
-                    endpointContainer.append(ep);
-                });
-                checkNode.append(serviceStatus).append(checkElem([], true, false).append(checkElem([], false, true).append($("<div/>").append(headerContainer))).append(checkElem([], false, true).append($("<div/>").append(information)))).append($("<div/>").append(checkElem([], true, true).append(checkElem([], false, true).append(endpointContainer))));
-            } else if (check.type == "error") {
-                var info = elem([], false, true, "Errors");
-                var description = furtherDetail('Description', 'serviceCapacity', false, check.label);
-                var sourceItem = furtherDetail('Source', 'errorSource', false, check.source);
-                var expectedPeriod = furtherDetail('Expected period', 'errorPeriod', false, check.expectedPeriod);
-                var errorContainer = furtherDetail('Errors', 'errorList', false);
-                _.forEach(check.errors, function (item) {
-                    errorContainer.append($("<span/>", {
-                        'class': 'errorItem',
-                        'text': item
-                    }));
-                });
-                checkNode.append(info).append(checkElem([], true, false).append(checkElem([], false, true).append(description))).append(checkElem([], true, true).append(checkElem([], false, true).append(sourceItem)).append(checkElem([], false, true).append(expectedPeriod)).append(checkElem([], false, true).append(errorContainer)).append($("<hr/>")));
-            }
-        }
-        var hideable = checkNode.find('.' + checkExpandableClass);
-        var toggleable = checkNode.find('.' + toggleableClass);
-        var thisChecksFurtherDetails = checkNode.find('.' + furtherDetailClass);
-        var collapseCheck = function () {
-            thisChecksFurtherDetails.addClass(furtherDetailHiddenClass).removeClass(furtherDetailVisibleClass);
-            toggleable.addClass(toggledOutClass).removeClass(toggledInClass);
-            hideable.addClass(hideableHiddenClass).addClass(checkCollapsedClass).removeClass(checkExpandedClass);
-            collapser.html(getCollapserClosed());
-            expanded = false;
-            pluginSystem.fireCommand('layoutChanged', 'core.collapseCheck');
-        };
-        var expandCheck = function () {
-            thisChecksFurtherDetails.addClass(furtherDetailVisibleClass).removeClass(furtherDetailHiddenClass);
-            toggleable.addClass(toggledInClass).removeClass(toggledOutClass);
-            hideable.removeClass(hideableHiddenClass).addClass(checkExpandedClass).removeClass(checkCollapsedClass);
-            collapser.html(getCollapserOpen());
-            expanded = true;
-            pluginSystem.fireCommand('layoutChanged', 'core.expandCheck');
-        };
-        collapser.on('click', function () {
-            if (expanded) {
-                collapseCheck();
-            } else {
-                expandCheck();
-            }
-        });
-        thisChecksFurtherDetails.addClass(furtherDetailHiddenClass).removeClass(furtherDetailVisibleClass);
-        hideable.addClass(hideableHiddenClass).addClass(checkCollapsedClass).removeClass(checkExpandedClass);
-        toggleable.addClass(toggledOutClass).removeClass(toggledInClass);
-        var checkCreatedInfo = {
-            checkData: check,
-            service: check.service,
-            server: check.server,
-            serviceNode: serviceRootNode,
-            serverNode: serverRootNode,
-            checkNode: checkNode
-        };
-        pluginSystem.fireCommand('checkCreated', 'core.createChecks', checkCreatedInfo);
-        if (_.find(defaultExpandedChecks, function (item) {
-                return item == check.label;
-            }) != undefined) {
-            expandCheck();
-        }
-        return checkNode;
-    };
-*/
-
-    //return rootElem;
     return function(rootSelectorString,jsonStructure){
         render(rootSelectorString,jsonStructure);
     };

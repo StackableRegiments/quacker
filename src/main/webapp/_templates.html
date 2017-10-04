@@ -1,5 +1,5 @@
 <div id="templateContainer" class="hideableHidden">
-  <span class="collapserTemplate collapser template">[<span class="collapserState"></span>]</span>
+  <span class="collapserTemplate collapser template"><span class="collapserState"></span></span>
   <div class="informationTemplate template">
     <div class="serviceStatus hideable">
       Information
@@ -12,24 +12,26 @@
         <span class="serviceName"></span>
       </span>
     </div>
-    <span class="servers hideable"></span>
+    <span class="servers serviceHideable"></span>
   </div>
-  <div class="serverTemplate serverGroup toggleable template">
+  <div class="serverTemplate serverGroup template">
     <span class="serverCollapser"></span>
     <span class="serverHeader">
       <span class="serverName"></span>
     </span>
-    <span class="checks"></span>
+    <span class="checks serverHideable"></span>
   </div>
   <div class="checkTemplate checkSummary template">
     <span class="checkCollapser"></span>
-    <!--<span class="pingerSummary checkSummary">-->
-    <span class="checkLabel"></span>
-    <span class="hideable">
-      <span class="summaryLine1"></span>
-      <span class="summaryLine2 hideable toggleable"></span>
+    <span class="checkHeader">
+      Name: <span class="checkName"></span>
+      Label: <span class="checkLabel"></span>
     </span>
-    <!--</span>-->
+    <span class="summaryLine1"></span>
+    <span class="summaryLine2 checkHideable">
+      <span class="checkSeverity"></span><br/>
+      <span class="checkMode"></span>
+    </span>
   </div>
 </div>
 <!--

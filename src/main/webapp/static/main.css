@@ -25,6 +25,7 @@ body{
 }
 .serverHeader {
     font-size: 1.25em;
+    display:inline-block;
     /*font-weight: bold;*/
     /*font-color: darkblue;*/
     /*display:block;*/
@@ -36,14 +37,20 @@ body{
     /*display:block;*/
 }
 
-.checkSummary{
-    display:inline-block;
+.checkSummary {
     margin-left:1em;
-    /*min-width:20%;*/
+}
+.checkHeader{
+    font-size: 1em;
+    display:inline-block;
+    /*margin-left:1em;*/
 }
 .checkLabel {
     display:block;
-    font-size: 1em;
+}
+.summaryLine1, .summaryLine2 {
+    display:block;
+    margin-left:1em;
 }
 
 .serverError{
@@ -68,19 +75,24 @@ body{
 }
 .toggleable {
 }
-.hideable {
-}
 .toggledIn {
-}
-.hideableHidden {
-    /*display:none!important;*/
+    background:mistyrose;
 }
 .toggledOut {
+    background:lightyellow;
+}
+.hideableHidden {
+    display:none!important;
 }
 .collapser {
     font-weight: bold;
-    margin-left:0.5em;
-    margin-right:0.5em;
+    /*font-family: ;*/
+    padding-left:0.5em;
+    padding-right:0.5em;
+    padding-top:0.25em;
+    padding-bottom:0.25em;
+    margin-right: 0.25em;
+    border:1px solid lightgray;
     cursor:Pointer;
 }
 .serviceDataDescriptor {
