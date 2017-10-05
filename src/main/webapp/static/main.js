@@ -64,6 +64,7 @@ function updateCheck(newCheck){
     if ("id" in newCheck) {
         var oldCheck = jsonStructure[newCheck.id];
         if (oldCheck !== undefined) {
+            // console.log("updating check:",oldCheck,newCheck);
             jsonStructure[newCheck.id] = _.merge(oldCheck, newCheck);
         }
     }

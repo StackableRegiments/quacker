@@ -2,7 +2,6 @@ var renderHtml = (function(rootSelectorString,jsonStructure) {
     var templates = {};
     $(function(){
         var templateRoot = $("#templateContainer");
-        console.log("found templateRoot",templateRoot);
         templates = {
             "service":templateRoot.find(".serviceTemplate").clone(),
             "server":templateRoot.find(".serverTemplate").clone(),
@@ -12,7 +11,6 @@ var renderHtml = (function(rootSelectorString,jsonStructure) {
             "collapser":templateRoot.find(".collapserTemplate").clone()
         };
         templateRoot.remove();
-        console.log("found templates",templates);
     });
 
     var toggledInClass = "toggledIn";
@@ -72,13 +70,13 @@ var renderHtml = (function(rootSelectorString,jsonStructure) {
         setupCollapser(serviceNode, serviceName, ".serviceCollapser", ".serviceHideable", "core.expandService", "core.collapseService", defaultExpandedServices);
         return withElem(serviceNode,serviceName,servers);
     };
-    var updateServiceElem = function(elem,serviceName,servers){
-        return elem;
+    var updateServiceElem = function(serviceNode,serviceName,servers){
+        return serviceNode;
     };
 
     var generateServerId = function(serverName){return safetyId("server_"+serverName);};
-    var updateServerElem = function(elem,serverName,server){
-        return elem;
+    var updateServerElem = function(serverNode,serverName,server){
+        return serverNode;
     };
     var createServerElem = function(checks,serverName,withElem) {
         var serverNode = templates["server"].clone();
@@ -93,7 +91,8 @@ var renderHtml = (function(rootSelectorString,jsonStructure) {
         var checkNode = templates["check"].clone();
         checkNode.attr("id",generateCheckId(check));
         checkNode.find(".checkName").text(check.name);
-        checkNode.find(".checkLabel").text(check.label);
+        var checkLabel = checkNode.find(".checkLabel");
+        checkLabel.text(check.label);
         checkNode.find(".checkService").text(check.service);
         checkNode.find(".checkServer").text(check.server);
         checkNode.find(".checkSeverity").text(check.severity);
@@ -104,15 +103,6 @@ var renderHtml = (function(rootSelectorString,jsonStructure) {
 
                 var pingerNode = pingerTemplate.clone();
                 var checkStatus = furtherDetail('', 'checkStatus', false, check.lastStatusCode);
-                switch (check.lastStatusCode) {
-                    case 'Y':
-                        checkStatus.addClass('serverOk');
-                        break;
-                    case 'N':
-                        checkStatus.addClass('serverError');
-                        break;
-                    default:
-                }
                 pingerNode.prepend(checkStatus);
 
         var summaryContainer = pingerNode.find(".pingerSummary");
@@ -159,13 +149,32 @@ var renderHtml = (function(rootSelectorString,jsonStructure) {
 
         return withElem(checkNode,check);
     };
-    var updateCheckElem = function(elem,check){
-      elem.find(".statusCode").text(check.status ? "Y" : "N");
-      elem.find(".lastSuccess").text(new Date(check.lastUp));
-      elem.find(".lastCheck").text(new Date(check.lastCheck));
-      elem.find(".why").text(check.why);
-      elem.find(".detail").text(check.detail);
-      return elem;
+    var updateCheckElem = function(checkNode,check){
+        var checkLabel = checkNode.find(".checkLabel");
+        var checkStatus = checkNode.find(".checkStatus");
+        switch (check.status) {
+            case true:
+                checkLabel.addClass('checkOk');
+                checkStatus.addClass('checkOk');
+                checkStatus.text('Y');
+                break;
+            case false:
+                checkLabel.addClass('checkError');
+                checkStatus.addClass('checkError');
+                checkStatus.text('N');
+                break;
+            default:
+                checkLabel.addClass('checkUnknown');
+                checkStatus.addClass('checkUnknown');
+                checkStatus.text('?');
+        }
+
+        // elem.find(".statusCode").text(check.status ? "Y" : "N");
+        checkNode.find(".lastSuccess").text(new Date(check.lastUp));
+        checkNode.find(".lastCheck").text(new Date(check.lastCheck));
+        checkNode.find(".checkWhy").text(check.why);
+        checkNode.find(".checkDetail").text(check.detail);
+        return checkNode;
     };
 
     var safetyId = function(input){

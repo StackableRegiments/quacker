@@ -46,18 +46,26 @@ body{
     /*margin-left:1em;*/
 }
 .checkLabel {
-    display:block;
+    /*display:block;*/
+    font-weight:bold;
+}
+.checkStatus {
+    margin-left:1em;
 }
 .summaryLine1, .summaryLine2 {
     display:block;
-    margin-left:1em;
+    margin-left:2em;
 }
 
-.serverError{
+.checkUnknown{
+    background-color:orange;
+    color: black;
+}
+.checkError{
     background-color:red;
     color: white;
 }
-.serverOk {
+.checkOk {
     background-color:lightgreen;
     color: black;
 }
@@ -105,6 +113,7 @@ body{
     margin-bottom:1em;
 }
 .checkCollapsed {
+    display: none !important;
     margin-bottom:0em;
     border:none;
 }
@@ -119,11 +128,6 @@ body{
     /*padding: 10px;*/
 }
 
-.checkExpanded {
-}
-.checkCollapsed {
-    display: none !important;
-}
 /*
       #dashboardServerContainer .alwaysOn {
       margin: 1em;

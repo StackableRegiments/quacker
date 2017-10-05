@@ -15,7 +15,11 @@ import java.util.Date
 
 import net.liftweb.common.Logger
 
-case class DashboardException(reason:String,detail:String,exceptions:List[Exception] = Nil) extends Exception(reason)
+case class DashboardException(reason:String,detail:String,exceptions:List[Exception] = Nil) extends Exception(reason){
+	override def toString:String = {
+		"Exception(%s, %s)".format(reason,detail)
+	}
+}
 case object Check
 case object StartSensor
 case object StopSensor
