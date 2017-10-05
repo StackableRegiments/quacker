@@ -180,6 +180,7 @@ abstract class Sensor(metadata:SensorMetaData) extends LiftActor with VisualElem
 		}).openOr(("",""))
 		List(
       JField("type",JString("pinger")),
+      JField("name",JString(name)),
       JField("period",JInt(pollInterval.millis)),
       JField("mode",JString(mode.toString)),
       JField("severity",JString(severity.toString)),
