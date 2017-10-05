@@ -47,16 +47,23 @@ $(function (){
     pluginSystem.resumeCommand('dataChanged');
     pluginSystem.resumeCommand('layoutChanged');
 });
+var structureByServices = function(structure){
+    return _.groupBy(structure, function (check) {
+        return check.service;
+    });
+};
 var renderChecks = _.once(function(){
     var svgRootNode = $("#serverContainerSvg");
-    //svgRootNode.html(renderSvg(svgRootId));
     var htmlRootSelectorString = "#serverContainerHtml";
-    var htmlRootNode = $(htmlRootSelectorString);
-    //renderHtml(htmlRootId,jsonStructure);
     var redraw = function () {
-        svgRootNode.html(renderSvg());
-        renderHtml(htmlRootSelectorString,jsonStructure);
-            requestAnimationFrame(redraw);
+        svgRootNode.empty();
+        _.forEach(structureByServices(jsonStructure), function(checks,serviceName){
+            var thisSvgRootNode = $("<span/>");
+            svgRootNode.append(thisSvgRootNode);
+            thisSvgRootNode.html(renderSvg(checks,serviceName));
+            renderHtml(htmlRootSelectorString,checks,serviceName);
+        });
+        requestAnimationFrame(redraw);
     };
     requestAnimationFrame(redraw);
 });
@@ -65,7 +72,12 @@ function updateCheck(newCheck){
         var oldCheck = jsonStructure[newCheck.id];
         if (oldCheck !== undefined) {
             // console.log("updating check:",oldCheck,newCheck);
-            jsonStructure[newCheck.id] = _.merge(oldCheck, newCheck);
+            var cached = _.cloneDeep(oldCheck);
+            var merged = _.merge(oldCheck, newCheck);
+            jsonStructure[newCheck.id] = merged;
+            if (cached != merged){
+                merged.dirty = true;
+            };
         }
     }
     pluginSystem.fireCommand('dataChanged','core.updateCheck',newCheck);

@@ -1,4 +1,4 @@
-var renderHtml = (function(rootSelectorString,jsonStructure) {
+var renderHtml = (function(rootSelectorString,checkStructure) {
     var templates = {};
     $(function(){
         var templateRoot = $("#templateContainer");
@@ -98,55 +98,6 @@ var renderHtml = (function(rootSelectorString,jsonStructure) {
         checkNode.find(".checkSeverity").text(check.severity);
         checkNode.find(".checkMode").text(check.mode);
         setupCollapser(checkNode, check.name, ".checkCollapser", ".checkHideable", "core.expandCheck", "core.collapseCheck", defaultExpandedChecks);
-/*
-// Pinger
-
-                var pingerNode = pingerTemplate.clone();
-                var checkStatus = furtherDetail('', 'checkStatus', false, check.lastStatusCode);
-                pingerNode.prepend(checkStatus);
-
-        var summaryContainer = pingerNode.find(".pingerSummary");
-        var summaryLine1 = summaryContainer.find(".summaryLine1");
-        var capacity = furtherDetail('Purpose', 'serviceCapacity', true, check.label);
-        summaryLine1.append(capacity);
-        var summaryLine2 = summaryContainer.find(".summaryLine2");
-        var serviceClass = furtherDetail('Class', 'serviceClass', true, check.mode);
-        var lastChecked = furtherDetail('Last checked', 'serviceLastChecked', false, check.lastChecked);
-        var lastUp = furtherDetail('Last up', 'serviceLastUp', true, check.lastUp);
-        var frequency = furtherDetail('Frequency', 'servicePeriod', true, check.pollInterval);
-        summaryLine2.append(serviceClass).append(lastChecked).append(lastUp).append(frequency);
-*/
-
-/*
-//Information
-        var informationNode = informationTemplate.clone();
-        var serviceStatus = informationNode.find(".serviceStatus");
-        var header = furtherDetail('Information', 'serviceCapacity', true, check.label);
-        var information = checkElem(['information'], true, true, check.information);
-        serviceStatus.append(checkElem([], true, false).append(checkElem([], false, true).append(header))).append(checkElem([], true, true).append(checkElem([], false, true).append(information)));
-    } else if (check.type == "htmlInformation") {
-        var serviceStatus = elem([], true, false, "Information");
-        var header = furtherDetail('Information', 'serviceCapacity', true, check.label);
-        var information = checkElem(['information'], true, true, check.information);
-        checkNode.append(serviceStatus).append(checkElem([], true, false).append(checkElem([], false, true).append(header))).append(checkElem([], true, true).append(checkElem([], false, true).append(information)));
-*/
-
-/*
-//Error
-        var info = elem([], false, true, "Errors");
-        var description = furtherDetail('Description', 'serviceCapacity', false, check.label);
-        var sourceItem = furtherDetail('Source', 'errorSource', false, check.source);
-        var expectedPeriod = furtherDetail('Expected period', 'errorPeriod', false, check.expectedPeriod);
-        var errorContainer = furtherDetail('Errors', 'errorList', false);
-        _.forEach(check.errors, function (item) {
-            errorContainer.append($("<span/>", {
-                'class': 'errorItem',
-                'text': item
-            }));
-        });
-        checkNode.append(info).append(checkElem([], true, false).append(checkElem([], false, true).append(description))).append(checkElem([], true, true).append(checkElem([], false, true).append(sourceItem)).append(checkElem([], false, true).append(expectedPeriod)).append(checkElem([], false, true).append(errorContainer)).append($("<hr/>")));
-*/
-
         return withElem(checkNode,check);
     };
     var updateCheckElem = function(checkNode,check){
@@ -180,8 +131,8 @@ var renderHtml = (function(rootSelectorString,jsonStructure) {
     var safetyId = function(input){
         return _.replace(input," ","_");
     };
-    var render = function(rootSelectorString,jsonStructure) {
-        var structure = _.mapValues(_.groupBy(jsonStructure, function (check) {
+    var render = function(rootSelectorString,checkStructure) {
+        var structure = _.mapValues(_.groupBy(checkStructure, function (check) {
             return check.service;
         }), function (service) {
             return _.groupBy(service, function (check) {
@@ -216,14 +167,17 @@ var renderHtml = (function(rootSelectorString,jsonStructure) {
                        checkRoot = createCheckElem(check,updateCheckElem);
                        checksContainer.append(checkRoot);
                    } else {
-                       updateCheckElem(checkRoot,check);
+                       if ("dirty" in check && check.dirty == true) {
+                           updateCheckElem(checkRoot, check);
+                           delete check.dirty;
+                       }
                    }
                 });
             });
         });
     };
 
-    return function(rootSelectorString,jsonStructure){
-        render(rootSelectorString,jsonStructure);
+    return function(rootSelectorString,checkStructure){
+        render(rootSelectorString,checkStructure);
     };
 })();

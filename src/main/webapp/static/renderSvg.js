@@ -1,4 +1,8 @@
-var renderSvg = function () {
+var renderChecksAsCircles = function(checks,ringSeparatorFunc){
+
+};
+
+var renderSvg = function (allChecks) {
     var isHidden = function (elem) {
         return !elem.is(":visible") || elem.is(":hidden") || elem.css("display") === "none";
     };
@@ -16,7 +20,7 @@ var renderSvg = function () {
     };
     var rootElem = $("<div/>")[0];
     var svg = d3.select(rootElem).append("svg");
-    var data = _.toPairs(_.mapValues(_.groupBy(jsonStructure, function (item) {
+    var data = _.toPairs(_.mapValues(_.groupBy(allChecks, function (item) {
         return item.service;
     }), function (v, k) {
         return _.toPairs(_.groupBy(v, function (vi, vk) {
