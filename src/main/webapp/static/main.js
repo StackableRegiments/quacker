@@ -21,16 +21,16 @@ $(function (){
         var partString = window.location.search.substr(1);
         var parts = partString.split("&");
         var qParams = {};
-        if (parts.length == 0) {
+        if (parts.length === 0) {
             return qParams;
         }
         $.each(parts,function(index,item){
             var tuple = item.split("=");
             qParams[unescape(tuple[0])] = unescape(tuple[1]);
-        })
+        });
         return qParams;
     };
-    queryParams = getQueryParameters();
+    var queryParams = getQueryParameters();
     var queryParamExpandedServices = queryParams["expandedServices"];
     if (queryParamExpandedServices !== undefined){
         defaultExpandedServices = $.map(queryParamExpandedServices.split(","),function(item){return item.split("+").join(" ");});
@@ -53,15 +53,20 @@ var structureByServices = function(structure){
     });
 };
 var renderChecks = _.once(function(){
-    var svgRootNode = $("#serverContainerSvg");
-    var htmlRootSelectorString = "#serverContainerHtml";
+    var containerRootNode = $("#dashboardServerContainer");
+
     var redraw = function () {
-        svgRootNode.empty();
         _.forEach(structureByServices(jsonStructure), function(checks,serviceName){
-            var thisSvgRootNode = $("<span/>");
-            svgRootNode.append(thisSvgRootNode);
-            thisSvgRootNode.html(renderSvg(checks,serviceName));
-            renderHtml(htmlRootSelectorString,checks,serviceName);
+            var serviceIdOuter = "serviceOuter_" + serviceName;
+            var serviceNode = containerRootNode.find("#"+serviceIdOuter);
+            if (serviceNode[0] === undefined){
+                serviceNode = $("<span/>",{id:serviceIdOuter,class:"serviceOuter"});
+                containerRootNode.append(serviceNode);
+            }
+            renderHtml(serviceNode,checks,serviceName);
+            var thisSvgRootNode = serviceNode.find(".serviceSvg");
+            var serviceIdInner = "service_" + serviceName;
+            thisSvgRootNode.html(renderSvg(checks,serviceIdInner));
         });
         requestAnimationFrame(redraw);
     };
@@ -77,7 +82,7 @@ function updateCheck(newCheck){
             jsonStructure[newCheck.id] = merged;
             if (cached != merged){
                 merged.dirty = true;
-            };
+            }
         }
     }
     pluginSystem.fireCommand('dataChanged','core.updateCheck',newCheck);
@@ -106,7 +111,7 @@ function internalUpdateCheck(newCheck,targetNode){
 
     var rootNode = targetNode;
     var id = newCheck["id"];
-    if (rootNode == undefined){
+    if (rootNode === undefined){
         rootNode = $("#"+id);
     }
     var label = newCheck["label"];
@@ -120,11 +125,11 @@ function internalUpdateCheck(newCheck,targetNode){
     rootNode.find(".serviceCapacity").text(label);
     rootNode.find(".serviceLastChecked").text(newCheck["now"]);
     var statusNode = rootNode.find(".serviceStatus").attr("title",tooltip).text(statusCode);
-    if (statusClasses["serverError"] == true) {
+    if (statusClasses["serverError"] === true) {
         statusNode.addClass("serverError").removeClass("serverUnknown").removeClass("serverOk");
         rootNode.find(".serviceWhy").text(why);
         rootNode.find(".serviceDetail").text(detail);
-    } else if (statusClasses["serverOk"] == true) {
+    } else if (statusClasses["serverOk"] === true) {
         statusNode.addClass("serverOk").removeClass("serverUnknown").removeClass("serverError");
         rootNode.find(".serviceWhy").text(truncate(why,500));
         rootNode.find(".serviceDetail").text(truncate(detail,500));

@@ -1,19 +1,20 @@
 <div id="templateContainer" class="hideableHidden">
   <span class="collapserTemplate collapser template"><span class="collapserState"></span></span>
-  <div class="informationTemplate template">
-    <div class="serviceStatus hideable">
+  <span class="informationTemplate template">
+    <span class="serviceStatus hideable">
       Information
-    </div>
-  </div>
-  <div class="serviceTemplate serviceGroup template">
-    <div class="serviceHeaderContainer toggleable">
-      <span class="serviceCollapser"></span>
+    </span>
+  </span>
+  <span class="serviceTemplate serviceGroup template">
+    <span class="serviceHeaderContainer">
       <span class="serviceHeader">
         <span class="serviceName"></span>
       </span>
-    </div>
+    </span>
+    <span class="serviceSvg"></span>
+    <!--<span class="serviceCollapser"></span>-->
     <span class="servers serviceHideable"></span>
-  </div>
+  </span>
   <div class="serverTemplate serverGroup template">
     <span class="serverCollapser"></span>
     <span class="serverHeader">
@@ -24,17 +25,17 @@
   <div class="checkTemplate checkSummary template">
     <span class="checkCollapser"></span>
     <span class="checkHeader">
-      <!--Name: <span class="checkName"></span><br/>-->
       <span class="checkLabel"></span><span class="checkStatus"></span>
     </span>
     <span class="summaryLine1">
-      Why: <span class="checkWhy"></span>
+      <!--Name: <span class="checkName"></span><br/>-->
     </span>
     <span class="summaryLine2 checkHideable">
       Severity: <span class="checkSeverity"></span><br/>
       Mode: <span class="checkMode"></span><br/>
       Last Check: <span class="lastCheck"></span><br/>
       Last Success: <span class="lastSuccess"></span><br/>
+      Why: <span class="checkWhy"></span><br/>
       Detail: <span class="checkDetail"></span>
     </span>
   </div>

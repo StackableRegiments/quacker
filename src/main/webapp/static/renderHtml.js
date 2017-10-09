@@ -1,4 +1,4 @@
-var renderHtml = (function(rootSelectorString,checkStructure) {
+var renderHtml = (function() {
     var templates = {};
     $(function(){
         var templateRoot = $("#templateContainer");
@@ -67,7 +67,7 @@ var renderHtml = (function(rootSelectorString,checkStructure) {
         serviceNode.attr("id",generateServiceId(serviceName));
         serviceNode.find(".serviceCollapser").html(getCollapserOpen());
         serviceNode.find(".serviceName").text(serviceName);
-        setupCollapser(serviceNode, serviceName, ".serviceCollapser", ".serviceHideable", "core.expandService", "core.collapseService", defaultExpandedServices);
+        // setupCollapser(serviceNode, serviceName, ".serviceCollapser", ".serviceHideable", "core.expandService", "core.collapseService", defaultExpandedServices);
         return withElem(serviceNode,serviceName,servers);
     };
     var updateServiceElem = function(serviceNode,serviceName,servers){
@@ -177,7 +177,7 @@ var renderHtml = (function(rootSelectorString,checkStructure) {
         });
     };
 
-    return function(rootSelectorString,checkStructure){
+    return function(rootSelectorString,checkStructure,serviceName){
         render(rootSelectorString,checkStructure);
     };
 })();

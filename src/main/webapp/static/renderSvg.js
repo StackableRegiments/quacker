@@ -2,7 +2,7 @@ var renderChecksAsCircles = function(checks,ringSeparatorFunc){
 
 };
 
-var renderSvg = function (allChecks) {
+var renderSvg = function (allChecks,serviceName) {
     var isHidden = function (elem) {
         return !elem.is(":visible") || elem.is(":hidden") || elem.css("display") === "none";
     };
