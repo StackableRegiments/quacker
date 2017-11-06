@@ -1,8 +1,4 @@
-var renderChecksAsCircles = function(checks,ringSeparatorFunc){
-
-};
-
-var renderSvg = function (allChecks,serviceName) {
+var renderSvgRings = function (allChecks, serviceName) {
     var isHidden = function (elem) {
         return !elem.is(":visible") || elem.is(":hidden") || elem.css("display") === "none";
     };
@@ -81,29 +77,6 @@ var renderSvg = function (allChecks,serviceName) {
         .attr("transform", function (d, i) {
             return sprintf("translate(%s,%s)", i * dGroup.width, 0);
         });
-/*    var serviceLabels = html.selectAll(".service")
-        .data(data)
-        .enter().append("p")
-        .attr("class", "serviceLabel")
-        .attr("text-anchor", "middle")
-        // .attr("x", dGroup.width / 2)
-        // .attr("y", dGroup.height)
-        .text(function (d, i) {
-            //console.log("Service label:",d,i);
-            return d[0];
-        })
-        .on("click", function (d, i) {
-            var serviceId = constructIdentity("service_" + d[0]);
-            var serverSelector = $("#" + serviceId + " .serverLabel");
-            var checkSelector = $("#" + serviceId + " .checkLabel");
-            if (isHidden(serverSelector)) {
-                serverSelector.show();
-                // checkSelector.show();
-            } else {
-                serverSelector.hide();
-                checkSelector.hide();
-            }
-        });*/
 
     services.each(function (service, serviceIndex) {
         var thisService = this;
@@ -190,30 +163,7 @@ var renderSvg = function (allChecks,serviceName) {
             .attr("id", function (d, i) {
                 return constructIdentity("server_" + d[0]);
             });
-/*        var serverLabels = d3.select(thisService)
-            .selectAll(".server")
-            .data(service[1])
-            .append("p")
-            .attr("class", "serverLabel")
-            .attr("x", 60)
-            .attr("y", function (d, i, coll, e) {
-                var above = calculateVerticalOffsetWithinService(serviceIndex, i);
-                // console.log("serverLabels", d, i, coll, above);
-                return dGroup.height + above;
-            })
-            .text(function (d) {
-                return d[0];
-            })
-            .on("click", function (d, i) {
-                var selectorString = "#" + constructIdentity("server_" + d[0]) + " .checkLabel";
-                var selector = $(selectorString);
-                // console.log("showing:", selectorString, selector, isHidden(selector));
-                if (isHidden(selector)) {
-                    selector.show();
-                } else {
-                    selector.hide();
-                }
-            });*/
+
         servers.each(function (server, serverIndex) {
             var thisServer = this;
             // console.log("each server", server, serverIndex, thisServer);
@@ -225,25 +175,7 @@ var renderSvg = function (allChecks,serviceName) {
                 .attr("id", function (d, i) {
                     return constructIdentity("check_" + d.id);
                 });
-/*            var checkLabels = d3.select(thisServer)
-                .selectAll(".check")
-                .data(server[1])
-                .append("p")
-                .attr("class", "checkLabel")
-                .attr("x", 90)
-                .attr("y", function (sd, si, coll) {
-                    var above = calculateVerticalOffsetWithinService(serviceIndex, serverIndex, si);
-                    // console.log("checkLabels", sd, si, coll, above);
-                    return dGroup.height + above;
-                })
-                .text(function (d, i) {
-                    return d.label;
-                })
-                .on("mouseover", function (d, i) {
-                    // console.log('mouseOverElem',this,d,i);
-                });*/
         });
-
     });
     return rootElem;
 };

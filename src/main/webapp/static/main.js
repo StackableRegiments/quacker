@@ -64,9 +64,10 @@ var renderChecks = _.once(function(){
                 containerRootNode.append(serviceNode);
             }
             renderHtml(serviceNode,checks,serviceName);
-            var thisSvgRootNode = serviceNode.find(".serviceSvg");
+/*            var thisSvgRootNode = serviceNode.find(".serviceSvg");
             var serviceIdInner = "service_" + serviceName;
-            thisSvgRootNode.html(renderSvg(checks,serviceIdInner));
+            // thisSvgRootNode.html(renderSvgRings(checks,serviceIdInner));
+            thisSvgRootNode.html(renderSvgCircles(checks,serviceIdInner));*/
         });
         requestAnimationFrame(redraw);
     };

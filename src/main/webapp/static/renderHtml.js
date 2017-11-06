@@ -82,7 +82,7 @@ var renderHtml = (function() {
         var serverNode = templates["server"].clone();
         serverNode.attr("id",generateServerId(serverName));
         serverNode.find(".serverName").text(serverName);
-        setupCollapser(serverNode, serverName, ".serverCollapser", ".serverHideable", "core.expandServer", "core.collapseServer", defaultExpandedServers);
+        // setupCollapser(serverNode, serverName, ".serverCollapser", ".serverHideable", "core.expandServer", "core.collapseServer", defaultExpandedServers);
         return withElem(serverNode,serverName,checks);
     };
 
@@ -161,17 +161,23 @@ var renderHtml = (function() {
                     updateServerElem(serverRoot,serverName,checks);
                 }
                 var checksContainer = serverRoot.find(".checks");
-                _.forEach(checks,function(check){
+                _.forEach(checks,function(check, checkName){
                    var checkRoot = checksContainer.find("#"+generateCheckId(check));
                    if (checkRoot[0] === undefined){
                        checkRoot = createCheckElem(check,updateCheckElem);
+                       // checkRoot.append(createCheckSvg(checkRoot));
                        checksContainer.append(checkRoot);
                    } else {
-                       if ("dirty" in check && check.dirty == true) {
+                       if ("dirty" in check && check.dirty === true) {
                            updateCheckElem(checkRoot, check);
                            delete check.dirty;
                        }
                    }
+                   checkRoot.find(".checkSvg").empty();
+                   var singleCheckStructure = _.filter(checkStructure, function(o){
+                        return o.id === check.id;
+                    });
+                   renderCheckSvg(checkRoot.find(".checkSvg"), singleCheckStructure);
                 });
             });
         });
