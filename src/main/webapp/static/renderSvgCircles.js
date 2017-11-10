@@ -45,10 +45,35 @@ var renderCheckSvg = function(checkElem, allChecks) {
     var calcY = function(check, checkIndex) {
         return dGroup.height / 2;
     };
+    var calcProportion = function(d) {
+        if("lastCheck" in d && "period" in d) {
+            var now = new Date().getTime();
+            return (now - d.lastCheck) / d.period;
+        } else {
+            return 0;
+        }
+    }
+    var calcIndicatorColor = function(d) {
+        // console.log("Calcing color",d,d.lastCheck,d.status,d.label);
+        if("lastCheck" in d && "period" in d) {
+            var nextCheck = (d.lastCheck + d.period);
+            if (d.lastCheck == 0 || new Date().getTime() > nextCheck) {
+                return "grey";
+            }
+        }
+        if("status" in d) {
+            if (d.status == true) {
+                return "green";
+            } else {
+                return "red";
+            }
+        }
+        return "orange";
+    }
     // console.log("checks: ",checks);
     checks.each(function (check, checkIndex) {
         var thisCheck = this;
-        console.log("each check", check, checkIndex, thisCheck);
+//        console.log("each check", check, checkIndex, thisCheck);
         var checkData = _.flatMap(check[1], function (server) {
             return server[1];
         });
@@ -84,9 +109,41 @@ var renderCheckSvg = function(checkElem, allChecks) {
             .attr("y", function (d, checkIndex) {
                 return calcY(d, checkIndex);
             });
+
+        var indicators = d3.select(thisCheck).selectAll(".ringIndicator")
+            .data(checkData)
+            .enter()
+            .append("circle")
+            .attr("cx",function(d,i){
+                if ("lastCheck" in d && "period" in d && "severity" in d){
+                    var center = calcX(d, i);
+                    var radius = calcRadius(d);
+                    var theta = (2 * Math.PI * calcProportion(d)) - (Math.PI / 2);
+                    return center + radius * Math.cos(theta);
+                } else {
+                    return 25;
+                }
+            })
+            .attr("cy",function(d,i){
+                if ("lastCheck" in d && "period" in d && "severity" in d){
+                    var center = calcY(d, i);
+                    var radius = calcRadius(d);
+                    var theta = (2 * Math.PI * calcProportion(d)) - (Math.PI / 2);
+                    return center + radius * Math.sin(theta);
+                } else {
+                    return 25;
+                }
+            })
+            .attr("class","checkIndicator")
+            .attr("r",5)
+            .attr("stroke","grey")
+            .attr("fill",function(d){
+                return calcIndicatorColor(d);
+            })
+            .attr("stroke-width",1);
     });
 };
-
+/*
 var renderSvgCircles = function (allChecks, serviceName) {
     // var isHidden = function (elem) {
     //     return !elem.is(":visible") || elem.is(":hidden") || elem.css("display") === "none";
@@ -161,7 +218,8 @@ var renderSvgCircles = function (allChecks, serviceName) {
     };
     var serviceCount = _.size(data);
     // console.log("data",data);
-    var services = svg.attr("viewBox",sprintf("0 0 %s %s", dGroup.width/* * serviceCount*/, dGroup.height))
+//    var services = svg.attr("viewBox",sprintf("0 0 %s %s", dGroup.width * serviceCount, dGroup.height))
+    var services = svg.attr("viewBox",sprintf("0 0 %s %s", dGroup.width, dGroup.height))
         .selectAll(".service")
         .data(data)
         .enter().append("g")
@@ -280,3 +338,4 @@ var renderSvgCircles = function (allChecks, serviceName) {
     });
     return rootElem;
 };
+*/
