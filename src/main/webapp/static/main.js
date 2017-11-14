@@ -52,10 +52,12 @@ var structureByServices = function(structure){
         return check.service;
     });
 };
+var paused = false;
 var renderChecks = _.once(function(){
     var containerRootNode = $("#dashboardServerContainer");
 
     var redraw = function () {
+      if (!paused){
         _.forEach(structureByServices(jsonStructure), function(checks,serviceName){
             var serviceIdOuter = "serviceOuter_" + serviceName;
             var serviceNode = containerRootNode.find("#"+serviceIdOuter);
@@ -69,10 +71,16 @@ var renderChecks = _.once(function(){
             // thisSvgRootNode.html(renderSvgRings(checks,serviceIdInner));
             thisSvgRootNode.html(renderSvgCircles(checks,serviceIdInner));*/
         });
+        }
         requestAnimationFrame(redraw);
     };
     requestAnimationFrame(redraw);
 });
+var stripCheckHistory = function(check){
+  delete check.history;
+  return check;
+}
+var maxHistoryItems = 5;
 function updateCheck(newCheck){
     if ("id" in newCheck) {
         var oldCheck = jsonStructure[newCheck.id];
@@ -80,6 +88,9 @@ function updateCheck(newCheck){
             // console.log("updating check:",oldCheck,newCheck);
             var cached = _.cloneDeep(oldCheck);
             var merged = _.merge(oldCheck, newCheck);
+            var oldChecks = oldCheck.history || [];
+            oldChecks.push(stripCheckHistory(_.cloneDeep(cached)));
+            merged.history = _.take(oldChecks,maxHistoryItems);
             jsonStructure[newCheck.id] = merged;
             if (cached != merged){
                 merged.dirty = true;
