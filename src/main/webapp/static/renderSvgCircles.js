@@ -1,6 +1,6 @@
 var renderCheckSvg = function(checkElem, allChecks) {
     var dGroup = {
-        width: 300,
+        width: 250,
         height: 250
     };
     var ringRadius = 75;
@@ -8,12 +8,14 @@ var renderCheckSvg = function(checkElem, allChecks) {
     var orbitingContainerHeight = 25;
     var dotRadius = 10;
     var indicatorTextOffsetY = 4;
-    var historyWidth = 102;
-    var historyHeight = 27;
-    var historyPositionX = 25;
-    var historyPositionY = dGroup.height / 2 - historyHeight / 2;
+    var historiesWidth = 102;
+    var historiesHeight = 27;
+    var historiesPositionX = 25;
+    var historiesPositionY = dGroup.height / 2 - historiesHeight / 2;
     var historyContainerWidth = 25;
     var historyContainerHeight = 25;
+    var historyContainerPositionX = 0;
+    var historyContainerPositionY = 0;
 
     var constructIdentity = function (inString) {
         return _.replace(inString, " ", "_");
@@ -76,28 +78,11 @@ var renderCheckSvg = function(checkElem, allChecks) {
         }
         return "orange";
     };
-    var calcIndicatorTextColor = function(d,ignoreNextCheck){
-        // console.log("Calcing color",d,d.lastCheck,d.status,d.label);
-        if("status" in d) {
-            if (d.status == true) {
-                return "white";
-            } else {
-                return "white";
-            }
-        }
-        if("lastCheck" in d && "period" in d) {
-            var nextCheck = (d.lastCheck + d.period);
-            if (d.lastCheck == 0 || (!ignoreNextCheck && new Date().getTime() > nextCheck)) {
-                return "black";
-            }
-        }
-        return "orange";
-    };
-    var calcIndicatorText = function(d) {
+    var calcIndicatorText = function(d,ignoreNextCheck) {
         // console.log("Calcing text",d,d.lastCheck,d.status,d.label);
         if("lastCheck" in d && "period" in d) {
             var nextCheck = (d.lastCheck + d.period);
-            if (d.lastCheck == 0 || new Date().getTime() > nextCheck) {
+            if (d.lastCheck == 0 || (!ignoreNextCheck && new Date().getTime() > nextCheck)) {
                 return "?";
             }
         }
@@ -109,6 +94,23 @@ var renderCheckSvg = function(checkElem, allChecks) {
             }
         }
         return "O";
+    };
+    var calcIndicatorTextColor = function(d,ignoreNextCheck){
+        // console.log("Calcing color",d,d.lastCheck,d.status,d.label);
+        if("lastCheck" in d && "period" in d) {
+            var nextCheck = (d.lastCheck + d.period);
+            if (d.lastCheck == 0 || (!ignoreNextCheck && new Date().getTime() > nextCheck)) {
+                return "black";
+            }
+        }
+        if("status" in d) {
+            if (d.status == true) {
+                return "lightgrey";
+            } else {
+                return "white";
+            }
+        }
+        return "orange";
     };
 
     // console.log("checks: ",checks);
@@ -142,39 +144,49 @@ var renderCheckSvg = function(checkElem, allChecks) {
             .enter();
         indicators.each(function(d,i){
             if ("history" in d && _.size(d.history)){
-                var thisD = this;
-                var historyContainer = d3.select(thisD).selectAll(".historyItem")
+                var thisIndicatorD = this;
+
+                var historiesSvg = indicators.append("svg");
+                historiesSvg.attr("class","historiesContainer")
+                    .attr("w",historiesWidth)
+                    .attr("h",historiesHeight)
+                    .attr("x",historiesPositionX)
+                    .attr("y",historiesPositionY);
+
+                var histories = d3.select(thisIndicatorD).selectAll(".historyItem")
                     .data(d.history)
                     .enter();
-//                console.log("History container", historyContainer);
-                var historySvg = historyContainer.append("svg");
-                historySvg.attr("class","historyContainer")
-                    .attr("w",historyWidth)
-                    .attr("h",historyHeight)
-                    .attr("x",function(hd,hi){
-                      return (hi * historyContainerWidth) + historyPositionX;
-                    })
-                    .attr("y",historyPositionY);
-                historySvg.append("circle")
-                    .attr("class","historyIndicator")
-                    .attr("cy",dotRadius + 1)
-                    .attr("cx",dotRadius + 1)
-                    .attr("r",dotRadius)
-                    .attr("stroke","black")
-                    .attr("fill",function(hd,hi){
-                      var hc = calcIndicatorDotColor(hd,true);
-                      return hc;
-                    });
-                historySvg.append("text")
-                    .attr("class","historyText")
-                    .text(function(hd) {
-                        return calcIndicatorText(hd);
-                    })
-                    .attr("x",(historyContainerWidth / 2) - 2)
-                    .attr("y",(historyContainerHeight / 2) + 2)
-                    .attr("text-anchor", "middle")
-                    .attr("fill",function(hd,hi){ return calcIndicatorTextColor(hd); });
-              }
+                histories.each(function(hd,hi){
+                    var historySvg = historiesSvg.append("svg");
+                    historySvg.attr("class","historyContainer")
+                        .attr("w",historyContainerWidth)
+                        .attr("h",historyContainerHeight)
+                        .attr("x",function(){
+                            return historyContainerPositionX + (historyContainerWidth * hi);
+                        })
+                        .attr("y",historyContainerPositionY);
+                    historySvg.append("circle")
+                        .attr("class","historyIndicator")
+                        .attr("cy",dotRadius + 1)
+                        .attr("cx",dotRadius + 1)
+                        .attr("r",dotRadius)
+                        .attr("stroke","black")
+                        .attr("fill",function(){
+                            return calcIndicatorDotColor(hd,true);
+                        });
+                    historySvg.append("text")
+                        .attr("class","historyText")
+                        .text(function() {
+                            return calcIndicatorText(hd,true);
+                        })
+                        .attr("x",(historyContainerWidth / 2) - 2)
+                        .attr("y",(historyContainerHeight / 2) + 2)
+                        .attr("text-anchor", "middle")
+                        .attr("fill",function(){
+                            return calcIndicatorTextColor(hd,true);
+                        });
+                });
+            }
         });
 
         var orbitingContainer = indicators.append("svg")
