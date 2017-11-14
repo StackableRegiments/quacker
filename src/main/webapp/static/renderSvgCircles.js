@@ -59,56 +59,26 @@ var renderCheckSvg = function(checkElem, allChecks) {
             return 0;
         }
     };
-    var calcIndicatorDotColor = function(d,ignoreNextCheck) {
+    var calcIndicatorAttributes = function(d,ignoreNextCheck) {
         // console.log("Calcing color",d,d.lastCheck,d.status,d.label);
         if("lastCheck" in d && "period" in d) {
             var nextCheck = (d.lastCheck + d.period);
             if (d.lastCheck == 0 || (!ignoreNextCheck && new Date().getTime() > nextCheck)) {
-                return "grey";
+                // Stale. Past next expected check time, but no next check available.
+                return {dotColor:"lightgrey",text:"?",textColor:"black"};
             }
         }
         if("status" in d) {
             if (d.status == true) {
-                return "green";
+                // Check success.
+                return {dotColor:"green",text:"Y",textColor:"white"};
             } else {
-                return "red";
+                // Check failure.
+                return {dotColor:"red",text:"N",textColor:"white"};
             }
         }
-        return "orange";
-    };
-    var calcIndicatorText = function(d,ignoreNextCheck) {
-        // console.log("Calcing text",d,d.lastCheck,d.status,d.label);
-        if("lastCheck" in d && "period" in d) {
-            var nextCheck = (d.lastCheck + d.period);
-            if (d.lastCheck == 0 || (!ignoreNextCheck && new Date().getTime() > nextCheck)) {
-                return "?";
-            }
-        }
-        if("status" in d) {
-            if (d.status == true) {
-                return "Y";
-            } else {
-                return "N";
-            }
-        }
-        return "O";
-    };
-    var calcIndicatorTextColor = function(d,ignoreNextCheck){
-        // console.log("Calcing color",d,d.lastCheck,d.status,d.label);
-        if("lastCheck" in d && "period" in d) {
-            var nextCheck = (d.lastCheck + d.period);
-            if (d.lastCheck == 0 || (!ignoreNextCheck && new Date().getTime() > nextCheck)) {
-                return "black";
-            }
-        }
-        if("status" in d) {
-            if (d.status == true) {
-                return "lightgrey";
-            } else {
-                return "white";
-            }
-        }
-        return "orange";
+        // Unknown status.
+        return {dotColor:"orange",text:"O",textColor:"black"};
     };
     var calcIndicatorOpacity = function(d,i,historyCount){
         if(historyCount == maxHistoryItems && i == maxHistoryItems - 1){
@@ -139,10 +109,9 @@ var renderCheckSvg = function(checkElem, allChecks) {
                 return calcRingCenterY(d, checkIndex);
             })
             .attr("r", function (d) {
-                //console.log("r",d)
                 return calcRingRadius(d);
             })
-            .attr("stroke", "black")
+            .attr("stroke", "lightgrey")
             .attr("fill", "none")
             .attr("stroke-width", 2);
 
@@ -179,6 +148,7 @@ var renderCheckSvg = function(checkElem, allChecks) {
                     .enter();
                 histories.each(function(hd,hi){
                     var currentHistoryIndex = historyCount - hi - 1;
+                    var historyAttributes = calcIndicatorAttributes(hd,true);
 
                     var historySvg = historiesSvg.append("g");
                     historySvg.attr("class","historyContainer")
@@ -204,7 +174,7 @@ var renderCheckSvg = function(checkElem, allChecks) {
                             return calcIndicatorOpacity(d,currentHistoryIndex,historyCount);
                         })
                         .attr("fill",function(){
-                            return calcIndicatorDotColor(hd,true);
+                            return historyAttributes.dotColor;
                         })
                         .attr("fill-opacity",function(){
                             return calcIndicatorOpacity(d,currentHistoryIndex,historyCount);
@@ -212,13 +182,13 @@ var renderCheckSvg = function(checkElem, allChecks) {
                     historySvg.append("text")
                         .attr("class","historyText")
                         .text(function() {
-                            return calcIndicatorText(hd,true);
+                            return historyAttributes.text;
                         })
                         .attr("x",(historyContainerWidth / 2) - 2)
                         .attr("y",(historyContainerHeight / 2) + 2)
                         .attr("text-anchor", "middle")
                         .attr("fill",function(){
-                            return calcIndicatorTextColor(hd,true);
+                            return historyAttributes.textColor;
                         })
                         .attr("fill-opacity",function(){
                             return calcIndicatorOpacity(d,currentHistoryIndex,historyCount);
@@ -263,17 +233,19 @@ var renderCheckSvg = function(checkElem, allChecks) {
             .attr("cy",orbitingContainerHeight / 2)
             .attr("stroke","grey")
             .attr("fill",function(d){
-                return calcIndicatorDotColor(d);
+                return calcIndicatorAttributes(d).dotColor;
             })
             .attr("stroke-width",1);
         orbitingContainer.append("text")
             .attr("class","orbitingText")
             .text(function(d) {
-                return calcIndicatorText(d);
+                return calcIndicatorAttributes(d).text;
             })
             .attr("x",(orbitingContainerWidth / 2))
             .attr("y",(orbitingContainerHeight / 2) + indicatorTextOffsetY)
             .attr("text-anchor", "middle")
-            .attr("fill",function(d,i){ return calcIndicatorTextColor(d); });
+            .attr("fill",function(d,i){
+                return calcIndicatorAttributes(d).textColor;
+            });
         });
 };
