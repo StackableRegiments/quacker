@@ -7,6 +7,7 @@ import _root_.net.liftweb.http.provider._
 import _root_.net.liftweb.sitemap.Loc._
 import _root_.net.liftweb.sitemap._
 import _root_.net.liftweb.util._
+import Helpers._
 import metl.view.{DebugToolsRestHelper, ProbeRestHelper, SystemRestHelper}
 
 /**
@@ -20,6 +21,14 @@ class Boot {
     Globals.isDevMode = Props.mode match {
       case Props.RunModes.Production => false
       case _ => true
+    }
+    LiftRules.attachResourceId = {
+      if (Globals.isDevMode){
+        s => "%s?%s".format(s,nextFuncName)
+      } else {
+        val prodRunId = nextFuncName
+        s => "%s?%s".format(s,prodRunId)
+      }
     }
     ServiceConfigurator.autoConfigure
 
