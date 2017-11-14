@@ -28,21 +28,27 @@ trait VisualElement {
 	val id:String = nextFuncName
 	val label:String
 	val serviceName:String
+	val serviceLabel:String
 	val serverName:String
-  def jsonRenderer(service:String = serviceName,server:String = serverName):JObject = {
+	val serverLabel:String
+  def jsonRenderer(sen:String = serviceName,sel:String = serviceLabel,srn:String = serverName,srl:String = serverLabel):JObject = {
     JObject(List(
       JField("id",JString(id)),
-      JField("server",JString(server)),
-      JField("service",JString(service)),
-      JField("label",JString(label))
+      JField("serviceName",JString(sen)),
+      JField("serviceLabel",JString(sel)),
+			JField("serverName",JString(srn)),
+			JField("serverLabel",JString(srl)),
+			JField("label",JString(label))
     ) ::: asJson)
   }
   protected def asJson:List[JField] = Nil
 }
 
 case class HtmlInformation(metadata:SensorMetaData, name:String, html:NodeSeq) extends VisualElement {
-	override val serviceName = metadata.service
-	override val serverName = metadata.server
+	override val serviceName: String = metadata.serviceName
+	override val serviceLabel: String = metadata.serviceLabel
+	override val serverName: String = metadata.serverName
+	override val serverLabel: String = metadata.serverLabel
 	override val label: String = "%s information".format(name)
   override def asJson = List(
     JField("type",JString("htmlInformation")),
@@ -51,8 +57,10 @@ case class HtmlInformation(metadata:SensorMetaData, name:String, html:NodeSeq) e
 }
 
 case class Information(metadata:SensorMetaData, name:String, message:String) extends VisualElement {
-	override val serviceName = metadata.service
-	override val serverName = metadata.server
+	override val serviceName: String = metadata.serviceName
+	override val serviceLabel: String = metadata.serviceLabel
+	override val serverName: String = metadata.serverName
+	override val serverLabel: String = metadata.serverLabel
 	override val label: String = name
   override def asJson = List(
     JField("type",JString("information")),
@@ -61,8 +69,10 @@ case class Information(metadata:SensorMetaData, name:String, message:String) ext
 }
 
 case class ErrorInformation(metadata:SensorMetaData, name:String, expectedPeriod:String, sourceString:String, errors:List[String]) extends VisualElement {
-	override val serviceName = metadata.service
-	override val serverName = metadata.server
+	override val serviceName: String = metadata.serviceName
+	override val serviceLabel: String = metadata.serviceLabel
+	override val serverName: String = metadata.serverName
+	override val serverLabel: String = metadata.serverLabel
 	override val label: String = "Error: %s".format(name)
   override def asJson = List(
     JField("type",JString("error")),
@@ -73,12 +83,16 @@ case class ErrorInformation(metadata:SensorMetaData, name:String, expectedPeriod
 }
 
 case class EndpointInformationWithString(metadata:SensorMetaData, name:String, htmlDescriptor:String, endpoints:List[EndpointDescriptor]) extends EndpointInformationWithHtml(metadata,name,Text(htmlDescriptor),endpoints){
-	override val serviceName = metadata.service
-	override val serverName = metadata.server
+	override val serviceName: String = metadata.serviceName
+	override val serviceLabel: String = metadata.serviceLabel
+	override val serverName: String = metadata.serverName
+	override val serverLabel: String = metadata.serverLabel
 }
 class EndpointInformationWithHtml(metadata:SensorMetaData, name:String, html:NodeSeq, endpoints:List[EndpointDescriptor]) extends VisualElement {
-	override val serviceName = metadata.service
-	override val serverName = metadata.server
+	override val serviceName: String = metadata.serviceName
+	override val serviceLabel: String = metadata.serviceLabel
+	override val serverName: String = metadata.serverName
+	override val serverLabel: String = metadata.serverLabel
 	override val label: String = name
   override def asJson = List(
     JField("type",JString("endpoints")),
@@ -94,23 +108,27 @@ class EndpointInformationWithHtml(metadata:SensorMetaData, name:String, html:Nod
 case class EndpointDescriptor(name:String,endpoint:String,description:String)
 
 case object NullCheck extends VisualElement {
-	override val label = "null"
-	override val serverName:String = "null"
 	override val serviceName:String = "null"
+	override val serviceLabel:String = "null"
+	override val serverName:String = "null"
+	override val serverLabel:String = "null"
+	override val label = "null"
 }
 
-case class SensorMetaData(name:String, label:String, mode:ServiceCheckMode, severity:ServiceCheckSeverity, service:String, server:String, expectFail:Boolean = false, timeout:Option[TimeSpan] = None, acceptedFailures:Int = 1)
+case class SensorMetaData(name:String, label:String, mode:ServiceCheckMode, severity:ServiceCheckSeverity, serviceName:String, serviceLabel:String, serverName:String, serverLabel:String, expectFail:Boolean = false, timeout:Option[TimeSpan] = None, acceptedFailures:Int = 1)
 
 abstract class Sensor(metadata:SensorMetaData) extends LiftActor with VisualElement with metl.comet.CheckRenderHelper with Logger {
   import GraphableData._
-	override val serviceName = metadata.service
-	override val serverName = metadata.server
+	override val serviceName: String = metadata.serviceName
+	override val serviceLabel: String = metadata.serviceLabel
+	override val serverName: String = metadata.serverName
+	override val serverLabel: String = metadata.serverLabel
 	val mode: ServiceCheckMode = metadata.mode
 	val severity: ServiceCheckSeverity = metadata.severity
 	val name: String = metadata.name
 	override val label: String = metadata.label
 	var checkTimeout:Box[TimeSpan] = metadata.timeout
-	var failureTolerance = metadata.acceptedFailures
+	var failureTolerance: Int = metadata.acceptedFailures
 	var lastCheckBegin:Box[Date] = Empty
 	var lastUptime:Box[Date] = Empty
 	var lastCheck:Box[Date] = Empty
@@ -140,7 +158,7 @@ abstract class Sensor(metadata:SensorMetaData) extends LiftActor with VisualElem
 		val now = updatedTime(success = false)
 		lastStatus = Full(false)
 		currentFailures = currentFailures + 1
-    val cr = CheckResult(id,name,label,serviceName,serverName,now,why,lastUp,detail,mode,severity,success = false)
+    val cr = CheckResult(id,name,label,serviceName,serviceLabel,serverName,serverLabel,now,why,lastUp,detail,mode,severity,success = false)
     DashboardServer ! cr
     HistoryServer ! cr
 		if (currentFailures >= failureTolerance){
@@ -159,7 +177,7 @@ abstract class Sensor(metadata:SensorMetaData) extends LiftActor with VisualElem
 		updatedTime(success = true,now)
 		lastStatus = Full(true)
 		currentFailures = 0
-    var cr =  CheckResult(id,name,label,serviceName,serverName,now,why,lastUp,"",mode,severity,success = true,data)
+    var cr =  CheckResult(id,name,label,serviceName,serviceLabel,serverName,serverLabel,now,why,lastUp,"",mode,severity,success = true,data)
     HistoryServer ! cr
 		DashboardServer ! cr
 		ErrorRecorder ! cr

@@ -22,8 +22,8 @@ var renderHtml = (function() {
         collapser.find(".collapserState").text(char);
         return collapser;
     }
-    var getCollapserClosed = function(){return getCollapser("+");};
-    var getCollapserOpen = function(){return getCollapser("-");};
+    var getCollapserClosed = function(){return getCollapser("\uf055");};
+    var getCollapserOpen = function(){return getCollapser("\uf056");};
     function setupCollapser(containerNode, containerName, collapserSelector, hideableSelector, expandCommand, collapseCommand, defaultExpanded) {
         var collapser = containerNode.find(collapserSelector);
         collapser.html(getCollapserClosed());
@@ -62,28 +62,28 @@ var renderHtml = (function() {
     }
 
     var generateServiceId = function(serviceName){return safetyId("service_"+serviceName);};
-    var createServiceElem = function(servers,serviceName,withElem) {
+    var createServiceElem = function(servers,serviceName,serviceLabel,withElem) {
         var serviceNode = templates["service"].clone();
         serviceNode.attr("id",generateServiceId(serviceName));
         serviceNode.find(".serviceCollapser").html(getCollapserOpen());
-        serviceNode.find(".serviceName").text(serviceName);
+        serviceNode.find(".serviceLabel").text(serviceLabel);
         // setupCollapser(serviceNode, serviceName, ".serviceCollapser", ".serviceHideable", "core.expandService", "core.collapseService", defaultExpandedServices);
         return withElem(serviceNode,serviceName,servers);
     };
-    var updateServiceElem = function(serviceNode,serviceName,servers){
+    var updateServiceElem = function(serviceNode,serviceName,serviceLabel,servers){
         return serviceNode;
     };
 
     var generateServerId = function(serverName){return safetyId("server_"+serverName);};
-    var updateServerElem = function(serverNode,serverName,server){
+    var updateServerElem = function(serverNode,serverName,serverLabel,server){
         return serverNode;
     };
-    var createServerElem = function(checks,serverName,withElem) {
+    var createServerElem = function(checks,serverName,serverLabel,withElem) {
         var serverNode = templates["server"].clone();
         serverNode.attr("id",generateServerId(serverName));
-        serverNode.find(".serverName").text(serverName);
+        serverNode.find(".serverLabel").text(serverLabel);
         // setupCollapser(serverNode, serverName, ".serverCollapser", ".serverHideable", "core.expandServer", "core.collapseServer", defaultExpandedServers);
-        return withElem(serverNode,serverName,checks);
+        return withElem(serverNode,serverName,serverLabel,checks);
     };
 
     var generateCheckId = function(check){return safetyId("check_"+check.id);};
@@ -93,34 +93,42 @@ var renderHtml = (function() {
         checkNode.find(".checkName").text(check.name);
         var checkLabel = checkNode.find(".checkLabel");
         checkLabel.text(check.label);
-        checkNode.find(".checkService").text(check.service);
-        checkNode.find(".checkServer").text(check.server);
+        checkNode.find(".checkServiceName").text(check.serviceName);
+        checkNode.find(".checkServiceLabel").text(check.serviceLabel);
+        checkNode.find(".checkServerName").text(check.serverName);
+        checkNode.find(".checkServerLabel").text(check.serverLabel);
         checkNode.find(".checkSeverity").text(check.severity);
         checkNode.find(".checkMode").text(check.mode);
         setupCollapser(checkNode, check.name, ".checkCollapser", ".checkHideable", "core.expandCheck", "core.collapseCheck", defaultExpandedChecks);
         return withElem(checkNode,check);
     };
     var updateCheckElem = function(checkNode,check){
+/*
         var checkLabel = checkNode.find(".checkLabel");
-        var checkStatus = checkNode.find(".checkStatus");
+        checkLabel.removeClass('checkOk');
+        checkLabel.removeClass('checkError');
+        checkLabel.removeClass('checkUnknown');
+//        var checkStatus = checkNode.find(".checkStatus");
+//        checkStatus.removeClass();
         switch (check.status) {
             case true:
                 checkLabel.addClass('checkOk');
-                checkStatus.addClass('checkOk');
-                checkStatus.text('Y');
+//                checkStatus.addClass('checkOk');
+//                checkStatus.text('Y');
                 break;
             case false:
                 checkLabel.addClass('checkError');
-                checkStatus.addClass('checkError');
-                checkStatus.text('N');
+//                checkStatus.addClass('checkError');
+//                checkStatus.text('N');
                 break;
             default:
                 checkLabel.addClass('checkUnknown');
-                checkStatus.addClass('checkUnknown');
-                checkStatus.text('?');
+//                checkStatus.addClass('checkUnknown');
+//                checkStatus.text('?');
         }
 
         // elem.find(".statusCode").text(check.status ? "Y" : "N");
+*/
         checkNode.find(".lastSuccess").text(new Date(check.lastUp));
         checkNode.find(".lastCheck").text(new Date(check.lastCheck));
         checkNode.find(".checkWhy").text(check.why);
@@ -132,36 +140,51 @@ var renderHtml = (function() {
         return _.replace(input," ","_");
     };
     var render = function(rootSelectorString,checkStructure) {
-        var structure = _.mapValues(_.groupBy(checkStructure, function (check) {
-            return check.service;
-        }), function (service) {
-            return _.groupBy(service, function (check) {
-                return check.server;
-            });
+        var serviceNameToLabel = {};
+        var serverNameToLabel = {};
+        _.forEach(checkStructure, function(check){
+            if(!serviceNameToLabel[check.serviceName]) serviceNameToLabel[check.serviceName] = check.serviceLabel;
+            if(!serverNameToLabel[check.serverName]) serverNameToLabel[check.serverName] = check.serverLabel;
         });
-        //console.log("structure",structure);
+
+        var structure = _.mapValues(
+            _.groupBy(checkStructure,
+                      function (check) {
+                          return check.serviceName;
+                      }),
+            function (service) {
+                return _.groupBy(service, function (check) {
+                    return check.serverName;
+                });
+            });
+//        console.log("structure",structure);
+
         var rootElem = $(rootSelectorString);
         _.forEach(structure,function(servers,serviceName) {
             var serviceRoot = rootElem.find("#"+generateServiceId(serviceName));
+            var serviceLabel = serviceNameToLabel[serviceName];
+//            console.log("Servers",servers);
             if (serviceRoot[0] === undefined){
-                serviceRoot = createServiceElem(servers,serviceName,updateServiceElem);
-                // console.log("creating rootElem",serviceRoot,rootElem);
-                rootElem.append(serviceRoot);
+                serviceRoot = createServiceElem(servers,serviceName,serviceLabel,updateServiceElem);
+//                 console.log("creating rootElem",serviceRoot,rootElem);
+                 rootElem.append(serviceRoot);
             } else {
-                updateServiceElem(serviceRoot,serviceName,servers);
-                // console.log("updating rootElem",serviceRoot,rootElem);
+                updateServiceElem(serviceRoot,serviceName,serviceLabel,servers);
+//                console.log("updating rootElem",serviceRoot,rootElem);
             }
             var serverContainer = serviceRoot.find(".servers");
             _.forEach(servers,function(checks,serverName){
                 var serverRoot = serverContainer.find("#"+generateServerId(serverName));
+//                console.log("Checks",checks);
+                var serverLabel = serverNameToLabel[serverName];
                 if (serverRoot[0] === undefined){
-                    serverRoot = createServerElem(checks,serverName,updateServerElem);
+                    serverRoot = createServerElem(checks,serverName,serverLabel,updateServerElem);
                     serverContainer.append(serverRoot)
                 } else {
-                    updateServerElem(serverRoot,serverName,checks);
+                    updateServerElem(serverRoot,serverName,serverLabel,checks);
                 }
                 var checksContainer = serverRoot.find(".checks");
-                _.forEach(checks,function(check, checkName){
+                _.forEach(checks,function(check,checkName){
                    var checkRoot = checksContainer.find("#"+generateCheckId(check));
                    if (checkRoot[0] === undefined){
                        checkRoot = createCheckElem(check,updateCheckElem);
@@ -183,7 +206,7 @@ var renderHtml = (function() {
         });
     };
 
-    return function(rootSelectorString,checkStructure,serviceName){
+    return function(rootSelectorString,checkStructure){
         render(rootSelectorString,checkStructure);
     };
 })();

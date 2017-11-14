@@ -49,7 +49,7 @@ $(function (){
 });
 var structureByServices = function(structure){
     return _.groupBy(structure, function (check) {
-        return check.service;
+        return check.serviceName;
     });
 };
 var paused = false;
@@ -65,7 +65,7 @@ var renderChecks = _.once(function(){
                 serviceNode = $("<span/>",{id:serviceIdOuter,class:"serviceOuter"});
                 containerRootNode.append(serviceNode);
             }
-            renderHtml(serviceNode,checks,serviceName);
+            renderHtml(serviceNode,checks);
 /*            var thisSvgRootNode = serviceNode.find(".serviceSvg");
             var serviceIdInner = "service_" + serviceName;
             // thisSvgRootNode.html(renderSvgRings(checks,serviceIdInner));
@@ -109,6 +109,7 @@ function createChecks(newChecks){
     renderChecks();
 }
 function createCheck(newCheck){
+    console.log("Create check:", newCheck);
     if ("id" in newCheck) {
         jsonStructure[newCheck.id] = newCheck;
     }
@@ -120,6 +121,7 @@ function removeCheck(checkId){
     pluginSystem.fireCommand('removeCheck','core.removeCheck',checkId);
 }
 function internalUpdateCheck(newCheck,targetNode){
+    console.log("Internal update check:", newCheck);
     //console.log("newCheck: " + newCheck["label"] + ", " + newCheck["mode"]);
 
     var rootNode = targetNode;

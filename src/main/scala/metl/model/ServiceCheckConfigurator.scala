@@ -1,13 +1,14 @@
 package metl.model
 
 import metl.model.sensor._
-import net.liftweb.common.{Empty, Full}
+import net.liftweb.common.{Empty, Full, Logger}
 import net.liftweb.util.Helpers._
 
 import scala.xml.Node
 
-object ServiceCheckConfigurator extends ConfigFileReader {
-  def configureFromXml(xml:Node, serviceName:String = "unknown", serverName:String = "unknown"):List[VisualElement] = {
+object ServiceCheckConfigurator extends ConfigFileReader with Logger {
+  def configureFromXml(xml:Node, serviceName:String = "unknown", serviceLabel:String = "unknown", serverName:String = "unknown", serverLabel:String = "unknown"):List[VisualElement] = {
+    warn("loading xml: %s".format(xml))
     (xml \\ "serviceCheck").map(sc => {
       debug("Configuring serviceCheck from:\n%s".format(sc))
       val periodInt = getInt(sc,"period").getOrElse(60) * 1000
@@ -21,7 +22,7 @@ object ServiceCheckConfigurator extends ConfigFileReader {
       val expectFail = getBool(sc,"expectFail")
       var failed = false
       var errors = List.empty[String]
-      val metadata = SensorMetaData(serviceCheckName,label,mode,severity,serviceName,serverName,expectFail.getOrElse(false),timeout)
+      val metadata = SensorMetaData(serviceCheckName,label,mode,severity,serviceName,serviceLabel,serverName,serverLabel,expectFail.getOrElse(false),timeout)
       def getOrError[A](value:Option[A],default:A,error:String):A = value.getOrElse({
         failed = true
         errors = error :: errors

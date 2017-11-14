@@ -121,7 +121,9 @@ class MongoHistoryListener(override val name:String,host:String,port:Int,databas
 		val dbo = new BasicDBObject
 		dbo.put("label",cr.label)
 		dbo.put("service",cr.service)
+		dbo.put("serviceLabel",cr.serviceLabel)
 		dbo.put("server",cr.server)
+		dbo.put("serverLabel",cr.serverLabel)
 		dbo.put("serviceCheck",cr.serviceCheck)
 		dbo.put("when",cr.when)
 		dbo.put("why",cr.why)
@@ -138,7 +140,9 @@ class MongoHistoryListener(override val name:String,host:String,port:Int,databas
       id = nextFuncName,
       label = dbo.get("label").asInstanceOf[String],
       service = dbo.get("service").asInstanceOf[String],
+      serviceLabel = dbo.get("serviceLabel").asInstanceOf[String],
       server = dbo.get("server").asInstanceOf[String],
+      serverLabel = dbo.get("serverLabel").asInstanceOf[String],
 			serviceCheck = dbo.get("serviceCheck").asInstanceOf[String],
       when = dbo.get("when").asInstanceOf[Date],
       why = dbo.get("why").asInstanceOf[String],

@@ -35,11 +35,13 @@ object Servers extends ConfigFileReader{
 		(x \\ "services").foreach(servicesXml => {
 			(servicesXml \\ "service").foreach(serviceXml => {
 				val serviceName = getAttr(serviceXml,"name").getOrElse("unknown")
+				val serviceLabel = getText(serviceXml,"label").getOrElse("unknown")
 				val servicesToStop = services.filter(s => s.name == serviceName)
 				servicesToStop.foreach(sts => sts.servers.foreach(s => s.checks.filter(c => c.isInstanceOf[Sensor]).map(c => c.asInstanceOf[Sensor]).foreach(c => c ! StopSensor)))
 				val newServers = (serviceXml \ "server").map(serverXml => {
 					val serverName = getAttr(serverXml,"name").getOrElse("unknown")
-					val serviceChecks = (serverXml \ "serviceCheck").map(serviceCheckXml => ServiceCheckConfigurator.configureFromXml(serviceCheckXml,serviceName,serverName)).toList.flatten.toList
+					val serverLabel = getText(serverXml,"label").getOrElse("unknown")
+					val serviceChecks = (serverXml \ "serviceCheck").map(serviceCheckXml => ServiceCheckConfigurator.configureFromXml(serviceCheckXml,serviceName,serviceLabel,serverName,serverLabel)).toList.flatten.toList
 					newChecksList = newChecksList ::: serviceChecks
 					ServerDefinition(serverName,serviceName,serviceChecks)
 				}).toList
@@ -98,7 +100,7 @@ object Servers extends ConfigFileReader{
 		checks.filter(c => {
 			c match {
 				case p:Sensor => {
-					pingerName == p.label && serviceName.map(svcName => svcName == p.serviceName).getOrElse(true) && serverName.map(svrName => svrName == p.serverName).getOrElse(true) && serviceCheckMode.map(svcMode => svcMode == p.mode).getOrElse(true)
+					pingerName == p.name && serviceName.map(svcName => svcName == p.serviceName).getOrElse(true) && serverName.map(svrName => svrName == p.serverName).getOrElse(true) && serviceCheckMode.map(svcMode => svcMode == p.mode).getOrElse(true)
 				}
 				case _ => false
 			}

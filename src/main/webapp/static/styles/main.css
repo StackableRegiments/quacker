@@ -9,8 +9,8 @@ body{
     margin-left:0;
     width:250px;
 }
-.serviceHeader .serviceName {
-    font-size: 2em;
+.serviceHeader {
+    font-size: 1.5em;
     display:inline-block;
 }
 /*
@@ -43,6 +43,13 @@ body{
 .checkSummary {
     margin-left:1em;
 }
+.checkSvg {
+    display:block;
+/*
+    max-width:180px;
+    max-height:180px;
+*/
+}
 .checkHeader{
     font-size: 1em;
     display:inline-block;
@@ -50,7 +57,9 @@ body{
 }
 .checkLabel {
     /*display:block;*/
+/*
     font-weight:bold;
+*/
 }
 .checkStatus {
     margin-left:1em;
@@ -87,23 +96,31 @@ body{
 .toggleable {
 }
 .toggledIn {
+/*
     background:mistyrose;
+*/
 }
 .toggledOut {
+/*
     background:lightyellow;
+*/
 }
 .hideableHidden {
     display:none!important;
 }
 .collapser {
+/*
     font-weight: bold;
-    /*font-family: ;*/
+*/
+    font-family: FontAwesome;
+/*
     padding-left:0.5em;
     padding-right:0.5em;
     padding-top:0.25em;
     padding-bottom:0.25em;
     margin-right: 0.25em;
-    border:1px solid lightgray;
+*/
+    /*border:1px solid lightgray;*/
     cursor:Pointer;
 }
 .serviceDataDescriptor {

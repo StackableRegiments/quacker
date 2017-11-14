@@ -1,7 +1,7 @@
 var renderCheckSvg = function(checkElem, allChecks) {
     var dGroup = {
-        width: 250,
-        height: 250
+        width: 180,
+        height: 180
     };
     var ringRadius = 75;
     var orbitingContainerWidth = 25;
@@ -31,7 +31,8 @@ var renderCheckSvg = function(checkElem, allChecks) {
         }));
     }));
 
-    var checks = svg.attr("viewBox",sprintf("0 0 %s %s", dGroup.width/* * serviceCount*/, dGroup.height))
+    var checks = svg.attr("viewBox",sprintf("0 0 %s %s", dGroup.width, dGroup.height))
+//        .attr("preserveAspectRatio","XMidYMid meet")
         .selectAll(".check")
         .data(data)
         .enter().append("g")
