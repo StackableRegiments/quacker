@@ -112,6 +112,15 @@ var renderCheckSvg = function(checkElem, allChecks) {
         }
         return "orange";
     };
+            var calcIndicatorOpacity = function(d,i,historyCount){
+                                if(historyCount == maxHistoryItems && i == 0){
+                                    var proportion = calcIndicatorProportion(d);
+                                    var opacity = 1.0 - proportion;
+                                    //console.log("Fill opacity",proportion,opacity);
+                                    return opacity;
+                                }
+                                return 1.0;
+                            };
 
     // console.log("checks: ",checks);
     checks.each(function (check, checkIndex) {
@@ -145,9 +154,13 @@ var renderCheckSvg = function(checkElem, allChecks) {
         indicators.each(function(d,i){
             if ("history" in d && _.size(d.history)){
                 var thisIndicatorD = this;
+                var historyCount = _.size(d.history);
 
-                var historiesSvg = indicators.append("svg");
+                var historiesSvg = indicators.append("g");
                 historiesSvg.attr("class","historiesContainer")
+                    .attr("transform",function(hd,hi){
+                      return sprintf("translate(%d,%d)",historiesPositionX,historiesPositionY);
+                    })
                     .attr("w",historiesWidth)
                     .attr("h",historiesHeight)
                     .attr("x",historiesPositionX)
@@ -157,8 +170,12 @@ var renderCheckSvg = function(checkElem, allChecks) {
                     .data(d.history)
                     .enter();
                 histories.each(function(hd,hi){
-                    var historySvg = historiesSvg.append("svg");
+                    var historySvg = historiesSvg.append("g");
                     historySvg.attr("class","historyContainer")
+                        .attr("transform", function() {
+                            var offset = historyCount == maxHistoryItems ? historyContainerWidth * calcIndicatorProportion(d) : 0;
+                            return sprintf("translate(%d,%d)",historyContainerPositionX + (historyContainerWidth * hi) - offset,historyContainerPositionY);
+                        })
                         .attr("w",historyContainerWidth)
                         .attr("h",historyContainerHeight)
                         .attr("x",function(){
@@ -171,8 +188,14 @@ var renderCheckSvg = function(checkElem, allChecks) {
                         .attr("cx",dotRadius + 1)
                         .attr("r",dotRadius)
                         .attr("stroke","black")
+                        .attr("stroke-opacity",function(){
+                            return calcIndicatorOpacity(d,hi,historyCount);
+                        })
                         .attr("fill",function(){
                             return calcIndicatorDotColor(hd,true);
+                        })
+                        .attr("fill-opacity",function(){
+                            return calcIndicatorOpacity(d,hi,historyCount);
                         });
                     historySvg.append("text")
                         .attr("class","historyText")
@@ -189,30 +212,35 @@ var renderCheckSvg = function(checkElem, allChecks) {
             }
         });
 
-        var orbitingContainer = indicators.append("svg")
+        var calcOrbiterX = function(d,i){
+                                            if ("lastCheck" in d && "period" in d && "severity" in d){
+                                                var center = calcRingX(d, i);
+                                                var radius = calcRingRadius(d);
+                                                var theta = (2 * Math.PI * calcIndicatorProportion(d)) - (Math.PI / 2);
+                                                return center + radius * Math.cos(theta) - (orbitingContainerWidth / 2);
+                                            } else {
+                                                return orbitingContainerWidth;
+                                            }
+                                        };
+                                        var calcOrbiterY = function(d,i){
+                                                                          if ("lastCheck" in d && "period" in d && "severity" in d){
+                                                                              var center = calcRingY(d, i);
+                                                                              var radius = calcRingRadius(d);
+                                                                              var theta = (2 * Math.PI * calcIndicatorProportion(d)) - (Math.PI / 2);
+                                                                              return center + radius * Math.sin(theta) - (orbitingContainerHeight / 2);
+                                                                          } else {
+                                                                              return orbitingContainerHeight;
+                                                                          }
+                                                                       };
+        var orbitingContainer = indicators.append("g")
             .attr("class","orbitingContainer")
+            .attr("transform",function(d,i){
+              return sprintf("translate(%s,%s)",calcOrbiterX(d,i),calcOrbiterY(d,i));
+            })
             .attr("w",orbitingContainerWidth)
             .attr("h",orbitingContainerHeight)
-            .attr("x",function(d,i){
-                 if ("lastCheck" in d && "period" in d && "severity" in d){
-                     var center = calcRingX(d, i);
-                     var radius = calcRingRadius(d);
-                     var theta = (2 * Math.PI * calcIndicatorProportion(d)) - (Math.PI / 2);
-                     return center + radius * Math.cos(theta) - (orbitingContainerWidth / 2);
-                 } else {
-                     return orbitingContainerWidth;
-                 }
-             })
-            .attr("y",function(d,i){
-               if ("lastCheck" in d && "period" in d && "severity" in d){
-                   var center = calcRingY(d, i);
-                   var radius = calcRingRadius(d);
-                   var theta = (2 * Math.PI * calcIndicatorProportion(d)) - (Math.PI / 2);
-                   return center + radius * Math.sin(theta) - (orbitingContainerHeight / 2);
-               } else {
-                   return orbitingContainerHeight;
-               }
-            });
+            .attr("x",calcOrbiterX)
+            .attr("y",calcOrbiterY);
         orbitingContainer.append("circle")
             .attr("class","orbitingIndicator")
             .attr("r",dotRadius)
