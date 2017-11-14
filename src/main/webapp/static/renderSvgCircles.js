@@ -82,7 +82,7 @@ var renderCheckSvg = function(checkElem, allChecks) {
             }
         }
         // Unknown status. An exclamation mark warning.
-        return {dotColor:"orange",text:"\uf071",textColor:"black",circleColor:"grey"};
+        return {dotColor:"orange",text:"\uf12a",textColor:"black",circleColor:"grey"};
     };
     var calcIndicatorOpacity = function(d,i,historyCount){
         if(historyCount == maxHistoryItems && i == maxHistoryItems - 1){
