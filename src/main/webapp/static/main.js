@@ -90,7 +90,8 @@ function updateCheck(newCheck){
             var merged = _.merge(oldCheck, newCheck);
             var oldChecks = oldCheck.history || [];
             oldChecks.push(stripCheckHistory(_.cloneDeep(cached)));
-            merged.history = _.take(oldChecks,maxHistoryItems);
+            var newHistory = _.reverse(_.take(_.reverse(oldChecks),maxHistoryItems));
+            merged.history = newHistory;
             jsonStructure[newCheck.id] = merged;
             if (cached != merged){
                 merged.dirty = true;
