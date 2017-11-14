@@ -67,21 +67,21 @@ var renderCheckSvg = function(checkElem, allChecks) {
         if("lastCheck" in d && "period" in d) {
             var nextCheck = (d.lastCheck + d.period);
             if (d.lastCheck == 0 || (!ignoreNextCheck && new Date().getTime() > nextCheck)) {
-                // Stale. Past next expected check time, but no next check available.
-                return {dotColor:"lightgrey",text:"",textColor:"grey",circleColor:"grey"};
+                // Stale (after next expected check time). A plug (disconnected).
+                return {dotColor:"lightgrey",text:"\uf1e6",textColor:"grey",circleColor:"grey"};
             }
         }
         if("status" in d) {
             if (d.status == true) {
-                // Check success.
-                return {dotColor:"lightgreen",text:"Y",textColor:"black",circleColor:"black"};
+                // Check success. A tick.
+                return {dotColor:"lightgreen",text:"\uf00c",textColor:"black",circleColor:"grey"};
             } else {
-                // Check failure.
-                return {dotColor:"red",text:"N",textColor:"white",circleColor:"black"};
+                // Check failure. A cross.
+                return {dotColor:"red",text:"\uf00d",textColor:"white",circleColor:"grey"};
             }
         }
-        // Unknown status.
-        return {dotColor:"orange",text:"?",textColor:"black",circleColor:"black"};
+        // Unknown status. An exclamation mark warning.
+        return {dotColor:"orange",text:"\uf071",textColor:"black",circleColor:"grey"};
     };
     var calcIndicatorOpacity = function(d,i,historyCount){
         if(historyCount == maxHistoryItems && i == maxHistoryItems - 1){
@@ -116,7 +116,7 @@ var renderCheckSvg = function(checkElem, allChecks) {
             })
             .attr("stroke", "lightgrey")
             .attr("fill", "none")
-            .attr("stroke-width", 2);
+            .attr("stroke-width", 3);
 
         var indicators = d3.select(thisCheck).selectAll(".ringIndicator")
             .data(checkData)

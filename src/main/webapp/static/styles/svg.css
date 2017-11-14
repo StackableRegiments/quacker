@@ -29,3 +29,6 @@ svg {
     fill: #0000ff;
     //display:none;
 }*/
+g text {
+    font-family: FontAwesome
+}
