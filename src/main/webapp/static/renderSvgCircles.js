@@ -7,6 +7,7 @@ var renderCheckSvg = function(checkElem, allChecks) {
     var orbitingContainerWidth = 25;
     var orbitingContainerHeight = 25;
     var dotRadius = 10;
+    var indicatorTextOffsetX = 0;
     var indicatorTextOffsetY = 4;
     var historiesWidth = 27;
     var historiesHeight = 102;
@@ -14,6 +15,8 @@ var renderCheckSvg = function(checkElem, allChecks) {
     var historyContainerHeight = 25;
     var historyContainerPositionX = 0;
     var historyContainerPositionY = 0;
+    var historyTextOffsetX = -1.5;
+    var historyTextOffsetY = 2;
 
     var constructIdentity = function (inString) {
         return _.replace(inString, " ", "_");
@@ -65,20 +68,20 @@ var renderCheckSvg = function(checkElem, allChecks) {
             var nextCheck = (d.lastCheck + d.period);
             if (d.lastCheck == 0 || (!ignoreNextCheck && new Date().getTime() > nextCheck)) {
                 // Stale. Past next expected check time, but no next check available.
-                return {dotColor:"lightgrey",text:"?",textColor:"black"};
+                return {dotColor:"lightgrey",text:"",textColor:"grey",circleColor:"grey"};
             }
         }
         if("status" in d) {
             if (d.status == true) {
                 // Check success.
-                return {dotColor:"green",text:"Y",textColor:"white"};
+                return {dotColor:"lightgreen",text:"Y",textColor:"black",circleColor:"black"};
             } else {
                 // Check failure.
-                return {dotColor:"red",text:"N",textColor:"white"};
+                return {dotColor:"red",text:"N",textColor:"white",circleColor:"black"};
             }
         }
         // Unknown status.
-        return {dotColor:"orange",text:"O",textColor:"black"};
+        return {dotColor:"orange",text:"?",textColor:"black",circleColor:"black"};
     };
     var calcIndicatorOpacity = function(d,i,historyCount){
         if(historyCount == maxHistoryItems && i == maxHistoryItems - 1){
@@ -169,7 +172,7 @@ var renderCheckSvg = function(checkElem, allChecks) {
                         .attr("cy",dotRadius + 1)
                         .attr("cx",dotRadius + 1)
                         .attr("r",dotRadius)
-                        .attr("stroke","black")
+                        .attr("stroke",historyAttributes.circleColor)
                         .attr("stroke-opacity",function(){
                             return calcIndicatorOpacity(d,currentHistoryIndex,historyCount);
                         })
@@ -184,8 +187,8 @@ var renderCheckSvg = function(checkElem, allChecks) {
                         .text(function() {
                             return historyAttributes.text;
                         })
-                        .attr("x",(historyContainerWidth / 2) - 2)
-                        .attr("y",(historyContainerHeight / 2) + 2)
+                        .attr("x",(historyContainerWidth / 2) + historyTextOffsetX)
+                        .attr("y",(historyContainerHeight / 2) + historyTextOffsetY)
                         .attr("text-anchor", "middle")
                         .attr("fill",function(){
                             return historyAttributes.textColor;
@@ -231,7 +234,9 @@ var renderCheckSvg = function(checkElem, allChecks) {
             .attr("r",dotRadius)
             .attr("cx",orbitingContainerWidth / 2)
             .attr("cy",orbitingContainerHeight / 2)
-            .attr("stroke","grey")
+            .attr("stroke",function(d){
+                return calcIndicatorAttributes(d).circleColor;
+            })
             .attr("fill",function(d){
                 return calcIndicatorAttributes(d).dotColor;
             })
@@ -241,7 +246,7 @@ var renderCheckSvg = function(checkElem, allChecks) {
             .text(function(d) {
                 return calcIndicatorAttributes(d).text;
             })
-            .attr("x",(orbitingContainerWidth / 2))
+            .attr("x",(orbitingContainerWidth / 2) + indicatorTextOffsetX)
             .attr("y",(orbitingContainerHeight / 2) + indicatorTextOffsetY)
             .attr("text-anchor", "middle")
             .attr("fill",function(d,i){
