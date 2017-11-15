@@ -89,7 +89,7 @@ object Servers extends ConfigFileReader{
 	protected var checks = List.empty[Sensor]
   def getVisualElements:List[VisualElement] = {
     val myRestriction = Globals.currentUserAccessRestriction
-		println("getVisualElements: %s\r\nPermissions:%s".format(services,myRestriction))
+		trace("getVisualElements: %s\r\nPermissions:%s".format(services,myRestriction))
     services.filter(service => myRestriction.permit(service)).map(service => {
       service.servers.filter(server => myRestriction.permit(server)).map(server => {
         server.checks.filter(check => myRestriction.permit(check))

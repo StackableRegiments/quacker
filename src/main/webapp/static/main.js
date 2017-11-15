@@ -58,7 +58,8 @@ var renderChecks = _.once(function(){
 
     var redraw = function () {
       if (!paused){
-        _.forEach(structureByServices(jsonStructure), function(checks,serviceName){
+        var serviceStructure = structureByServices(jsonStructure);
+        _.forEach(serviceStructure, function(checks,serviceName){
             var serviceIdOuter = "serviceOuter_" + serviceName;
             var serviceNode = containerRootNode.find("#"+serviceIdOuter);
             if (serviceNode[0] === undefined){
@@ -109,7 +110,6 @@ function createChecks(newChecks){
     renderChecks();
 }
 function createCheck(newCheck){
-    console.log("Create check:", newCheck);
     if ("id" in newCheck) {
         jsonStructure[newCheck.id] = newCheck;
     }
@@ -121,9 +121,6 @@ function removeCheck(checkId){
     pluginSystem.fireCommand('removeCheck','core.removeCheck',checkId);
 }
 function internalUpdateCheck(newCheck,targetNode){
-    console.log("Internal update check:", newCheck);
-    //console.log("newCheck: " + newCheck["label"] + ", " + newCheck["mode"]);
-
     var rootNode = targetNode;
     var id = newCheck["id"];
     if (rootNode === undefined){

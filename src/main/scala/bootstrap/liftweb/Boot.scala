@@ -14,7 +14,7 @@ import metl.view.{DebugToolsRestHelper, ProbeRestHelper, SystemRestHelper}
   * A class that's instantiated early and run.  It allows the application
   * to modify Lift's environment.
   */
-class Boot {
+class Boot extends Logger {
   implicit val formats = GraphableData.formats
 
   def boot {
@@ -30,7 +30,8 @@ class Boot {
         s => "%s?%s".format(s,prodRunId)
       }
     }
-    ServiceConfigurator.autoConfigure
+    val configurationStatus = ServiceConfigurator.describeAutoConfigure(ServiceConfigurator.autoConfigure)
+    warn("Xml configuration reloaded\r\n%s".format(configurationStatus))
 
     // Setup RESTful endpoints (these are in view/Endpoints.scala)
     LiftRules.dispatch.prepend(ProbeRestHelper)

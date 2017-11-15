@@ -157,7 +157,6 @@ var renderHtml = (function() {
                     return check.serverName;
                 });
             });
-//        console.log("structure",structure);
 
         var rootElem = $(rootSelectorString);
         _.forEach(structure,function(servers,serviceName) {
