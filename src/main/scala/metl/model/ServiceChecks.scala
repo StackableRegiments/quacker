@@ -128,6 +128,7 @@ abstract class Sensor(metadata:SensorMetaData) extends LiftActor with VisualElem
 	val name: String = metadata.name
 	override val label: String = metadata.label
 	var checkTimeout:Box[TimeSpan] = metadata.timeout
+	var checkDuration:Box[Double] = Empty
 	var failureTolerance: Int = metadata.acceptedFailures
 	var lastCheckBegin:Box[Date] = Empty
 	var lastUptime:Box[Date] = Empty
@@ -153,23 +154,30 @@ abstract class Sensor(metadata:SensorMetaData) extends LiftActor with VisualElem
   def schedule(interval:TimeSpan = pollInterval) = {
     Schedule.schedule(this,Check,interval)
   }
-  def fail(why:String,detail:String = "") = {
+  def fail(why:String,detail:String = "",timeTaken:Box[Double] = Empty) = {
 		val lastUp = lastUptime
 		val now = updatedTime(success = false)
 		lastStatus = Full(false)
 		currentFailures = currentFailures + 1
-    val cr = CheckResult(id,name,label,serviceName,serviceLabel,serverName,serverLabel,now,why,lastUp,detail,mode,severity,success = false)
+		val durationOrTimeSinceStart = calculateCheckDuration(timeTaken)
+		checkDuration = Full(durationOrTimeSinceStart)
+		val cr = CheckResult(id,name,label,serviceName,serviceLabel,serverName,serverLabel,now,why,lastUp,detail,mode,severity,success = false,duration = checkDuration)
     DashboardServer ! cr
     HistoryServer ! cr
 		if (currentFailures >= failureTolerance){
 			ErrorRecorder ! cr
 		}
   }
+	def calculateCheckDuration(timeTaken:Box[Double] = Empty):Double = {
+		val now = new Date()
+		timeTaken.openOr((now.getTime - lastCheckBegin.openOr(now).getTime).toDouble)
+	}
   def succeed(why:String,timeTaken:Box[Double] = Empty,data:List[Tuple2[Long,Map[String,GraphableDatum]]] = Nil) = {
 		val now = new Date()
-		val checkDuration = timeTaken.openOr((new Date().getTime - lastCheckBegin.openOr(now).getTime).toDouble)
+		val durationOrTimeSinceStart = calculateCheckDuration(timeTaken)
+		checkDuration = Full(durationOrTimeSinceStart)
 		checkTimeout.map(c => {
-			if (checkDuration >= c.millis){
+			if (durationOrTimeSinceStart >= c.millis){
 				throw DashboardException("Timeout", "This check passed, but took %sms when it is not permitted to take %s or longer: %s".format(checkDuration, c, why))
 			}
 		})
@@ -177,19 +185,19 @@ abstract class Sensor(metadata:SensorMetaData) extends LiftActor with VisualElem
 		updatedTime(success = true,now)
 		lastStatus = Full(true)
 		currentFailures = 0
-    var cr =  CheckResult(id,name,label,serviceName,serviceLabel,serverName,serverLabel,now,why,lastUp,"",mode,severity,success = true,data)
+    var cr =  CheckResult(id,name,label,serviceName,serviceLabel,serverName,serverLabel,now,why,lastUp,"",mode,severity,success = true,data,timeTaken)
     HistoryServer ! cr
 		DashboardServer ! cr
 		ErrorRecorder ! cr
   }
   override protected def exceptionHandler:PartialFunction[Throwable,Unit] = {
 		case DashboardException(reason,detail,innerExceptions) => {
-			fail(reason,detail)
+			fail(reason,detail,lastCheckBegin.map(d => (new Date().getTime - d.getTime).toDouble))
 			internalResetEnvironment
 			schedule()
 		}
     case t:Throwable =>{
-      fail(t.toString)
+      fail(t.toString,timeTaken = lastCheckBegin.map(d => (new Date().getTime - d.getTime).toDouble))
       internalResetEnvironment
       schedule()
     }
