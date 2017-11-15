@@ -103,32 +103,6 @@ var renderHtml = (function() {
         return withElem(checkNode,check);
     };
     var updateCheckElem = function(checkNode,check){
-/*
-        var checkLabel = checkNode.find(".checkLabel");
-        checkLabel.removeClass('checkOk');
-        checkLabel.removeClass('checkError');
-        checkLabel.removeClass('checkUnknown');
-//        var checkStatus = checkNode.find(".checkStatus");
-//        checkStatus.removeClass();
-        switch (check.status) {
-            case true:
-                checkLabel.addClass('checkOk');
-//                checkStatus.addClass('checkOk');
-//                checkStatus.text('Y');
-                break;
-            case false:
-                checkLabel.addClass('checkError');
-//                checkStatus.addClass('checkError');
-//                checkStatus.text('N');
-                break;
-            default:
-                checkLabel.addClass('checkUnknown');
-//                checkStatus.addClass('checkUnknown');
-//                checkStatus.text('?');
-        }
-
-        // elem.find(".statusCode").text(check.status ? "Y" : "N");
-*/
         checkNode.find(".lastSuccess").text(new Date(check.lastUp));
         checkNode.find(".lastCheck").text(new Date(check.lastCheck));
         checkNode.find(".checkWhy").text(check.why);
@@ -142,6 +116,7 @@ var renderHtml = (function() {
     var render = function(rootSelectorString,checkStructure) {
         var serviceNameToLabel = {};
         var serverNameToLabel = {};
+
         _.forEach(checkStructure, function(check){
             if(!serviceNameToLabel[check.serviceName]) serviceNameToLabel[check.serviceName] = check.serviceLabel;
             if(!serverNameToLabel[check.serverName]) serverNameToLabel[check.serverName] = check.serverLabel;
@@ -159,22 +134,26 @@ var renderHtml = (function() {
             });
 
         var rootElem = $(rootSelectorString);
+        var existingDomElements = rootElem.find(".checkSummary");
+        _.forEach(existingDomElements,function(domElement) {
+            var domId = $(domElement).attr("id").split("_")[1];
+            var matchingElem = _.find(checkStructure,function(ce){return ce.id == domId});
+            if (matchingElem === undefined){
+                $(domElement).remove();
+            }
+        });
         _.forEach(structure,function(servers,serviceName) {
             var serviceRoot = rootElem.find("#"+generateServiceId(serviceName));
             var serviceLabel = serviceNameToLabel[serviceName];
-//            console.log("Servers",servers);
             if (serviceRoot[0] === undefined){
                 serviceRoot = createServiceElem(servers,serviceName,serviceLabel,updateServiceElem);
-//                 console.log("creating rootElem",serviceRoot,rootElem);
                  rootElem.append(serviceRoot);
             } else {
                 updateServiceElem(serviceRoot,serviceName,serviceLabel,servers);
-//                console.log("updating rootElem",serviceRoot,rootElem);
             }
             var serverContainer = serviceRoot.find(".servers");
             _.forEach(servers,function(checks,serverName){
                 var serverRoot = serverContainer.find("#"+generateServerId(serverName));
-//                console.log("Checks",checks);
                 var serverLabel = serverNameToLabel[serverName];
                 if (serverRoot[0] === undefined){
                     serverRoot = createServerElem(checks,serverName,serverLabel,updateServerElem);
@@ -187,7 +166,6 @@ var renderHtml = (function() {
                    var checkRoot = checksContainer.find("#"+generateCheckId(check));
                    if (checkRoot[0] === undefined){
                        checkRoot = createCheckElem(check,updateCheckElem);
-                       // checkRoot.append(createCheckSvg(checkRoot));
                        checksContainer.append(checkRoot);
                    } else {
                        if ("dirty" in check && check.dirty === true) {
