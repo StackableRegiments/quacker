@@ -17,6 +17,7 @@ var renderCheckSvg = function(checkElem, allChecks) {
     var historyContainerPositionY = 0;
     var historyTextOffsetX = -1.5;
     var historyTextOffsetY = 2;
+    var historyDurationOffsetX = 10;
 
     var constructIdentity = function (inString) {
         return _.replace(inString, " ", "_");
@@ -193,6 +194,22 @@ var renderCheckSvg = function(checkElem, allChecks) {
                         .attr("text-anchor", "middle")
                         .attr("fill",function(){
                             return historyAttributes.textColor;
+                        })
+                        .attr("fill-opacity",function(){
+                            return calcIndicatorOpacity(d,currentHistoryIndex,historyCount);
+                        });
+                    historySvg.append("text")
+                        .attr("class","historyDuration")
+                        .text(function() {
+                            if (hd.duration !== undefined){
+                              return sprintf("%d ms",hd.duration);
+                            }
+                        })
+                        .attr("x",(historyContainerWidth / 2) + historyDurationOffsetX)
+                        .attr("y",(historyContainerHeight / 2) + historyTextOffsetY)
+                        .attr("text-anchor", "left")
+                        .attr("fill",function(){
+                            return "black";
                         })
                         .attr("fill-opacity",function(){
                             return calcIndicatorOpacity(d,currentHistoryIndex,historyCount);

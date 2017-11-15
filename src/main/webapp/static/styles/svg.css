@@ -29,6 +29,10 @@ svg {
     fill: #0000ff;
     //display:none;
 }*/
-g text {
+g .historyText, g .orbitingText {
     font-family: FontAwesome
+}
+g .historyDuration {
+    font-family: sans-serif;
+    font-size: 0.75em;
 }

@@ -185,7 +185,7 @@ abstract class Sensor(metadata:SensorMetaData) extends LiftActor with VisualElem
 		updatedTime(success = true,now)
 		lastStatus = Full(true)
 		currentFailures = 0
-    var cr =  CheckResult(id,name,label,serviceName,serviceLabel,serverName,serverLabel,now,why,lastUp,"",mode,severity,success = true,data,timeTaken)
+    val cr =  CheckResult(id,name,label,serviceName,serviceLabel,serverName,serverLabel,now,why,lastUp,"",mode,severity,success = true,data,checkDuration)
     HistoryServer ! cr
 		DashboardServer ! cr
 		ErrorRecorder ! cr
