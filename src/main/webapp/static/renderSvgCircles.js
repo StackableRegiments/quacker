@@ -17,7 +17,7 @@ var renderCheckSvg = function(checkElem, allChecks) {
     var historyContainerPositionY = 0;
     var historyTextOffsetX = -1.5;
     var historyTextOffsetY = 2;
-    var historyDurationOffsetX = 10;
+    var historyDurationOffsetX = 12;
 
     var constructIdentity = function (inString) {
         return _.replace(inString, " ", "_");
@@ -116,7 +116,7 @@ var renderCheckSvg = function(checkElem, allChecks) {
             .attr("r", function (d) {
                 return calcRingRadius(d);
             })
-            .attr("stroke", "lightgrey")
+            .attr("stroke", "grey")
             .attr("fill", "none")
             .attr("stroke-width", 3);
 

@@ -17,6 +17,27 @@
     <!--<hr />-->
     <div class="lift:embed?what=_templates"></div>
     <div id="enable"></div>
+    <script>
+      $(function(){
+        var uiPluginContainer = $("#uiPluginContainer");
+        if ("paused" in window) {
+          var pauseButton = $("<span/>",{id:"pauseButton",class:"icon"}).appendTo(uiPluginContainer);
+          var getPauseIcon = function(paused) {
+              return paused ? '\uf04b' : '\uf04c';
+          };
+          function pauseButtonClicked() {
+            paused = !paused;
+            pauseButton.text(getPauseIcon(paused));
+          };
+          pauseButton.on("click",pauseButtonClicked).text(getPauseIcon(paused));
+        }
+      });
+    </script>
+    <div id="quackerHeader">
+      <span class="quackerHeading">Quacker</span>
+      <span class="quackerSubHeading">making sure all the things work all the time</span>
+      <span id="uiPluginContainer"></span>
+    </div>
     <div id="dashboardServerContainer"></div>
     <div class="lift:comet?type=Dashboard" name="dashboard"></div>
   </div>

@@ -86,6 +86,19 @@ var renderHtml = (function() {
         return withElem(serverNode,serverName,serverLabel,checks);
     };
 
+    var calcCheckSeverityIcon = function(severity) {
+        switch(severity) {
+/*            case "IMPACT": return "\uf2c7"; // thermometer full
+            case "ISSUE": return "\uf2c9";  // thermometer half
+            case "ALERT": return "\uf2cb";  // thermometer empty    */
+            case "IMPACT": return "\uf06d"; // fire
+            case "ISSUE": return "\uf024";  // flag
+            case "ALERT": return "\uf21e";  // heartbeat
+        }
+        // Unknown severity. A question mark.
+        return "\uf059";
+    };
+
     var generateCheckId = function(check){return safetyId("check_"+check.id);};
     var createCheckElem = function(check,withElem){
         var checkNode = templates["check"].clone();
@@ -98,6 +111,9 @@ var renderHtml = (function() {
         checkNode.find(".checkServerName").text(check.serverName);
         checkNode.find(".checkServerLabel").text(check.serverLabel);
         checkNode.find(".checkSeverity").text(check.severity);
+        var severityIcon = calcCheckSeverityIcon(check.severity);
+        console.log("SeverityIcon",severityIcon);
+        checkNode.find(".checkSeverityIcon").text(severityIcon);
         checkNode.find(".checkMode").text(check.mode);
         setupCollapser(checkNode, check.name, ".checkCollapser", ".checkHideable", "core.expandCheck", "core.collapseCheck", defaultExpandedChecks);
         return withElem(checkNode,check);

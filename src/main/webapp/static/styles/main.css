@@ -1,13 +1,45 @@
 body{
     font-family: 'Cabin', sans-serif;
     font-size:12px;
+    background-image: url("/static/images/brushed-metal.jpg");
+    background-repeat: repeat;
+/*
+    background-color: rgba(100,100,100,1);
+*/
+}
+
+.icon {
+    font-family: FontAwesome;
+    cursor: default;
+}
+#quackerHeader {
+    width: 100%;
+}
+#uiPluginContainer {
+    height: 100%;
+    float: right;
+}
+#pauseButton {
+    cursor: pointer !important;
+}
+
+.quackerHeading {
+    font-size: 2.5em;
+}
+
+.quackerSubHeading {
+    font-size: 1.5em;
+    margin-left: 0.5em;
 }
 
 .serviceGroup {
     display:inline-block;
     vertical-align: top;
-    margin-left:0;
+    margin:2px;
+    padding:2px;
+    border:1px solid grey;
     width:250px;
+    background-color: rgba(255,255,255,0.3);
 }
 .serviceHeader {
     font-size: 1.5em;
@@ -23,7 +55,11 @@ body{
 }
 
 .serverGroup {
-    margin-left:1.5em;
+/*
+    margin:2px;
+    padding:2px;
+    border:1px solid grey;
+*/
     font-weight: normal;
 }
 .serverHeader {
@@ -42,6 +78,13 @@ body{
 
 .checkSummary {
     margin-left:1em;
+    background-color: rgba(255,255,255,0.1);
+    margin:2px;
+    padding:2px;
+    border:1px solid grey;
+}
+.checkSeverityIcon {
+    float: right;
 }
 .checkSvg {
     display:block;
@@ -53,6 +96,7 @@ body{
 .checkHeader{
     font-size: 1em;
     display:inline-block;
+    width: 100%;
     /*margin-left:1em;*/
 }
 .checkLabel {
@@ -67,6 +111,7 @@ body{
 .summaryLine1, .summaryLine2 {
     display:block;
     margin-left:2em;
+    background-color: rgba(255,255,255,0.1);
 }
 
 .checkUnknown{
@@ -106,22 +151,10 @@ body{
 */
 }
 .hideableHidden {
-    display:none!important;
+    display: none !important;
 }
-.collapser {
-/*
-    font-weight: bold;
-*/
-    font-family: FontAwesome;
-/*
-    padding-left:0.5em;
-    padding-right:0.5em;
-    padding-top:0.25em;
-    padding-bottom:0.25em;
-    margin-right: 0.25em;
-*/
-    /*border:1px solid lightgray;*/
-    cursor:Pointer;
+.collapserState {
+    cursor: pointer !important;
 }
 .serviceDataDescriptor {
     font-weight: bold;
