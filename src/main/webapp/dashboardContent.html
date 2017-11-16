@@ -8,6 +8,7 @@
     <script data-lift="with-resource-id" src="/static/renderHtml.js"></script>
     <script data-lift="with-resource-id" src="/static/renderSvgCircles.js"></script>
     <script data-lift="with-resource-id" src="/static/main.js"></script>
+    <script data-lift="with-resource-id" src="/static/plugins.js"></script>
   </head>
   <div>
     <div id="recipients" class="editingOnly"></div>
@@ -17,22 +18,6 @@
     <!--<hr />-->
     <div class="lift:embed?what=_templates"></div>
     <div id="enable"></div>
-    <script>
-      $(function(){
-        var uiPluginContainer = $("#uiPluginContainer");
-        if ("paused" in window) {
-          var pauseButton = $("<span/>",{id:"pauseButton",class:"icon"}).appendTo(uiPluginContainer);
-          var getPauseIcon = function(paused) {
-              return paused ? '\uf04b' : '\uf04c';
-          };
-          function pauseButtonClicked() {
-            paused = !paused;
-            pauseButton.text(getPauseIcon(paused));
-          };
-          pauseButton.on("click",pauseButtonClicked).text(getPauseIcon(paused));
-        }
-      });
-    </script>
     <div id="quackerHeader">
       <span class="quackerHeading">Quacker</span>
       <span class="quackerSubHeading">checking all the things all the time</span>
@@ -41,4 +26,11 @@
     <div id="dashboardServerContainer"></div>
     <div class="lift:comet?type=Dashboard" name="dashboard"></div>
   </div>
+  <script>
+    $(function(){
+      if ("addPlugins" in window){
+        addPlugins();
+      }
+    });
+  </script>
 </div>

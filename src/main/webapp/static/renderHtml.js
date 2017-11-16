@@ -111,9 +111,7 @@ var renderHtml = (function() {
         checkNode.find(".checkServerName").text(check.serverName);
         checkNode.find(".checkServerLabel").text(check.serverLabel);
         checkNode.find(".checkSeverity").text(check.severity);
-        var severityIcon = calcCheckSeverityIcon(check.severity);
-        console.log("SeverityIcon",severityIcon);
-        checkNode.find(".checkSeverityIcon").text(severityIcon);
+        checkNode.find(".checkSeverityIcon").text(calcCheckSeverityIcon(check.severity));
         checkNode.find(".checkMode").text(check.mode);
         setupCollapser(checkNode, check.name, ".checkCollapser", ".checkHideable", "core.expandCheck", "core.collapseCheck", defaultExpandedChecks);
         return withElem(checkNode,check);

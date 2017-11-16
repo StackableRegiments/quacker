@@ -19,8 +19,9 @@ body{
     height: 100%;
     float: right;
 }
-#pauseButton {
+.pluginButton {
     cursor: pointer !important;
+    margin:2px;
 }
 
 .quackerHeading {
