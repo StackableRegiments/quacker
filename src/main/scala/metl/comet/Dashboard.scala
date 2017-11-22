@@ -39,7 +39,7 @@ trait CheckRenderHelper {
   protected val statusClasses = List("serverOk","serverError","serverUnknown")
   def jsCmdCreator(action:CheckAction.Value, c:CheckResult):JsCmd = Call(checkActionJsCmds(action),jsonForCheckResult(c))
   def jsCmdCreator(action:CheckAction.Value,v:VisualElement):JsCmd = Call(checkActionJsCmds(action),jsonForVisualElement(v))
-  def jsonForCheckResult(s:CheckResult) = s.generateJson
+  def jsonForCheckResult(s:CheckResult) = JObject(s.generateJson)
   def jsonForVisualElement(v:VisualElement): JObject = v.jsonRenderer()
 }
 

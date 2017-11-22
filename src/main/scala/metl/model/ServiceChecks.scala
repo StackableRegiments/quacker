@@ -137,6 +137,17 @@ abstract class Sensor(metadata:SensorMetaData) extends LiftActor with VisualElem
 	var lastWhy:Box[String] = Empty
 	var lastDetail:Box[String] = Empty
 	var currentFailures = 0
+
+	protected val maxHistory = 5
+	protected var history:List[CheckResult] = Nil
+	protected def addCheckResult(cr:CheckResult,shouldSendToError:Boolean = true) = {
+		history = cr :: history.take(maxHistory - 1)
+		DashboardServer ! cr
+		HistoryServer ! cr
+		if (shouldSendToError){
+			ErrorRecorder ! cr
+		}
+	}
 	protected val pollInterval: Helpers.TimeSpan = 5 seconds
   private def updatedTime(success:Boolean,now:Date = new Date()):Date = {
     val now = new Date()
@@ -162,11 +173,8 @@ abstract class Sensor(metadata:SensorMetaData) extends LiftActor with VisualElem
 		val durationOrTimeSinceStart = calculateCheckDuration(timeTaken)
 		checkDuration = Full(durationOrTimeSinceStart)
 		val cr = CheckResult(id,name,label,serviceName,serviceLabel,serverName,serverLabel,now,why,lastUp,detail,mode,severity,success = false,duration = checkDuration)
-    DashboardServer ! cr
-    HistoryServer ! cr
-		if (currentFailures >= failureTolerance){
-			ErrorRecorder ! cr
-		}
+		addCheckResult(cr,currentFailures >= failureTolerance)
+
   }
 	def calculateCheckDuration(timeTaken:Box[Double] = Empty):Double = {
 		val now = new Date()
@@ -186,9 +194,7 @@ abstract class Sensor(metadata:SensorMetaData) extends LiftActor with VisualElem
 		lastStatus = Full(true)
 		currentFailures = 0
     val cr =  CheckResult(id,name,label,serviceName,serviceLabel,serverName,serverLabel,now,why,lastUp,"",mode,severity,success = true,data,checkDuration)
-    HistoryServer ! cr
-		DashboardServer ! cr
-		ErrorRecorder ! cr
+		addCheckResult(cr)
   }
   override protected def exceptionHandler:PartialFunction[Throwable,Unit] = {
 		case DashboardException(reason,detail,innerExceptions) => {
@@ -214,12 +220,15 @@ abstract class Sensor(metadata:SensorMetaData) extends LiftActor with VisualElem
       JField("period",JInt(pollInterval.millis)),
       JField("mode",JString(mode.toString)),
       JField("severity",JString(severity.toString)),
-			JField("lastWhy",JString(why)),
-      JField("lastDetail",JString(detail)),
-			JField("expectFail",JBool(metadata.expectFail))
-    ) ::: lastUptime.map(lu => JField("lastUp",JInt(lu.getTime))).toList :::
-			lastStatus.map(ls => JField("status",JBool(ls))).toList :::
-			lastCheck.map(lc => JField("lastCheck",JInt(lc.getTime()))).toList
+			//JField("lastWhy",JString(why)),
+      //JField("lastDetail",JString(detail)),
+			JField("expectFail",JBool(metadata.expectFail)),
+			JField("history",JArray(history.drop(1).map(c => JObject(c.generateJson))))
+    ) ::: history.headOption.toList.flatMap(h => {
+			h.generateJson
+		}) //::: lastUptime.map(lu => JField("lastUp",JInt(lu.getTime))).toList :::
+			//lastStatus.map(ls => JField("status",JBool(ls))).toList :::
+			//lastCheck.map(lc => JField("lastCheck",JInt(lc.getTime()))).toList
   }
 	private var isStopped = true
 	def isRunning:Boolean = !isStopped

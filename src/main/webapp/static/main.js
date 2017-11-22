@@ -89,13 +89,11 @@ function updateCheck(newCheck){
             // console.log("updating check:",oldCheck,newCheck);
             var cached = _.cloneDeep(oldCheck);
             var merged = _.merge(oldCheck, newCheck);
-            delete merged.incomplete;
-            //var oldChecks = _.concat([stripCheckHistory(merged)],oldCheck.history || []);
-            var oldChecks = oldCheck.history || [];
-            if (!("incomplete" in cached)){
-              oldChecks.push(stripCheckHistory(_.cloneDeep(cached)));
+            var oldChecks = _.orderBy(_.concat([stripCheckHistory(_.cloneDeep(cached))],oldCheck.history || []),["lastCheck"],["desc"]);
+            if (oldCheck.label == "Wait for a while"){
+            console.log('checkOrder',_.map(oldChecks,function(oc){return new Date(oc.lastCheck);}));
             }
-            var newHistory = _.reverse(_.take(_.reverse(oldChecks),maxHistoryItems - 1)); //taking one less, now that we'll be putting ourselves into the listing for subsequent rendering.  This isn't the right point to fix it at, but it'll do for the moment.
+            var newHistory = _.take(oldChecks,maxHistoryItems - 1); //taking one less, now that we'll be putting ourselves into the listing for subsequent rendering.  This isn't the right point to fix it at, but it'll do for the moment.
             merged.history = newHistory;
             jsonStructure[newCheck.id] = merged;
             if (cached != merged){
@@ -115,8 +113,8 @@ function createChecks(newChecks){
 }
 function createCheck(newCheck){
     if ("id" in newCheck) {
-        newCheck.incomplete = true;
         jsonStructure[newCheck.id] = newCheck;
+        newCheck.history = _.orderBy(newCheck.history,["lastCheck"],["desc"]);
         pluginSystem.fireCommand('createCheck','core.createCheck',newCheck);
         renderChecks();
     }

@@ -56,6 +56,14 @@ object ServiceCheckConfigurator extends ConfigFileReader with Logger {
                 Information(metadata,serviceCheckName,htmlDescriptor)
             }
           }
+          case "counting_mock" => {
+            CountingSensor(metadata,period)
+          }
+          case "waiting_mock" => {
+            val minWait = getLong(sc,"minWait").getOrElse(1000L)
+            val additionalTime = getInt(sc,"variance").getOrElse(2000)
+            WaitingSensor(metadata,minWait,additionalTime,period)
+          }
           case "icmp" => {
             val host = getOrError(getText(sc,"host"),"","host not specified")
             val ipv6 = getBool(sc,"ipv6").getOrElse(false)

@@ -142,12 +142,12 @@ object GraphableData {
 }
 
 case class CheckResult(id:String,serviceCheck:String,label:String,service:String,serviceLabel:String,server:String,serverLabel:String,when:Date,why:String,lastUp:Box[Date],detail:String,mode:ServiceCheckMode,severity:ServiceCheckSeverity,success:Boolean,data:List[Tuple2[Long,Map[String,GraphableDatum]]] = Nil,duration:Box[Double] = Empty) {
-	def generateJson:JValue = {
-		JObject(List(
+	def generateJson:List[JField] = {
+		List(
 			JField("id",JString(id)),
 			JField("status",JBool(success)),
 			JField("label",JString(label)),
-			JField("now",JInt(now.getTime())),
+			JField("now",JInt(when.getTime())),
 			JField("why",JString(why)),
 			JField("detail",JString(success match {
 				case true => ""
@@ -168,9 +168,8 @@ case class CheckResult(id:String,serviceCheck:String,label:String,service:String
 						})
 					})))
 				))
-			}))))
-			::: duration.map(d => JField("duration",JDouble(d))).toList ::: lastUp.map(lu => JField("lastUp",JInt(lu.getTime()))).toList
-		)
+			})))) ::: duration.map(d => JField("duration",JDouble(d))).toList ::: lastUp.map(lu => JField("lastUp",JInt(lu.getTime()))).toList
+
 	}
 }
 

@@ -168,8 +168,7 @@ var renderCheckSvg = function(checkElem, allChecks) {
                 var histories = d3.select(thisIndicatorD).selectAll(".historyItem")
                     .data(history)
                     .enter();
-                histories.each(function(hd,hi){
-                    var currentHistoryIndex = historyCount - hi - 1;
+                histories.each(function(hd,currentHistoryIndex){
                     var historyAttributes = calcIndicatorAttributes(hd,true);
 
                     var historySvg = historiesSvg.append("g");
