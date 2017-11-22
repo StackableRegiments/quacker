@@ -9,15 +9,16 @@ import _root_.net.liftweb.sitemap._
 import _root_.net.liftweb.util._
 import Helpers._
 import metl.view.{DebugToolsRestHelper, ProbeRestHelper, SystemRestHelper}
+import net.liftweb.json.Formats
 
 /**
   * A class that's instantiated early and run.  It allows the application
   * to modify Lift's environment.
   */
 class Boot extends Logger {
-  implicit val formats = GraphableData.formats
+  implicit val formats: Formats = GraphableData.formats
 
-  def boot {
+  def boot() {
     Globals.isDevMode = Props.mode match {
       case Props.RunModes.Production => false
       case _ => true
@@ -30,6 +31,9 @@ class Boot extends Logger {
         s => "%s?%s".format(s,prodRunId)
       }
     }
+
+    Globals.setupAuthenticators
+
     val configurationStatus = ServiceConfigurator.describeAutoConfigure(ServiceConfigurator.autoConfigure)
     warn("Xml configuration reloaded\r\n%s".format(configurationStatus))
 
@@ -47,12 +51,12 @@ class Boot extends Logger {
 
     // Build SiteMap
     def sitemap() = SiteMap(
-      Menu("Home") / "index" >> User.AddUserMenusAfter, // Simple menu form
+      Menu("Home") / "index" , // Simple menu form
       Menu("Flexible") / "flexible",
       // Menu with special Link
-      Menu(Loc("Static", Link(List("static"), true, "/static/index"), "Static Content")))
+      Menu(Loc("Static", Link(List("static"), matchHead_? = true, "/static/index"), "Static Content")))
 
-    LiftRules.setSiteMapFunc(() => User.sitemapMutator(sitemap()))
+    LiftRules.setSiteMapFunc(() => sitemap())
 
     // Show the spinny image when an Ajax call starts
     LiftRules.ajaxStart =
@@ -64,7 +68,7 @@ class Boot extends Logger {
 
     LiftRules.early.append(makeUtf8)
 
-    LiftRules.loggedInTest = Full(() => User.loggedIn_?)
+    LiftRules.loggedInTest = Full(() => true)
 
     metl.comet.DashboardServer
   }

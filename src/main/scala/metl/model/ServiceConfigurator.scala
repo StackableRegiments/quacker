@@ -1,21 +1,16 @@
 package metl.model
 
-import metl.comet._
-import scala.xml._
 import net.liftweb._
 import common._
 import util._
-import Helpers._
 
-import javax.mail._
-import javax.mail.internet._
 import java.io.File
 
 object ServiceConfigurator extends Logger {
 	private val osName = System.getProperty("os.name")	
-	val isWindows = osName.toLowerCase.trim.startsWith("windows")
-	val isLinux = osName.toLowerCase.trim.startsWith("linux")
-	val isOSX = osName.toLowerCase.trim.startsWith("macos")
+	val isWindows: Boolean = osName.toLowerCase.trim.startsWith("windows")
+	val isLinux: Boolean = osName.toLowerCase.trim.startsWith("linux")
+	val isOSX: Boolean = osName.toLowerCase.trim.startsWith("macos")
 	private	def getParamOrElse(paramName: String, orElse: => String):String = {
 		System.getProperty(paramName) match {
 			case s:String if (s.length > 0) => s
@@ -26,6 +21,19 @@ object ServiceConfigurator extends Logger {
 				}
 			}	
 		}
+	}
+	def safelyConfigure(name:String,usage:()=>List[String]):List[String] = {
+		var messages = List.empty[String]
+		try {
+			val outputMessages:List[String] = usage()
+			messages = messages ::: outputMessages
+		} catch {
+			case e:Throwable => {
+				messages = messages ::: List("%s failed to load xml with exception: %s".format(name,e.getMessage))
+
+			}
+		}
+		messages
 	}
 	def processDirectory(path:File, visit:File=>Tuple2[Boolean,String]):Map[String,Tuple2[Boolean,String]]  = {
 		var items = Map.empty[String,Tuple2[Boolean,String]]
@@ -82,22 +90,12 @@ object ServiceConfigurator extends Logger {
 		try {
 			val x = scala.xml.XML.loadFile(xmlPath)
 			var messages = List.empty[String]
-			def safelyConfigure(name:String,usage:()=>List[String]):Unit = {
-				try {
-					val outputMessages = usage()
-					messages = messages ::: outputMessages
-				} catch {
-					case e:Throwable => {
-						messages = messages ::: List("%s failed to load xml with exception: %s".format(name,e.getMessage))
-					}
-				}
-			}
-			safelyConfigure("validUsers",() => ValidUsers.configureFromXml(x))
+			messages = messages ::: safelyConfigure("validUsers",() => ValidUsers.configureFromXml(x))
 			if (!Globals.isDevMode){
-				safelyConfigure("notifiers",() => ErrorRecorder.configureFromXml(x))
+				messages = messages ::: safelyConfigure("notifiers",() => ErrorRecorder.configureFromXml(x))
 			}
-			safelyConfigure("historyListeners",() => HistoryServer.configureFromXml(x))
-			safelyConfigure("servers",() => Servers.configureFromXml(x))
+			messages = messages ::: safelyConfigure("historyListeners",() => HistoryServer.configureFromXml(x))
+			messages = messages ::: safelyConfigure("servers",() => Servers.configureFromXml(x))
 			(true,messages match {
 				case l:List[String] if l.length > 0 => " %s".format(l.mkString(", "))
 				case _ => "loaded nothing"

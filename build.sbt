@@ -74,10 +74,11 @@ libraryDependencies ++= {
     "io.github.stackableregiments" %% "common-utils" % "1.2.+",
 //    "com.metl" % "LiftExtensions" % "1.0-SNAPSHOT",
     /*auth*/
-    "io.github.stackableregiments" %% "lift-authentication" % "0.2.+",
-    "io.github.stackableregiments" %% "cas-authentication" % "0.2.+",
-    
-    
+    "io.github.stackableregiments" %% "lift-authentication" % "0.3.+",
+    "io.github.stackableregiments" %% "form-authentication" % "0.3.+",
+    //"io.github.stackableregiments" %% "cas-authentication" % "0.3.+",
+    "io.github.stackableregiments" %% "openid-connect-authentication" % "0.3.+",
+
     /*Lift framework*/
     "net.liftweb"       %% "lift-webkit"        % liftVersion        % "compile",
     "net.liftweb"       %% "lift-mapper"        % liftVersion        % "compile",
