@@ -84,7 +84,7 @@ body{
     padding:2px;
     border:1px solid grey;
 }
-.checkSeverityIcon {
+.checkSeverityContainer {
     float: right;
 }
 .checkSvg {
@@ -204,4 +204,38 @@ body{
 .promotedService {
     background-color: white !important;
     z-index:100 !important;
+}
+/* Tooltip container */
+.tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+/* Tooltip text */
+.tooltip .tooltiptext {
+    visibility: hidden;
+    /*width: 120px;*/
+    background-color: rgba(192,192,192,0.8);
+    color: black;
+    text-align: center;
+    padding: 2px;
+    border: 1px solid darkgray;
+    border-radius: 6px;
+
+    /* Position the tooltip text - see examples below! */
+    position: absolute;
+    z-index: 1;
+}
+
+/* Show the tooltip text when you mouse over the tooltip container */
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    width: 120px;
+    /*
+    top: 100%;
+    left: 50%;
+    margin-left: -60px;
+    */
+    top: -2px;
+    right: 105%;
 }

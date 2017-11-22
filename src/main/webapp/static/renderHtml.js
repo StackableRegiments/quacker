@@ -86,17 +86,17 @@ var renderHtml = (function() {
         return withElem(serverNode,serverName,serverLabel,checks);
     };
 
-    var calcCheckSeverityIcon = function(severity) {
+    var calcCheckSeverity = function(severity) {
         switch(severity) {
 /*            case "IMPACT": return "\uf2c7"; // thermometer full
             case "ISSUE": return "\uf2c9";  // thermometer half
             case "ALERT": return "\uf2cb";  // thermometer empty    */
-            case "IMPACT": return "\uf06d"; // fire
-            case "ISSUE": return "\uf024";  // flag
-            case "ALERT": return "\uf21e";  // heartbeat
+            case "IMPACT": return {icon:"\uf06d",text:"Customer Impact"}; // fire
+            case "ISSUE": return {icon:"\uf024",text:"Technical Issue"};  // flag
+            case "ALERT": return {icon:"\uf21e",text:"Technical Alert"};  // heartbeat
         }
         // Unknown severity. A question mark.
-        return "\uf059";
+        return {icon:"\uf059",text:"Unknown"};
     };
 
     var generateCheckId = function(check){return safetyId("check_"+check.id);};
@@ -111,7 +111,9 @@ var renderHtml = (function() {
         checkNode.find(".checkServerName").text(check.serverName);
         checkNode.find(".checkServerLabel").text(check.serverLabel);
         checkNode.find(".checkSeverity").text(check.severity);
-        checkNode.find(".checkSeverityIcon").text(calcCheckSeverityIcon(check.severity));
+        var checkSeverity = calcCheckSeverity(check.severity);
+        checkNode.find(".checkSeverityIcon").text(checkSeverity.icon);
+        checkNode.find(".checkSeverityContainer").find(".tooltiptext").text(checkSeverity.text);
         checkNode.find(".checkMode").text(check.mode);
         setupCollapser(checkNode, check.name, ".checkCollapser", ".checkHideable", "core.expandCheck", "core.collapseCheck", defaultExpandedChecks);
         return withElem(checkNode,check);
