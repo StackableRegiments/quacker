@@ -24,6 +24,22 @@ var renderCheckSvg = function(checkElem, allChecks) {
     };
     var svg = d3.select(checkElem[0]).append("svg");
 
+    var gradient = svg.append("defs")
+        .append("linearGradient")
+        .attr("id","fadeRight")
+        .attr("x1","100%")
+        .attr("y1","0%")
+        .attr("x2","0%")
+        .attr("y2","0%");
+    gradient
+        .append("stop")
+        .attr("offset","10%")
+        .attr("class","historyElemGradientStart");
+    gradient
+        .append("stop")
+        .attr("offset","75%")
+        .attr("class","historyElemGradientEnd");
+
     var data = _.toPairs(_.mapValues(_.groupBy(allChecks, function (item) {
         return item.service;
     }), function (v, k) {
@@ -195,6 +211,18 @@ var renderCheckSvg = function(checkElem, allChecks) {
                         .attr("fill",function(){
                             return historyAttributes.textColor;
                         })
+                        .attr("fill-opacity",function(){
+                            return calcIndicatorOpacity(d,currentHistoryIndex,historyCount);
+                        });
+                    historySvg.append("rect")
+                        .attr("class","historyDurationBackground")
+                        .attr("x",(historyContainerWidth / 2) + historyDurationOffsetX - 2)
+                        .attr("y",(historyContainerHeight / 2) - 8)
+                        .attr("rx",5)
+                        .attr("ry",5)
+                        .attr("width",50)
+                        .attr("height",15)
+                        .attr("fill","url(#fadeRight)")
                         .attr("fill-opacity",function(){
                             return calcIndicatorOpacity(d,currentHistoryIndex,historyCount);
                         });

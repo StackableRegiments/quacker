@@ -98,6 +98,7 @@ body{
     font-size: 1em;
     display:inline-block;
     width: 100%;
+    font-weight: bold;
     /*margin-left:1em;*/
 }
 .checkLabel {
@@ -109,10 +110,18 @@ body{
 .checkStatus {
     margin-left:1em;
 }
-.summaryLine1, .summaryLine2 {
+.summaryLine1 {
     display:block;
     margin-left:2em;
     background-color: rgba(255,255,255,0.1);
+    font-weight: bold;
+}
+.summaryLine2 {
+    display:block;
+    background-color: rgba(255,255,255,0.1);
+}
+.summaryItemLabel {
+    font-weight: bold;
 }
 
 .checkUnknown{
@@ -217,10 +226,10 @@ body{
     /*width: 120px;*/
     background-color: rgba(192,192,192,0.8);
     color: black;
-    text-align: center;
-    padding: 2px;
     border: 1px solid darkgray;
     border-radius: 6px;
+    text-align: center;
+    padding: 2px;
 
     /* Position the tooltip text - see examples below! */
     position: absolute;
@@ -238,4 +247,13 @@ body{
     */
     top: -2px;
     right: 105%;
+}
+.historyElemGradientStart, .historyElemGradientEnd {
+  stop-color:rgb(192,192,192);
+}
+.historyElemGradientStart {
+  stop-opacity:0;
+}
+.historyElemGradientEnd {
+  stop-opacity:1;
 }
