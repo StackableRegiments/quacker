@@ -16,3 +16,4 @@ then
 else
         echo "Could not locate ./version, or it was empty."
         exit 1
+fi
