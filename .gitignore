@@ -6,3 +6,4 @@ project/project/target
 config/configuration*.xml
 monitoringDashboardConfig/*.xml
 *.log
+config/quacker*.xml
