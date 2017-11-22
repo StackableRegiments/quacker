@@ -140,9 +140,10 @@ var renderCheckSvg = function(checkElem, allChecks) {
             .data(checkData)
             .enter();
         indicators.each(function(d,i){
-            if ("history" in d && _.size(d.history)){
+            if ("history" in d){
+                var history = _.concat([d],d.history);
                 var thisIndicatorD = this;
-                var historyCount = _.size(d.history);
+                var historyCount = _.size(history);
                 var historiesPositionX = calcRingCenterX(d,0) - dotRadius;
                 var historiesPositionY = calcRingCenterY(d,0) - dotRadius - ringRadius;
 
@@ -165,7 +166,7 @@ var renderCheckSvg = function(checkElem, allChecks) {
                     .attr("fill","yellow");
 */
                 var histories = d3.select(thisIndicatorD).selectAll(".historyItem")
-                    .data(d.history)
+                    .data(history)
                     .enter();
                 histories.each(function(hd,hi){
                     var currentHistoryIndex = historyCount - hi - 1;

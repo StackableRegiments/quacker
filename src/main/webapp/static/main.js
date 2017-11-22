@@ -89,9 +89,13 @@ function updateCheck(newCheck){
             // console.log("updating check:",oldCheck,newCheck);
             var cached = _.cloneDeep(oldCheck);
             var merged = _.merge(oldCheck, newCheck);
+            delete merged.incomplete;
+            //var oldChecks = _.concat([stripCheckHistory(merged)],oldCheck.history || []);
             var oldChecks = oldCheck.history || [];
-            oldChecks.push(stripCheckHistory(_.cloneDeep(cached)));
-            var newHistory = _.reverse(_.take(_.reverse(oldChecks),maxHistoryItems));
+            if (!("incomplete" in cached)){
+              oldChecks.push(stripCheckHistory(_.cloneDeep(cached)));
+            }
+            var newHistory = _.reverse(_.take(_.reverse(oldChecks),maxHistoryItems - 1)); //taking one less, now that we'll be putting ourselves into the listing for subsequent rendering.  This isn't the right point to fix it at, but it'll do for the moment.
             merged.history = newHistory;
             jsonStructure[newCheck.id] = merged;
             if (cached != merged){
@@ -111,10 +115,11 @@ function createChecks(newChecks){
 }
 function createCheck(newCheck){
     if ("id" in newCheck) {
+        newCheck.incomplete = true;
         jsonStructure[newCheck.id] = newCheck;
+        pluginSystem.fireCommand('createCheck','core.createCheck',newCheck);
+        renderChecks();
     }
-    pluginSystem.fireCommand('createCheck','core.createCheck',newCheck);
-    renderChecks();
 }
 function removeCheck(checkId){
     delete jsonStructure[checkId];
