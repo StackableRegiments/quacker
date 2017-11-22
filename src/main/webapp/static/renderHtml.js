@@ -1,3 +1,38 @@
+var TimeSpanFormatter = (function(){
+  var timeFormats = [
+    {unit:"millisecond",value:1000},
+    {unit:"second",value:60},
+    {unit:"minute",value:60},
+    {unit:"hour",value:24},
+    {unit:"day",value:7},
+    {unit:"week",value:52}
+  ];
+  var comprehendTimeSpanFunc = function(timespan){
+    var ts = timespan;
+    var output = [];
+    _.forEach(timeFormats,function(tf){
+      if (ts > 0){
+        var c = ts % tf.value;
+        ts = ((ts - c) / tf.value);
+        if (c > 0){
+          output.push({unit:tf.unit,value:c});
+        }
+      }
+    });
+    return output;
+  };
+  var formatTimeSpanFunc = function(timePeriods){
+    return _.map(_.reverse(timePeriods),function(item){
+      return item.value + " " + item.unit + (item.value > 1 ? "s" : "");
+    }).join(", ");
+  };
+  return {
+    formatTimeSpan:function(timespan){
+      return formatTimeSpanFunc(comprehendTimeSpanFunc(timespan));
+    }
+  };
+})();
+
 var renderHtml = (function() {
     var templates = {};
     $(function(){
@@ -99,48 +134,8 @@ var renderHtml = (function() {
         return {icon:"\uf059",text:"Unknown"};
     };
 
-    var timeFormats = [
-      {unit:"millisecond",value:1000},
-      {unit:"second",value:60},
-      {unit:"minute",value:60},
-      {unit:"hour",value:24},
-      {unit:"day",value:7},
-      {unit:"week",value:52}
-    ]
     var formatTimespan = function(timespan) {
-      var ts = timespan;
-      var output = [];
-      _.forEach(timeFormats,function(tf){
-        if (ts > 0){
-          var c = ts % tf.value;
-          ts = ((ts - c) / tf.value);
-          if (c > 0){
-            output.push({unit:tf.unit,value:c});
-          }
-        }
-      });
-      console.log("formatTimespan:",timespan,output);
-/*
-        var hoursRaw = Math.floor((timespan % (24 * 60 * 60 * 1000))) / (60 * 60 * 1000);
-        if (hoursRaw > 0){
-          output.push({unit:"hour",value:hoursRaw});
-        }
-        var minutesRaw = Math.floor((timespan % (60 * 60 * 1000))) / (60 * 1000);
-        if (minutesRaw > 0){
-          output.push({unit:"minute",value:minutesRaw});
-        }
-        var secondsRaw = Math.floor((timespan % 60 * 1000)) / 1000;
-        if (secondsRaw > 0){
-          output.push({unit:"second",value:secondsRaw});
-        }
-        var msRaw = timespan % 1000;
-        if (msRaw > 0){
-          output.push({unit:"millisecond",value:msRaw});
-        }
-        */
-        return _.map(_.reverse(output),function(item){
-          return item.value + " " + item.unit + (item.value > 1 ? "s" : "");
-        }).join(", ");
+      return TimeSpanFormatter.formatTimeSpan(timespan);
     }
 
     var generateCheckId = function(check){return safetyId("check_"+check.id);};
