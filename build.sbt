@@ -1,5 +1,5 @@
 name := "Quacker"
-version := "0.0.2"
+version := "1.0.0"
 organization := "stackableRegiments"
 
 val scalaVersionString = "2.11.8"
