@@ -29,6 +29,8 @@ var addPlugins = _.once(function(){
     };
   };
 
-  $("<span/>",{id:"reloadXmlButton",class:"icon pluginButton",text:'\uf021'}).on("click",ajaxHandler("/reloadXml","Reload Xml")).appendTo(uiPluginContainer);
-  $("<span/>",{id:"breakSomethingButton",class:"icon pluginButton",text:'\uf0e7'}).on("click",ajaxHandler("/breakSomething","Break Something")).appendTo(uiPluginContainer);
+  if(isDevMode) {
+    $("<span/>",{id:"reloadXmlButton",class:"icon pluginButton",text:'\uf021'}).on("click",ajaxHandler("/reloadXml","Reload Xml")).appendTo(uiPluginContainer);
+    $("<span/>",{id:"breakSomethingButton",class:"icon pluginButton",text:'\uf0e7'}).on("click",ajaxHandler("/breakSomething","Break Something")).appendTo(uiPluginContainer);
+  }
 });

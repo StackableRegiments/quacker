@@ -156,3 +156,7 @@ function internalUpdateCheck(newCheck,targetNode){
     rootNode.find(".serviceLastUp").text(newCheck["lastUp"]);
     rootNode.find(".serviceClass").text(newCheck["mode"]);
 }
+var isDevMode = false;
+function setDevMode(devMode){
+    isDevMode = devMode;
+}
