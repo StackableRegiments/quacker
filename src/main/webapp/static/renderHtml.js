@@ -123,9 +123,6 @@ var renderHtml = (function() {
 
     var calcCheckSeverity = function(severity) {
         switch(severity) {
-/*            case "IMPACT": return "\uf2c7"; // thermometer full
-            case "ISSUE": return "\uf2c9";  // thermometer half
-            case "ALERT": return "\uf2cb";  // thermometer empty    */
             case "IMPACT": return {icon:"\uf06d",text:"Customer Impact"}; // fire
             case "ISSUE": return {icon:"\uf024",text:"Technical Issue"};  // flag
             case "ALERT": return {icon:"\uf21e",text:"Technical Alert"};  // heartbeat
@@ -173,8 +170,6 @@ var renderHtml = (function() {
         var serviceNameToLabel = {};
         var serverNameToLabel = {};
 
-//        console.log("Check structure",checkStructure);
-
         _.forEach(checkStructure, function(check){
             if(!serviceNameToLabel[check.serviceName]) serviceNameToLabel[check.serviceName] = check.serviceLabel;
             if(!serverNameToLabel[check.serverName]) serverNameToLabel[check.serverName] = check.serverLabel;
@@ -200,48 +195,9 @@ var renderHtml = (function() {
                 $(domElement).remove();
             }
         });
-        /*
-        _.forEach(structure,function(servers,serviceName) {
-            var serviceRoot = rootElem.find("#"+generateServiceId(serviceName));
-            var serviceLabel = serviceNameToLabel[serviceName];
-            if (serviceRoot[0] === undefined){
-                serviceRoot = createServiceElem(servers,serviceName,serviceLabel,updateServiceElem);
-                 rootElem.append(serviceRoot);
-            } else {
-                updateServiceElem(serviceRoot,serviceName,serviceLabel,servers);
-            }
-            var serverContainer = serviceRoot.find(".servers");
-            _.forEach(servers,function(checks,serverName){
-                var serverRoot = serverContainer.find("#"+generateServerId(serverName));
-                var serverLabel = serverNameToLabel[serverName];
-                if (serverRoot[0] === undefined){
-                    serverRoot = createServerElem(checks,serverName,serverLabel,updateServerElem);
-                    serverContainer.append(serverRoot)
-                } else {
-                    updateServerElem(serverRoot,serverName,serverLabel,checks);
-                }
-                var checksContainer = serverRoot.find(".checks");
-                _.forEach(checks,function(check,checkName){
-                   var checkRoot = checksContainer.find("#"+generateCheckId(check));
-                   if (checkRoot[0] === undefined){
-                       checkRoot = createCheckElem(check,updateCheckElem);
-                       checksContainer.append(checkRoot);
-                   } else {
-                       if ("dirty" in check && check.dirty === true) {
-                           updateCheckElem(checkRoot, check);
-                           delete check.dirty;
-                       }
-                   }
-                   checkRoot.find(".checkSvg").empty();
-                   var singleCheckStructure = _.filter(checkStructure, function(o){
-                        return o.id === check.id;
-                    });
-                   renderCheckSvg(checkRoot.find(".checkSvg"), singleCheckStructure);
-                });
-            });
-        });
-        */
-//        var checksContainer = rootElem.find(".checks");
+
+        checkStructure = _.sortBy(checkStructure,['status','serviceLabel','serverLabel','label']);
+
         _.forEach(checkStructure,function(check,checkName){
            var checkRoot = rootElem.find("#"+generateCheckId(check));
            if (checkRoot[0] === undefined){
@@ -272,9 +228,5 @@ var renderHtml = (function() {
 
     return function(rootSelectorString,checkStructure){
         render(rootSelectorString,checkStructure);
-//        $(".serviceOuter").tile(3);
-//        $(".t").tile(3);
-//        console.log("Tiled");
-//        paused = true;
     };
 })();
