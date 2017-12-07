@@ -32,6 +32,20 @@ body{
     font-size: 1.5em;
     margin-left: 0.5em;
 }
+#quackerStatus {
+    font-weight: bold;
+    margin-left: 2em;
+}
+#passCount {
+    padding: 2px;
+    font-size: 1.5em;
+    background-color: lightgreen;
+}
+#failCount {
+    padding: 2px;
+    font-size: 1.5em;
+    background-color: red;
+}
 /*
 .serviceGroup {
     display:inline-block;

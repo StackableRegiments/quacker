@@ -259,6 +259,15 @@ var renderHtml = (function() {
             });
            renderCheckSvg(checkRoot.find(".checkSvg"), singleCheckStructure);
         });
+
+        var passing = _.size(_.filter(checkStructure,function(check){return check.status;}));
+        $("#passCount").text(passing);
+        var failing = _.size(_.filter(checkStructure,function(check){return !check.status;}));
+        if(failing > 0) {
+          $("#failCount").text(failing);
+        } else {
+          $("#checksFailing").attr("style","display:none;");
+        }
     };
 
     return function(rootSelectorString,checkStructure){
