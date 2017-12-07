@@ -95,6 +95,7 @@ body{
 }
 .checkSvg {
     display:block;
+    text-align: center;
 /*
     max-width:180px;
     max-height:180px;
