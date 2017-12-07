@@ -218,9 +218,11 @@ var renderHtml = (function() {
 
         var passing = _.size(_.filter(checkStructure,function(check){return check.status;}));
         $("#passCount").text(passing);
+        $("#passDesc").text("Pass"+(passing > 1 ? "es" : ""));
         var failing = _.size(_.filter(checkStructure,function(check){return !check.status;}));
         if(failing > 0) {
           $("#failCount").text(failing);
+          $("#failDesc").text("Fail"+(failing > 1 ? "s" : ""));
         } else {
           $("#checksFailing").attr("style","display:none;");
         }
