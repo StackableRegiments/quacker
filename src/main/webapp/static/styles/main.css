@@ -32,7 +32,7 @@ body{
     font-size: 1.5em;
     margin-left: 0.5em;
 }
-
+/*
 .serviceGroup {
     display:inline-block;
     vertical-align: top;
@@ -46,43 +46,35 @@ body{
     font-size: 1.5em;
     display:inline-block;
 }
+*/
 /*
 .serviceContent{
     margin-left:2em;
 }
 */
+/*
 .serviceStatus{
     padding:0 1em;
 }
 
 .serverGroup {
-/*
-    margin:2px;
-    padding:2px;
-    border:1px solid grey;
-*/
     font-weight: normal;
 }
 .serverHeader {
     font-size: 1.25em;
     display:inline-block;
-    /*font-weight: bold;*/
-    /*font-color: darkblue;*/
-    /*display:block;*/
-    /*margin-left:2em;*/
-    /*margin-top:0.5em;*/
 }
 .serverContent{
     margin-left:1.5em;
-    /*display:block;*/
 }
-
+*/
 .checkSummary {
     margin-left:1em;
     background-color: rgba(255,255,255,0.1);
     margin:2px;
     padding:2px;
     border:1px solid grey;
+    width:250px;
 }
 .checkSeverityContainer {
     float: right;

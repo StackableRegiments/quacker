@@ -49,10 +49,17 @@ $(function (){
 });
 var structureByServices = function(structure){
     return _.groupBy(structure, function (check) {
-        return check.serviceName;
+        return "All";
     });
 };
 var paused = false;
+var retile = function() {
+    $('.serviceOuter').masonry({
+      itemSelector: '.checkSummary'
+      // columnWidth: 200
+    });
+//    console.log("Retiled");
+};
 var renderChecks = _.once(function(){
     var containerRootNode = $("#dashboardServerContainer");
 
@@ -63,10 +70,11 @@ var renderChecks = _.once(function(){
             var serviceIdOuter = "serviceOuter_" + serviceName;
             var serviceNode = containerRootNode.find("#"+serviceIdOuter);
             if (serviceNode[0] === undefined){
-                serviceNode = $("<span/>",{id:serviceIdOuter,class:"serviceOuter"});
+                serviceNode = $("<div/>",{id:serviceIdOuter,class:"serviceOuter"});
                 containerRootNode.append(serviceNode);
             }
             renderHtml(serviceNode,checks);
+            retile();
 /*            var thisSvgRootNode = serviceNode.find(".serviceSvg");
             var serviceIdInner = "service_" + serviceName;
             // thisSvgRootNode.html(renderSvgRings(checks,serviceIdInner));
@@ -90,9 +98,6 @@ function updateCheck(newCheck){
             var cached = _.cloneDeep(oldCheck);
             var merged = _.merge(oldCheck, newCheck);
             var oldChecks = _.orderBy(_.concat([stripCheckHistory(_.cloneDeep(cached))],oldCheck.history || []),["lastCheck"],["desc"]);
-            if (oldCheck.label == "Wait for a while"){
-            console.log('checkOrder',_.map(oldChecks,function(oc){return new Date(oc.lastCheck);}));
-            }
             var newHistory = _.take(oldChecks,maxHistoryItems - 1); //taking one less, now that we'll be putting ourselves into the listing for subsequent rendering.  This isn't the right point to fix it at, but it'll do for the moment.
             merged.history = newHistory;
             jsonStructure[newCheck.id] = merged;

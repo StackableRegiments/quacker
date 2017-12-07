@@ -173,6 +173,8 @@ var renderHtml = (function() {
         var serviceNameToLabel = {};
         var serverNameToLabel = {};
 
+//        console.log("Check structure",checkStructure);
+
         _.forEach(checkStructure, function(check){
             if(!serviceNameToLabel[check.serviceName]) serviceNameToLabel[check.serviceName] = check.serviceLabel;
             if(!serverNameToLabel[check.serverName]) serverNameToLabel[check.serverName] = check.serverLabel;
@@ -198,6 +200,7 @@ var renderHtml = (function() {
                 $(domElement).remove();
             }
         });
+        /*
         _.forEach(structure,function(servers,serviceName) {
             var serviceRoot = rootElem.find("#"+generateServiceId(serviceName));
             var serviceLabel = serviceNameToLabel[serviceName];
@@ -237,9 +240,32 @@ var renderHtml = (function() {
                 });
             });
         });
+        */
+//        var checksContainer = rootElem.find(".checks");
+        _.forEach(checkStructure,function(check,checkName){
+           var checkRoot = rootElem.find("#"+generateCheckId(check));
+           if (checkRoot[0] === undefined){
+               checkRoot = createCheckElem(check,updateCheckElem);
+               rootElem.append(checkRoot);
+           } else {
+               if ("dirty" in check && check.dirty === true) {
+                   updateCheckElem(checkRoot, check);
+                   delete check.dirty;
+               }
+           }
+           checkRoot.find(".checkSvg").empty();
+           var singleCheckStructure = _.filter(checkStructure, function(o){
+                return o.id === check.id;
+            });
+           renderCheckSvg(checkRoot.find(".checkSvg"), singleCheckStructure);
+        });
     };
 
     return function(rootSelectorString,checkStructure){
         render(rootSelectorString,checkStructure);
+//        $(".serviceOuter").tile(3);
+//        $(".t").tile(3);
+//        console.log("Tiled");
+//        paused = true;
     };
 })();
