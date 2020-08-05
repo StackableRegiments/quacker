@@ -7,3 +7,6 @@ config/configuration*.xml
 monitoringDashboardConfig/*.xml
 *.log
 config/quacker*.xml
+*.swp
+.ivy2
+.sbt-boot

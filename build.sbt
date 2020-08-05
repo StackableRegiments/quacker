@@ -9,8 +9,7 @@ scalaVersion := scalaVersionString
 resolvers ++= Seq(
   "snapshots"     at "http://oss.sonatype.org/content/repositories/snapshots",
   "releases"        at "http://oss.sonatype.org/content/repositories/releases",
-  "mavenCentral"  at  "http://mvnrepository.com/artifact",
-  "oosnmp" at "https://oosnmp.net/dist/release"
+  "mavenCentral"  at  "http://mvnrepository.com/artifact" 
 )
 
 unmanagedResourceDirectories in Test <+= (baseDirectory) { _ / "src/main/webapp" }
@@ -46,13 +45,20 @@ libraryDependencies ++= {
     /*telnet & munin*/
     "commons-net" % "commons-net" % "2.0",
     /*snmp*/
-    "org.snmp4j" % "snmp4j" % "1.11.5",
+    "org.snmp4j" % "snmp4j" % "3.4.2",
     /*mongo*/
     "org.mongodb" % "mongo-java-driver" % "2.6.3",
     /*html-cleaner for html parsing*/
     "net.sourceforge.htmlcleaner" % "htmlcleaner" % "2.9",
-    /*mysql*/
-    "mysql" % "mysql-connector-java" % "5.1.6",
+    // for mysql
+    "mysql" % "mysql-connector-java" % "8.0.19",
+    // for postgres
+    "org.postgresql" % "postgresql" % "42.2.9",
+    // for cloud sql
+    "com.google.cloud.sql" % "postgres-socket-factory"            % "1.0.15",
+    "com.google.cloud.sql" % "mysql-socket-factory-connector-j-8" % "1.0.15",
+    //for apache commons dbcp db connection pooling
+    "org.apache.commons" % "commons-dbcp2" % "2.7.0",
     /*subversion*/
     "org.tmatesoft.svnkit" % "svnkit" % "1.3.4",
     /*general*/
