@@ -144,7 +144,7 @@ object ServiceCheckConfigurator extends ConfigFileReader with Logger {
                                           "",
                                           "driver not specified")
                   val additionalProps = for {
-                    prop <- (sc \ "additionalProps").toList
+                    prop <- (sc \ "additionalProp").toList
                     k <- (prop \ "@key").headOption.map(_.text)
                     v <- prop.headOption.map(_.text)
                   } yield {
