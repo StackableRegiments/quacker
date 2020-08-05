@@ -376,20 +376,22 @@ case class SQLSensor(metadata: SensorMetaData,
                        List.empty[VerifiableSqlResultSetDefinition],
                      time: TimeSpan = 5 seconds)
     extends Sensor(metadata) {
-  Class.forName(driver).newInstance()
   override val pollInterval = time
   var sqlConnection: Option[Connection] = None
   protected val connectionCreationTimeout = 3000L
-  protected val props = new Properties()
-  additionalProps.foreach(prop => {
-    props.setProperty(prop._1, prop._2)
-  })
-  username.foreach(v => props.setProperty("user", v))
-  password.foreach(v => props.setProperty("password", v))
+  protected lazy val properties = {
+    val props = new Properties()
+    additionalProps.foreach(prop => {
+      props.setProperty(prop._1, prop._2)
+    })
+    username.foreach(v => props.setProperty("user", v))
+    password.foreach(v => props.setProperty("password", v))
+    props
+  }
   override def resetEnvironment = {
     sqlConnection.map(_.close)
     sqlConnection = try {
-      Await.result(Future(Some(DriverManager.getConnection(url, props))),
+      Await.result(Future(Some(DriverManager.getConnection(url, properties))),
                    Duration(connectionCreationTimeout, "millis"))
     } catch {
       case e: TimeoutException => {

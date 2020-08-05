@@ -2,7 +2,7 @@ versionWithGit
 git.baseVersion := "2.0"
 git.useGitDescribe := true
 
-name := "Quacker"
+name := "a-Quacker"
 version in ThisBuild := "develop"
 scalaVersion in ThisBuild := "2.12.8"
 
@@ -54,6 +54,8 @@ containerArgs := Seq(
 )
 
 containerPort := 8444
+
+compileOrder := CompileOrder.ScalaThenJava
 
 javaOptions in Jetty ++= Seq(
   "-Djavax.net.ssl.keyStore=keystore.jks",
@@ -189,15 +191,6 @@ libraryDependencies in ThisBuild ++= {
     "org.mongodb" % "mongo-java-driver" % "2.6.3",
     /*html-cleaner for html parsing*/
     "net.sourceforge.htmlcleaner" % "htmlcleaner" % "2.9",
-    // for mysql
-    "mysql" % "mysql-connector-java" % "8.0.19",
-    // for postgres
-    "org.postgresql" % "postgresql" % "42.2.9",
-    // for cloud sql
-    "com.google.cloud.sql" % "postgres-socket-factory" % "1.0.15",
-    "com.google.cloud.sql" % "mysql-socket-factory-connector-j-8" % "1.0.15",
-    //for apache commons dbcp db connection pooling
-    "org.apache.commons" % "commons-dbcp2" % "2.7.0",
     /*subversion*/
     "org.tmatesoft.svnkit" % "svnkit" % "1.3.4",
     /*general*/
@@ -238,6 +231,30 @@ libraryDependencies in ThisBuild ++= {
     .exclude("com.sun.jdmk", "jmxtools")
     .exclude("javax.jms", "jms")
     .exclude("com.sun.jmx", "jmxri"))
+
+scalacOptions in ThisBuild ++= Seq(
+  "-language:existentials",
+  "-deprecation",
+  "-unchecked",
+  "-feature",
+  "-Xfuture",
+  "-Xlint:adapted-args",
+  "-Xlint:doc-detached",
+  "-Xlint:inaccessible",
+  "-Xlint:infer-any",
+  "-Xlint:missing-interpolator",
+  "-Xlint:private-shadow",
+  "-Xlint:poly-implicit-overload",
+  "-Xlint:type-parameter-shadow",
+  "-Xlint:option-implicit",
+  "-Xlint:delayedinit-select",
+  "-Xlint:by-name-right-associative",
+  "-Xlint:package-object-classes",
+  "-Xlint:unsound-match",
+  "-Ywarn-dead-code",
+  "-Ypartial-unification",
+  "-Ywarn-value-discard"
+)
 
 // set Ivy logging to be at the highest level
 ivyLoggingLevel := UpdateLogging.Full
