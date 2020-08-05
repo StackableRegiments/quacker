@@ -20,17 +20,19 @@ class Boot extends Logger {
   def boot {
     Globals.isDevMode = Props.mode match {
       case Props.RunModes.Production => false
-      case _ => true
+      case _                         => true
     }
     LiftRules.attachResourceId = {
-      if (Globals.isDevMode){
-        s => "%s?%s".format(s,nextFuncName)
+      if (Globals.isDevMode) { s =>
+        "%s?%s".format(s, nextFuncName)
       } else {
         val prodRunId = nextFuncName
-        s => "%s?%s".format(s,prodRunId)
+        s =>
+          "%s?%s".format(s, prodRunId)
       }
     }
-    val configurationStatus = ServiceConfigurator.describeAutoConfigure(ServiceConfigurator.autoConfigure)
+    val configurationStatus = ServiceConfigurator.describeAutoConfigure(
+      ServiceConfigurator.autoConfigure)
     warn("Xml configuration reloaded\r\n%s".format(configurationStatus))
 
     // Setup RESTful endpoints (these are in view/Endpoints.scala)
@@ -46,21 +48,33 @@ class Boot extends Logger {
     LiftRules.addToPackages("metl")
 
     // Build SiteMap
-    def sitemap() = SiteMap(
-      Menu("Home") / "index" >> User.AddUserMenusAfter, // Simple menu form
-      Menu("Flexible") / "flexible",
-      // Menu with special Link
-      Menu(Loc("Static", Link(List("static"), true, "/static/index"), "Static Content")))
+    def sitemap() =
+      SiteMap(
+        Menu("Home") / "index" >> User.AddUserMenusAfter, // Simple menu form
+        Menu("Flexible") / "flexible",
+        // Menu with special Link
+        Menu(
+          Loc("Static",
+              Link(List("static"), true, "/static/index"),
+              "Static Content"))
+      )
 
     LiftRules.setSiteMapFunc(() => User.sitemapMutator(sitemap()))
 
+    // added temporarily (for Lift 3.4.0, where the resource server appears to be aiming for non-existent *-min.js files)
+    ResourceServer.pathRewriter = {
+      case anything => anything
+    }
+
+    LiftRules.securityRules = () => SecurityRules(content = None)
+
     // Show the spinny image when an Ajax call starts
-    LiftRules.ajaxStart =
-      Full(() => LiftRules.jsArtifacts.show("ajax-loader").cmd)
+    LiftRules.ajaxStart = Full(
+      () => LiftRules.jsArtifacts.show("ajax-loader").cmd)
 
     // Make the spinny image go away when it ends
-    LiftRules.ajaxEnd =
-      Full(() => LiftRules.jsArtifacts.hide("ajax-loader").cmd)
+    LiftRules.ajaxEnd = Full(
+      () => LiftRules.jsArtifacts.hide("ajax-loader").cmd)
 
     LiftRules.early.append(makeUtf8)
 

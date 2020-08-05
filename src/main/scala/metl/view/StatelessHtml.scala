@@ -7,7 +7,7 @@ import net.liftweb.http.{LiftResponse, XmlResponse}
 import scala.xml.Node
 
 class StatelessHtml {
-/*  def serviceChecks(jid:String)():Box[LiftResponse] = Stopwatch.time("StatelessHtml.serviceChecks()", Full(XmlResponse(loadServiceChecks())))
+  /*  def serviceChecks(jid:String)():Box[LiftResponse] = Stopwatch.time("StatelessHtml.serviceChecks()", Full(XmlResponse(loadServiceChecks())))
 
   def loadServiceChecks():Node= Stopwatch.time("StatelessHtml.loadHistory(%s)".format(jid), {
     <history>{serializer.fromRenderableHistory(getSecureHistoryForRoom(jid))}</history>

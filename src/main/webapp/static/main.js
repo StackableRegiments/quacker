@@ -85,6 +85,11 @@ var renderChecks = _.once(function(){
     };
     requestAnimationFrame(redraw);
 });
+
+var renderHistoricalChecks = _.once(function(){
+  console.log("render called");
+});
+
 var stripCheckHistory = function(check){
   delete check.history;
   return check;
@@ -108,6 +113,14 @@ function updateCheck(newCheck){
     }
     pluginSystem.fireCommand('dataChanged','core.updateCheck',newCheck);
 }
+function createHistoricalChecks(newChecks){
+  if (_.isArray(newChecks)){
+    _.forEach(newChecks,function(check){
+      createHistoricalCheck(check);
+    });
+  }
+  renderHistoricalChecks();
+}
 function createChecks(newChecks){
     if (_.isArray(newChecks)){
         _.forEach(newChecks,function(check){
@@ -115,6 +128,10 @@ function createChecks(newChecks){
         });
     }
     renderChecks();
+}
+function createHistoricalCheck(newCheck){
+  pluginSystem.fireCommand('createHistoricalCheck','core.createHistoricalCheck',newCheck);
+  console.log('received historical item',newCheck);
 }
 function createCheck(newCheck){
     if ("id" in newCheck) {

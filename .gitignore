@@ -8,5 +8,7 @@ monitoringDashboardConfig/*.xml
 *.log
 config/quacker*.xml
 *.swp
+*.swo
 .ivy2
 .sbt-boot
+null

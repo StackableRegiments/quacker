@@ -13,9 +13,9 @@ import Helpers._
 import net.liftweb.http.js.JE.Call
 
 class Header extends CometActor with CometListener {
-  override def lifespan:Box[TimeSpan] = Full(5 minutes)
+  override def lifespan: Box[TimeSpan] = Full(5 minutes)
   def registerWith: DashboardServer.type = DashboardServer
   override def render: RenderOut = {
-    OnLoad(Call("setDevMode",JBool(Globals.isDevMode)))
+    OnLoad(Call("setDevMode", JBool(Globals.isDevMode)))
   }
 }
