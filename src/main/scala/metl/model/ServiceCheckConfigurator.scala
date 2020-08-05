@@ -135,6 +135,39 @@ object ServiceCheckConfigurator extends ConfigFileReader with Logger {
                                thresholds,
                                period)
                 }
+                case "sql" => {
+                  val url =
+                    getOrError(getText(sc, "url"), "", "url not specified")
+                  val username = getText(sc, "username")
+                  val password = getText(sc, "password")
+                  val driver = getOrError(getText(sc, "driver"),
+                                          "",
+                                          "driver not specified")
+                  val additionalProps = for {
+                    prop <- (sc \ "additionalProps").toList
+                    k <- (prop \ "@key").headOption.map(_.text)
+                    v <- prop.headOption.map(_.text)
+                  } yield {
+                    (k, v)
+                  }
+                  val query =
+                    getOrError(getText(sc, "query"), "", "query not specified")
+                  val thresholds = getNodes(sc, "thresholds").map(ts => {
+                    val rowBehaviour = getAttr(ts, "rows").getOrElse("all")
+                    val tsMap = Matchers.configureFromXml(ts)
+                    VerifiableSqlResultSetDefinition(rowBehaviour, tsMap)
+                  })
+                  SQLSensor(metadata,
+                            driver,
+                            url,
+                            query,
+                            username,
+                            password,
+                            additionalProps,
+                            thresholds,
+                            period)
+                }
+
                 case "mysql" => {
                   val host =
                     getOrError(getText(sc, "host"), "", "host not specified")

@@ -2,6 +2,7 @@ package metl.model.sensor
 
 import metl.model._
 import net.liftweb.util.Helpers._
+import java.util.Properties
 
 case class SQLResultSet(rows: Map[Int, SQLRow]) {
   def verify(matchers: Map[String, Matcher]): Boolean = {
@@ -324,6 +325,71 @@ case class MySQLSensor(metadata: SensorMetaData,
                          "jdbc:mysql://%s/%s".format(uri, database),
                          username,
                          password))),
+                   Duration(connectionCreationTimeout, "millis"))
+    } catch {
+      case e: TimeoutException => {
+        error("mysql failed to create a connection within the timeout", e)
+        None
+      }
+    }
+  }
+  def status = {
+    resetEnvironment
+    val statementOption = sqlConnection.map(_.createStatement)
+    var output = SQLResultSet(Map.empty[Int, SQLRow])
+    var failedVerificationResponses = List.empty[VerificationResponse]
+    statementOption
+      .map(statement => {
+        val resultSet = statement.executeQuery(query)
+        output =
+          VerifiableSQLResultSetConverter.toVerifiableSQLResultSet(resultSet)
+        resultSet.close
+        val verificationResponses =
+          thresholds.map(t => t.verifyResultSet(output))
+        failedVerificationResponses =
+          verificationResponses.filter(pfv => !pfv.success)
+        output
+      })
+      .getOrElse(
+        throw new DashboardException("unable to connect to database", ""))
+    sqlConnection.map(_.close)
+    if (failedVerificationResponses.length > 0) {
+      throw new DashboardException("SQL Verification failed",
+                                   failedVerificationResponses
+                                     .map(fvr => fvr.errors)
+                                     .flatten
+                                     .mkString("\r\n"))
+    }
+    output
+  }
+  override def performCheck = succeed(status.toString)
+}
+
+case class SQLSensor(metadata: SensorMetaData,
+                     driver: String,
+                     url: String,
+                     query: String,
+                     username: Option[String],
+                     password: Option[String],
+                     additionalProps: List[Tuple2[String, String]],
+                     thresholds: List[VerifiableSqlResultSetDefinition] =
+                       List.empty[VerifiableSqlResultSetDefinition],
+                     time: TimeSpan = 5 seconds)
+    extends Sensor(metadata) {
+  Class.forName(driver).newInstance()
+  override val pollInterval = time
+  var sqlConnection: Option[Connection] = None
+  protected val connectionCreationTimeout = 3000L
+  protected val props = new Properties()
+  additionalProps.foreach(prop => {
+    props.setProperty(prop._1, prop._2)
+  })
+  username.foreach(v => props.setProperty("user", v))
+  password.foreach(v => props.setProperty("password", v))
+  override def resetEnvironment = {
+    sqlConnection.map(_.close)
+    sqlConnection = try {
+      Await.result(Future(Some(DriverManager.getConnection(url, props))),
                    Duration(connectionCreationTimeout, "millis"))
     } catch {
       case e: TimeoutException => {
