@@ -265,7 +265,7 @@ class SqlHistoryListener(override val name: String,
     object when extends MappedLong(this) {
       override def dbIndexed_? = true
     }
-    object crId extends MappedString(this, 16)
+    object crId extends MappedString(this, 24)
     object lastUp extends MappedLong(this)
     object mode extends MappedString(this, 16)
     object severity extends MappedString(this, 16)

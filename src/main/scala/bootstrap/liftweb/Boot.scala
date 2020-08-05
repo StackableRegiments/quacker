@@ -16,8 +16,8 @@ import metl.view.{DebugToolsRestHelper, ProbeRestHelper, SystemRestHelper}
   */
 class Boot extends Logger {
   implicit val formats = GraphableData.formats
-
   def boot {
+    sys.props.put("h2.implicitRelativePath", "true")
     Globals.isDevMode = Props.mode match {
       case Props.RunModes.Production => false
       case _                         => true

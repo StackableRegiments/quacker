@@ -12,3 +12,4 @@ config/quacker*.xml
 .ivy2
 .sbt-boot
 null
+*.db
