@@ -19,7 +19,7 @@ then
 else
 cp quacker-secrets-template.yaml $SECRETS
 mkdir envs/$NS/appConf
-cp ../appConf/application.conf envs/$NS/appConf/application.conf
+cp ../config/application.conf envs/$NS/appConf/application.conf
 echo "set up with default secrets.  Please review the file envs/$NS/secrets.yaml and update the database credentials and application config, and then run:"
 echo "./republish.sh $NS"
 fi
