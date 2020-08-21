@@ -2,7 +2,7 @@ versionWithGit
 git.baseVersion := "2.0"
 git.useGitDescribe := true
 
-name := "a-Quacker"
+name := "app.stackableregiments.quacker"
 version in ThisBuild := "develop"
 scalaVersion in ThisBuild := "2.12.8"
 
