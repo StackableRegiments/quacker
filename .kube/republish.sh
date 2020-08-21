@@ -25,12 +25,12 @@ then
 else 
 	echo "image not yet created - creating";
 	cd ..
-	./sbt clean compile package
+	./sbt.sh clean compile package
 	exit_if_failed
 	cd .kube
 	cp ../target/scala-2.12/*.war ./root.war
 	cd ..
-	./sbt clean
+	./sbt.sh clean
 	exit_if_failed
 	cd .kube
 	$(aws ecr get-login --no-include-email --region us-east-1)
