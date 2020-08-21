@@ -14,7 +14,6 @@ function exit_if_failed() {
 	fi
 }
 
-NS="$1"
 export PATH=~/kube:~/.local/bin:$PATH
 GIT_REV="$(git rev-parse HEAD)"
 docker login
