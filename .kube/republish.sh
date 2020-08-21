@@ -1,8 +1,9 @@
-#!/bin/bash
-if [ -z "$1" ];
+#!/bin/sh
+NS="$1"
+if [ -z "$NS" ];
 then
-echo "please provide a namespace for this republish"
-exit 1
+echo "no namespace provided - using 'quacker'"
+ENV="quacker"
 fi
 
 function exit_if_failed() {

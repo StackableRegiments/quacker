@@ -1,11 +1,11 @@
 #!/bin/sh
-if [ -z "$1" ];
+NS="$1"
+if [ -z "$NS" ];
 then
-echo "please provide a namespace for this service."
-exit 1
+echo "no namespace provided - using 'quacker'"
+ENV="quacker"
 fi
 export PATH=~/kube:~/.local/bin:$PATH
-NS="$1"
 mkdir envs
 mkdir envs/$NS
 SERVICE_FILE="envs/$NS/service.yaml"
