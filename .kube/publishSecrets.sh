@@ -3,7 +3,7 @@ NS="$1"
 if [ -z "$NS" ];
 then
 echo "no namespace provided - using 'quacker'"
-ENV="quacker"
+NS="quacker"
 fi
 kubectl delete secrets/app-conf-dir --namespace $NS
 kubectl create secret generic app-conf-dir --from-file envs/$NS/appConf/ --namespace $NS

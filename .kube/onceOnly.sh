@@ -3,7 +3,7 @@ NS="$1"
 if [ -z "$NS" ];
 then
 echo "no namespace provided - using 'quacker'"
-ENV="quacker"
+NS="quacker"
 fi
 export PATH=~/kube:~/.local/bin:$PATH
 mkdir envs

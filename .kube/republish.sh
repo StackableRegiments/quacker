@@ -3,7 +3,7 @@ NS="$1"
 if [ -z "$NS" ];
 then
 echo "no namespace provided - using 'quacker'"
-ENV="quacker"
+NS="quacker"
 fi
 
 function exit_if_failed() {
