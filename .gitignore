@@ -13,3 +13,4 @@ config/quacker*.xml
 .sbt-boot
 null
 *.db
+.kube/envs
