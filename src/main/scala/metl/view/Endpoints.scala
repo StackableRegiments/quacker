@@ -141,19 +141,22 @@ class GithubAuthHelper(
                                                    Nil))
             val postResponseRaw = postResponse.responseAsString
             println(
-              "received response from github: %s".format(postResponse,
-                                                         postResponseRaw))
+              "received response from github: %s\r\n%s".format(postResponse,
+                                                               postResponseRaw))
             val xml = scala.xml.XML.loadString(postResponseRaw)
             val token = (xml \\ "access_token").headOption.map(_.text).get
             val userRecordUrl = githubApiEndpoint + "/user"
             val client2 = Http.getClient
             client2.addHttpHeader("Accept", "application/json")
+            client2.addHttpHeader("User-Agent",
+                                  "quacker @ %s".format(Globals.hostname))
             client2.addHttpHeader("Authorization", "token %s".format(token))
             val userRecordResponse = client2.respondToResponse(
               client2.getExpectingHTTPResponse(githubApiEndpoint + "/user"))
             val jsonRaw = userRecordResponse.responseAsString
             println(
-              "received user record: %s".format(userRecordResponse, jsonRaw))
+              "received user record: %s\r\n%s".format(userRecordResponse,
+                                                      jsonRaw))
             val json = parse(jsonRaw)
             val username = (json \ "login").extractOpt[String].get
             State(None)
