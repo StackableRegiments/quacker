@@ -125,7 +125,7 @@ class GithubAuthHelper(
             s <- State
           } yield {
             val client = Http.getClient
-            client.addHttpHeader("Accept", "Accept: application/xml")
+            client.addHttpHeader("Accept", "application/xml")
             val postBody = List(
               "client_id" -> clientId,
               "client_secret" -> clientSecret,
@@ -146,6 +146,7 @@ class GithubAuthHelper(
             val token = (xml \\ "access_token").headOption.map(_.text).get
             val userRecordUrl = githubApiEndpoint + "/user"
             val client2 = Http.getClient
+            client2.addHttpHeader("Accept", "application/json")
             client2.addHttpHeader("Authorization", "token %s".format(token))
             val userRecordResponse = client2.respondToResponse(
               client2.getExpectingHTTPResponse(githubApiEndpoint + "/user"))
