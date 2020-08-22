@@ -168,7 +168,8 @@ class Dashboard extends CometActor with CometListener with CheckRenderHelper {
   override def lowPriority: PartialFunction[Any, Unit] = {
     case s: CheckResult if Globals.currentUserAccessRestriction.permit(s) =>
       partialUpdate(jsCmdCreator(CheckAction.Update, s))
-    case UserLoggedIn(s: LiftSession) if S.session.exists(_ == s) => reRender
+    case UserLoggedIn(s: LiftSession) if S.session.exists(_ == s) =>
+      S.redirectTo("/")
     case CreateCheck(check)
         if Globals.currentUserAccessRestriction.permit(check) =>
       partialUpdate(
