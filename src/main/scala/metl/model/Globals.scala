@@ -11,6 +11,8 @@ import com.mongodb.BasicDBObject
 import com.metl.liftAuthenticator._
 import com.metl.cas._
 
+import metl.view.{Authenticator, GithubAuthenticator, MockAuthenticator}
+
 import scala.collection.JavaConverters._
 
 object EnvVariable extends Logger {
@@ -54,7 +56,6 @@ object EnvVariable extends Logger {
 object Globals extends Logger {
   import java.io.File
   //Globals for the system
-  println("starting up Globals")
   var configDirectoryLocation = "config"
   EnvVariable
     .getProp("QUACKER_CONFIG_DIRECTORY_LOCATION",
@@ -84,18 +85,39 @@ object Globals extends Logger {
     "determined appConfigDirectory: %s".format(appConfigDirectoryLocation))
   val appConf =
     scala.xml.XML.loadFile(appConfigDirectoryLocation + "/application.xml")
-  println("found xml: %s".format(appConf))
   val hostname = (appConf \ "hostname").head.text
   println("starting up with hostname: %s".format(hostname))
-  for {
-    ghc <- (appConf \ "githubAuthenticator").headOption
-    ghClientId <- (ghc \ "@clientId").headOption.map(_.text)
-    ghClientSecret <- (ghc \ "@clientSecret").headOption.map(_.text)
-  } yield {
-    println("creating GitHubAuthHelper from: %s".format(ghc))
-    LiftRules.dispatch.prepend(
-      new metl.view.GithubAuthHelper(ghClientId, ghClientSecret, hostname))
-  }
+  val authenticator: Option[Authenticator] =
+    (appConf \ "authenticator").headOption.flatMap(authXml => {
+      val authChildren = authXml.child.filter {
+        case e: Elem => true
+        case _       => false
+      }.toList
+      if (authChildren.length > 1) {
+        throw new Exception(
+          "too many authenticators configured - Quacker only supports one authentication context")
+      }
+      authChildren.headOption.flatMap(authenticatorElem => {
+        authenticatorElem match {
+          case ghc: Elem if ghc.label == "githubAuthenticator" => {
+            for {
+              ghClientId <- (ghc \ "@clientId").headOption.map(_.text)
+              ghClientSecret <- (ghc \ "@clientSecret").headOption.map(_.text)
+            } yield {
+              new GithubAuthenticator(ghClientId, ghClientSecret, hostname)
+            }
+          }
+          case mc: Elem if mc.label == "mockAuthenticator" =>
+            Some(new MockAuthenticator)
+          case _ => None
+        }
+      })
+    })
+
+  authenticator.foreach(_.attach)
+  val configurationStatus =
+    ServiceConfigurator.describeAutoConfigure(ServiceConfigurator.autoConfigure)
+  warn("Xml configuration reloaded\r\n%s".format(configurationStatus))
 
   var isDevMode = false
   protected var validUserAccesses: List[UserAccessRestriction] =
@@ -135,6 +157,8 @@ object Globals extends Logger {
     casState(newUser)
     currentUser(newUser.username)
     currentUserAccessRestriction(updatedUserAccessRestriction)
+    S.session.foreach(s =>
+      metl.comet.DashboardServer ! metl.comet.UserLoggedIn(s))
   }
   object casState
       extends SessionVar[LiftAuthStateData](LiftAuthStateDataForbidden)

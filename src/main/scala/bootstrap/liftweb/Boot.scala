@@ -31,9 +31,6 @@ class Boot extends Logger {
           "%s?%s".format(s, prodRunId)
       }
     }
-    val configurationStatus = ServiceConfigurator.describeAutoConfigure(
-      ServiceConfigurator.autoConfigure)
-    warn("Xml configuration reloaded\r\n%s".format(configurationStatus))
 
     // Setup RESTful endpoints (these are in view/Endpoints.scala)
     LiftRules.dispatch.prepend(ProbeRestHelper)
@@ -80,9 +77,7 @@ class Boot extends Logger {
 
     LiftRules.loggedInTest = Full(() => User.loggedIn_?)
 
-    metl.model.Globals
-
-    metl.comet.DashboardServer
+    //metl.comet.DashboardServer
   }
 
   /**

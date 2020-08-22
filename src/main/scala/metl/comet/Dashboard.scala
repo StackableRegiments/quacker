@@ -25,6 +25,8 @@ case class StatusCall(id: String,
                       server: String,
                       serviceCheckMode: ServiceCheckMode)
 
+case class UserLoggedIn(session: LiftSession)
+
 case class RemoveCheck(check: VisualElement)
 case class CreateCheck(check: VisualElement)
 
@@ -59,11 +61,12 @@ trait CheckRenderHelper {
 object DashboardServer extends LiftActor with ListenerManager {
   def createUpdate: NodeSeq = NodeSeq.Empty
   override def lowPriority: PartialFunction[Any, Unit] = {
-    case r: RemoveCheck => sendListenersMessage(r)
-    case c: CreateCheck => sendListenersMessage(c)
-    case c: CheckResult => sendListenersMessage(c)
-    case s: StatusCall  => sendListenersMessage(s)
-    case _              => {}
+    case r: RemoveCheck  => sendListenersMessage(r)
+    case c: CreateCheck  => sendListenersMessage(c)
+    case c: CheckResult  => sendListenersMessage(c)
+    case s: StatusCall   => sendListenersMessage(s)
+    case u: UserLoggedIn => sendListenersMessage(u)
+    case _               => {}
   }
 }
 
@@ -165,6 +168,7 @@ class Dashboard extends CometActor with CometListener with CheckRenderHelper {
   override def lowPriority: PartialFunction[Any, Unit] = {
     case s: CheckResult if Globals.currentUserAccessRestriction.permit(s) =>
       partialUpdate(jsCmdCreator(CheckAction.Update, s))
+    case UserLoggedIn(s: LiftSession) if S.session.exists(_ == s) => reRender
     case CreateCheck(check)
         if Globals.currentUserAccessRestriction.permit(check) =>
       partialUpdate(

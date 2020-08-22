@@ -5,6 +5,8 @@ import net.liftweb.common.{Full, Logger}
 import net.liftweb.http._
 import net.liftweb.http.rest.RestHelper
 import net.liftweb.util.Helpers.tryo
+import metl.model.Globals
+import com.metl.liftAuthenticator._
 
 object SystemRestHelper extends RestHelper with Logger {
   serve {
@@ -58,15 +60,17 @@ object SystemRestHelper extends RestHelper with Logger {
               List.empty[Tuple2[String, String]],
               200))
         }
+    case r @ Req("logout" :: _, _, _) => {
+      Globals.setUser(LiftAuthStateDataForbidden)
+      Full(RedirectResponse("/"))
+    }
   }
 }
 
 object ProbeRestHelper extends RestHelper with Logger {
+  val probeEndpoints = List("probe", "healthz", "serverStatus")
   serve {
-    case Req("probe" :: _, _, _) =>
-      () =>
-        Full(PlainTextResponse("OK", List.empty[Tuple2[String, String]], 200))
-    case Req("serverStatus" :: _, _, _) =>
+    case Req(cand :: _, _, _) if probeEndpoints.contains(cand) =>
       () =>
         Full(PlainTextResponse("OK", List.empty[Tuple2[String, String]], 200))
   }
@@ -97,7 +101,53 @@ object DebugToolsRestHelper extends RestHelper {
   }
 }
 
-class GithubAuthHelper(
+trait Authenticator {
+  def loginLink: String
+  def attach: Unit
+}
+
+class MockAuthenticator extends Authenticator with RestHelper with Logger {
+  def loginLink = "/login/mock"
+  def attach = {
+    LiftRules.dispatch.prepend(this)
+  }
+  serve {
+    case r @ Req("login" :: "mock" :: _, _, _) =>
+      () =>
+        Full({
+          val returnTo =
+            r.param("return_url").filter(_.trim() != "").getOrElse("/")
+          (for {
+            username <- r.param("username")
+          } yield {
+            val userState =
+              LiftAuthStateData(true, username, Nil, Nil)
+            Globals.setUser(userState)
+            RedirectResponse(returnTo)
+          }).getOrElse({
+            val mockLoginPage =
+              <div>
+  <form method="GET" action="/login/mock">
+    <input type="hidden" name="return_url">{returnTo}</input>
+    <input id="username" type="text" name="username"></input>
+    <input type="submit" value="login">login</input>
+  </form>
+  <script>{
+    """document.getElementById("username").focus();
+    document.getElementById("username").onkeyup = function(evt){
+      if (evt.keycode == 13){
+        document.forms[0].submit();
+      }
+    }"""
+  }</script>
+</div>
+            XhtmlResponse(mockLoginPage, None, Nil, Nil, 200, true)
+          })
+        })
+  }
+}
+
+class GithubAuthenticator(
     clientId: String,
     clientSecret: String,
     redirect_host: String,
@@ -107,13 +157,16 @@ class GithubAuthHelper(
       "https://github.com/login/oauth/access_token",
     githubApiEndpoint: String = "https://api.github.com"
 ) extends RestHelper
-    with Logger {
+    with Logger
+    with Authenticator {
   import com.metl.utils.{HTTPResponse, Http}
   import net.liftweb.json._
   import Serialization._
   import net.liftweb.util.Helpers._
-  import com.metl.liftAuthenticator._
-  import metl.model.Globals
+  def loginLink = "/login/github"
+  def attach = {
+    LiftRules.dispatch.prepend(this)
+  }
   object State extends SessionVar[Option[String]](None)
   val redirect_uri = redirect_host + "/login/github"
   val stateSeparator = ":::"
@@ -134,13 +187,13 @@ class GithubAuthHelper(
               "redirect_uri" -> redirect_uri,
               "state" -> s
             )
-            println("sending request to github: %s".format(postBody))
+            trace("sending request to github: %s".format(postBody))
             val postResponse = client.respondToResponse(
               client.postFormExpectingHTTPResponse(githubCodeExchangeEndpoint,
                                                    postBody,
                                                    Nil))
             val postResponseRaw = postResponse.responseAsString
-            println(
+            trace(
               "received response from github: %s\r\n%s".format(postResponse,
                                                                postResponseRaw))
             val xml = scala.xml.XML.loadString(postResponseRaw)
@@ -154,7 +207,7 @@ class GithubAuthHelper(
             val userRecordResponse = client2.respondToResponse(
               client2.getExpectingHTTPResponse(githubApiEndpoint + "/user"))
             val jsonRaw = userRecordResponse.responseAsString
-            println(
+            trace(
               "received user record: %s\r\n%s".format(userRecordResponse,
                                                       jsonRaw))
             val json = parse(jsonRaw)
@@ -164,7 +217,7 @@ class GithubAuthHelper(
               case List(key, path) => path
               case _               => "/"
             }
-            println(
+            trace(
               "logged in as: %s, returning to: %s".format(username, returnTo))
             val userState =
               LiftAuthStateData(true, username, Nil, Nil)
@@ -194,9 +247,5 @@ class GithubAuthHelper(
             }
           }
         }
-    case r @ Req("logout" :: _, _, _) => {
-      Globals.setUser(LiftAuthStateDataForbidden)
-      Full(RedirectResponse("/"))
-    }
   }
 }
