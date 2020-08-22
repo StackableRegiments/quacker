@@ -101,7 +101,7 @@ class GithubAuthHelper(
     clientId: String,
     clientSecret: String,
     redirect_host: String,
-    scopes: List[String] = List("user"),
+    scopes: List[String] = List("read:user"),
     githubAuthorizeEndpoint: String = "https://github.com/login/oauth/authorize",
     githubCodeExchangeEndpoint: String = "https://github.com/oauth/access_token",
     githubApiEndpoint: String = "https://api.github.com"
