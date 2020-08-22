@@ -108,7 +108,7 @@ libraryDependencies in ThisBuild ++= {
     "com.sun.mail" % "javax.mail" % "1.6.2",
     "com.hacklanta" %% "lift-formality_3.3" % "1.2.0",
     "io.github.classgraph" % "classgraph" % "4.6.18",
-    "com.sksamuel.scrimage" % "scrimage-core_2.12" % "3.0.0-alpha4",
+    "com.sksamuel.scrimage" % "scrimage-core" % "4.0.6",
     "com.rklaehn" % "radixtree_2.12" % "0.5.1",
     "com.joestelmach" % "natty" % "0.11",
     //for resource loading
