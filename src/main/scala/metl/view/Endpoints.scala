@@ -163,7 +163,7 @@ class GithubAuthenticator(
   import net.liftweb.json._
   import Serialization._
   import net.liftweb.util.Helpers._
-  def loginLink = "/login/github"
+  def loginLink = "/redirect/github"
   def attach = {
     LiftRules.dispatch.prepend(this)
   }
