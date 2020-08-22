@@ -103,7 +103,8 @@ class GithubAuthHelper(
     redirect_host: String,
     scopes: List[String] = List("read:user"),
     githubAuthorizeEndpoint: String = "https://github.com/login/oauth/authorize",
-    githubCodeExchangeEndpoint: String = "https://github.com/oauth/access_token",
+    githubCodeExchangeEndpoint: String =
+      "https://github.com/login/oauth/access_token",
     githubApiEndpoint: String = "https://api.github.com"
 ) extends RestHelper
     with Logger {
