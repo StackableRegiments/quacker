@@ -115,13 +115,20 @@ object Globals extends Logger {
     })
 
   authenticator.foreach(_.attach)
-  val configurationStatus =
-    ServiceConfigurator.describeAutoConfigure(ServiceConfigurator.autoConfigure)
-  warn("Xml configuration reloaded\r\n%s".format(configurationStatus))
+
+  def startup = {
+    metl.comet.DashboardServer
+
+    val configurationStatus =
+      ServiceConfigurator.describeAutoConfigure(
+        ServiceConfigurator.autoConfigure)
+    warn("Xml configuration reloaded\r\n%s".format(configurationStatus))
+  }
 
   var isDevMode = false
   protected var validUserAccesses: List[UserAccessRestriction] =
     List.empty[UserAccessRestriction]
+
   def setValidUsers(newUsers: List[UserAccessRestriction]) = {
     validUserAccesses = (validUserAccesses ::: newUsers).toList
     currentUserAccessRestriction(updatedUserAccessRestriction)

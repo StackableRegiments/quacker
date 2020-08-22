@@ -77,7 +77,7 @@ class Boot extends Logger {
 
     LiftRules.loggedInTest = Full(() => User.loggedIn_?)
 
-    //metl.comet.DashboardServer
+    metl.model.Globals.startup
   }
 
   /**
