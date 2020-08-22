@@ -126,25 +126,33 @@ class GithubAuthHelper(
           } yield {
             val client = Http.getClient
             client.addHttpHeader("Accept", "Accept: application/xml")
+            val postBody = List(
+              "client_id" -> clientId,
+              "client_secret" -> clientSecret,
+              "code" -> code,
+              "redirect_uri" -> redirect_uri,
+              "state" -> s
+            )
+            println("sending request to github: %s".format(postBody))
             val postResponse = client.respondToResponse(
-              client.postFormExpectingHTTPResponse(
-                githubCodeExchangeEndpoint,
-                List(
-                  "client_id" -> clientId,
-                  "client_secret" -> clientSecret,
-                  "code" -> code,
-                  "redirect_uri" -> redirect_uri,
-                  "state" -> s
-                ),
-                Nil))
-            val xml = scala.xml.XML.loadString(postResponse.responseAsString)
+              client.postFormExpectingHTTPResponse(githubCodeExchangeEndpoint,
+                                                   postBody,
+                                                   Nil))
+            val postResponseRaw = postResponse.responseAsString
+            println(
+              "received response from github: %s".format(postResponse,
+                                                         postResponseRaw))
+            val xml = scala.xml.XML.loadString(postResponseRaw)
             val token = (xml \\ "access_token").headOption.map(_.text).get
             val userRecordUrl = githubApiEndpoint + "/user"
             val client2 = Http.getClient
             client2.addHttpHeader("Authorization", "token %s".format(token))
             val userRecordResponse = client2.respondToResponse(
               client2.getExpectingHTTPResponse(githubApiEndpoint + "/user"))
-            val json = parse(userRecordResponse.responseAsString)
+            val jsonRaw = userRecordResponse.responseAsString
+            println(
+              "received user record: %s".format(userRecordResponse, jsonRaw))
+            val json = parse(jsonRaw)
             val username = (json \ "login").extractOpt[String].get
             State(None)
             val returnTo = s.split(stateSeparator).toList match {
