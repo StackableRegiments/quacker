@@ -52,6 +52,7 @@ object EnvVariable extends Logger {
 }
 
 object Globals extends Logger {
+  import java.io.File
   //Globals for the system
   var configDirectoryLocation = "config"
   EnvVariable
@@ -65,6 +66,33 @@ object Globals extends Logger {
     .openOr({
       throw new Exception("no config directory location passed")
     })
+  var appConfigDirectoryLocation = "appConf"
+  EnvVariable
+    .getProp("QUACKER_APP_CONFIG_DIRECTORY_LOCATION",
+             "quacker.appConfigDirectoryLocation")
+    .map(qcdl => {
+      trace("setting appConfig directory location to: %s".format(qcdl))
+      appConfigDirectoryLocation = qcdl
+      qcdl
+    })
+    .openOr({
+      throw new Exception("no app config directory location passed")
+    })
+  val appConf =
+    scala.xml.XML.loadFile(appConfigDirectoryLocation + "/application.xml")
+  val hostname = (appConf \ "hostname").head.text
+
+  println("starting up with hostname: %s".format(hostname))
+  for {
+    ghc <- (appConf \ "githubAuthenticator").headOption
+    ghClientId <- (ghc \ "@clientId").headOption.map(_.text)
+    ghClientSecret <- (ghc \ "@clientSecret").headOption.map(_.text)
+  } yield {
+    println("creating GitHubAuthHelper from: %s".format(ghc))
+    LiftRules.dispatch.prepend(
+      new metl.view.GithubAuthHelper(ghClientId, ghClientSecret, hostname))
+  }
+
   var isDevMode = false
   protected var validUserAccesses: List[UserAccessRestriction] =
     List.empty[UserAccessRestriction]
@@ -99,6 +127,11 @@ object Globals extends Logger {
   }
   def isValidUser = validUserAccesses.exists(vua => vua.name == currentUser.is)
   //Globals for the current session
+  def setUser(newUser: LiftAuthStateData): Unit = {
+    casState(newUser)
+    currentUser(newUser.username)
+    currentUserAccessRestriction(updatedUserAccessRestriction)
+  }
   object casState
       extends SessionVar[LiftAuthStateData](LiftAuthStateDataForbidden)
   object currentUser extends SessionVar[String](casState.is.username)

@@ -60,9 +60,9 @@ compileOrder := CompileOrder.ScalaThenJava
 javaOptions in Jetty ++= Seq(
   "-Djavax.net.ssl.keyStore=keystore.jks",
   "-Djavax.net.ssl.keyStorePassword=changeit",
-  "-Dmetlx.configurationFile=config/configuration.local.xml",
   "-Dquacker.configDirectoryLocation=monitoringDashboardConfig",
-  "-Dlogback.configurationFile=config/logback.xml"
+  "-Dquacker.appConfigDirectoryLocation=appConf",
+  "-Dlogback.configurationFile=appConf/logback.xml"
 )
 
 //logLevel in ThisBuild := Level.Error
@@ -82,19 +82,6 @@ resolvers in ThisBuild ++= Seq(
   "releases" at "http://oss.sonatype.org/content/repositories/releases",
   "mavenCentral" at "http://mvnrepository.com/artifact"
 )
-
-/*
-javaOptions in container ++= Seq(
-  "-Drun.mode=development",
-  "-Dmetlx.configurationFile=config/configuration.local.xml",
-  "-Dquacker.configDirectoryLocation=../stackableMonitoringDefinitions",
-  "-Dlogback.configurationFile=config/logback.xml",
-  "-XX:+UseConcMarkSweepGC",
-  "-XX:+CMSClassUnloadingEnabled",
-  "-Xmx256m",
-  "-Xms256m"
-)
- */
 
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.+"
 

@@ -57,8 +57,8 @@ then
 else
 	cp quacker-secrets-template.yaml $SECRETS
 	mkdir envs/$NS/appConf
-	cp ../appConf/application.conf envs/$NS/appConf/application.conf
-	echo "no secrets available.  Please review the file envs/$NS/secrets.yaml and update the database credentials and application config, and then re-run this command."
+	cp ../appConf/* envs/$NS/appConf/
+	echo "no secrets available.  Please review the file envs/$NS/secrets.yaml and update the details in envs/$NS/appConf/, and then re-run this command."
 	exit 1;
 fi
 DEPLOYMENT_FILE="envs/$NS/deployment.yaml"

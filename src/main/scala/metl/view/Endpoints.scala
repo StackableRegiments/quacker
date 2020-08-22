@@ -96,3 +96,84 @@ object DebugToolsRestHelper extends RestHelper {
         }
   }
 }
+
+class GithubAuthHelper(
+    clientId: String,
+    clientSecret: String,
+    redirect_host: String,
+    scopes: List[String] = List("user"),
+    githubAuthorizeEndpoint: String = "https://github.com/login/oauth/authorize",
+    githubCodeExchangeEndpoint: String = "https://github.com/oauth/access_token",
+    githubApiEndpoint: String = "https://api.github.com"
+) extends RestHelper
+    with Logger {
+  import com.metl.utils.{HTTPResponse, Http}
+  import net.liftweb.json._
+  import Serialization._
+  import net.liftweb.util.Helpers._
+  object State extends SessionVar[Option[String]](None)
+  val redirect_uri = redirect_host + "/login/github"
+  val stateSeparator = ":::"
+  serve {
+    case r @ Req("login" :: "github" :: _, _, _) =>
+      () =>
+        {
+          for {
+            code <- r.param("code")
+            s <- State
+          } yield {
+            val client = Http.getClient
+            client.addHttpHeader("Accept", "Accept: application/xml")
+            val postResponse = client.respondToResponse(
+              client.postFormExpectingHTTPResponse(
+                githubCodeExchangeEndpoint,
+                List(
+                  "client_id" -> clientId,
+                  "client_secret" -> clientSecret,
+                  "code" -> code,
+                  "redirect_uri" -> redirect_uri,
+                  "state" -> s
+                ),
+                Nil))
+            val xml = scala.xml.XML.loadString(postResponse.responseAsString)
+            val token = (xml \\ "access_token").headOption.map(_.text).get
+            val userRecordUrl = githubApiEndpoint + "/user"
+            val client2 = Http.getClient
+            client2.addHttpHeader("Authorization", "token %s".format(token))
+            val userRecordResponse = client2.respondToResponse(
+              client2.getExpectingHTTPResponse(githubApiEndpoint + "/user"))
+            val json = parse(userRecordResponse.responseAsString)
+            val username = (json \ "login").extractOpt[String].get
+            State(None)
+            val returnTo = s.split(stateSeparator).toList match {
+              case List(key, path) => path
+              case _               => "/"
+            }
+            println(
+              "logged in as: %s, returning to: %s".format(username, returnTo))
+            val userState =
+              com.metl.liftAuthenticator.LiftAuthStateData(true,
+                                                           username,
+                                                           Nil,
+                                                           Nil)
+            metl.model.Globals.setUser(userState)
+            RedirectResponse(returnTo)
+          }
+        }
+    case r @ Req("redirect" :: "github" :: _, _, _) =>
+      () =>
+        {
+          val returnTo = r.param("returnTo").getOrElse("/")
+          val s = "%s%s%s".format(nextFuncName, stateSeparator, returnTo)
+          State(Some(s))
+          Full(
+            RedirectResponse(
+              "%s?client_id=%s&redirect_uri=%s&scope=%s&state=%s".format(
+                githubAuthorizeEndpoint,
+                urlEncode(clientId),
+                urlEncode(redirect_uri),
+                urlEncode(scopes.mkString(" ")),
+                urlEncode(s))))
+        }
+  }
+}

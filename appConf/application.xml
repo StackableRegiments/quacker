@@ -1,0 +1,4 @@
+<appConf>
+  <hostname>https://localhost:8444</hostname>
+  <githubAuthenticator clientId="" clientSecret="" />
+</appConf>
