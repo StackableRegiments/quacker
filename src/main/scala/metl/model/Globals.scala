@@ -54,6 +54,7 @@ object EnvVariable extends Logger {
 object Globals extends Logger {
   import java.io.File
   //Globals for the system
+  println("starting up Globals")
   var configDirectoryLocation = "config"
   EnvVariable
     .getProp("QUACKER_CONFIG_DIRECTORY_LOCATION",
@@ -66,6 +67,7 @@ object Globals extends Logger {
     .openOr({
       throw new Exception("no config directory location passed")
     })
+  println("determined configDirectory: %s".format(configDirectoryLocation))
   var appConfigDirectoryLocation = "appConf"
   EnvVariable
     .getProp("QUACKER_APP_CONFIG_DIRECTORY_LOCATION",
@@ -78,10 +80,12 @@ object Globals extends Logger {
     .openOr({
       throw new Exception("no app config directory location passed")
     })
+  println(
+    "determined appConfigDirectory: %s".format(appConfigDirectoryLocation))
   val appConf =
     scala.xml.XML.loadFile(appConfigDirectoryLocation + "/application.xml")
+  println("found xml: %s".format(appConf))
   val hostname = (appConf \ "hostname").head.text
-
   println("starting up with hostname: %s".format(hostname))
   for {
     ghc <- (appConf \ "githubAuthenticator").headOption
