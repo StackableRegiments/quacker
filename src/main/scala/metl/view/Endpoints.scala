@@ -111,6 +111,8 @@ class GithubAuthHelper(
   import net.liftweb.json._
   import Serialization._
   import net.liftweb.util.Helpers._
+  import com.metl.liftAuthenticator._
+  import metl.model.Globals
   object State extends SessionVar[Option[String]](None)
   val redirect_uri = redirect_host + "/login/github"
   val stateSeparator = ":::"
@@ -152,11 +154,8 @@ class GithubAuthHelper(
             println(
               "logged in as: %s, returning to: %s".format(username, returnTo))
             val userState =
-              com.metl.liftAuthenticator.LiftAuthStateData(true,
-                                                           username,
-                                                           Nil,
-                                                           Nil)
-            metl.model.Globals.setUser(userState)
+              LiftAuthStateData(true, username, Nil, Nil)
+            Globals.setUser(userState)
             RedirectResponse(returnTo)
           }
         }
@@ -164,16 +163,27 @@ class GithubAuthHelper(
       () =>
         {
           val returnTo = r.param("returnTo").getOrElse("/")
-          val s = "%s%s%s".format(nextFuncName, stateSeparator, returnTo)
-          State(Some(s))
-          Full(
-            RedirectResponse(
-              "%s?client_id=%s&redirect_uri=%s&scope=%s&state=%s".format(
-                githubAuthorizeEndpoint,
-                urlEncode(clientId),
-                urlEncode(redirect_uri),
-                urlEncode(scopes.mkString(" ")),
-                urlEncode(s))))
+          Globals.casState.is.authenticated match {
+            case true => {
+              Full(RedirectResponse(returnTo))
+            }
+            case false => {
+              val s = "%s%s%s".format(nextFuncName, stateSeparator, returnTo)
+              State(Some(s))
+              Full(
+                RedirectResponse(
+                  "%s?client_id=%s&redirect_uri=%s&scope=%s&state=%s".format(
+                    githubAuthorizeEndpoint,
+                    urlEncode(clientId),
+                    urlEncode(redirect_uri),
+                    urlEncode(scopes.mkString(" ")),
+                    urlEncode(s))))
+            }
+          }
         }
+    case r @ Req("logout" :: _, _, _) => {
+      Globals.setUser(LiftAuthStateDataForbidden)
+      Full(RedirectResponse("/"))
+    }
   }
 }
