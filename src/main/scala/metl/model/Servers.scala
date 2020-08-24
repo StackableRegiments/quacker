@@ -24,6 +24,7 @@ case class ServerDefinition(name: String,
                             service: String,
                             checks: List[VisualElement])
 
+/*
 object Servers extends ConfigFileReader {
   protected var services = List.empty[ServiceDefinition]
   def clear = {
@@ -161,3 +162,5 @@ object Servers extends ConfigFileReader {
   def breakSomething(count: Int = 3) =
     shuffle(checks).take(count).foreach(_.fail("This is a drill"))
 }
+
+ */

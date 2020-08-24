@@ -8,6 +8,14 @@ import net.liftweb.util.Helpers._
 import scala.xml.Node
 
 object HTTPResponseMatchers extends ConfigFileReader {
+  import net.liftweb.json._
+  import Serialization._
+  protected implicit val formats = DefaultFormats
+  def configureFromJson(jv: JValue): HTTPResponseMatcher = {
+    val matcher = new HTTPResponseMatcher
+    // TODO - fix this
+    matcher
+  }
   def configureFromXml(n: Node): HTTPResponseMatcher = {
     val matcher = new HTTPResponseMatcher
     getNodes(n, "matcher").map(mn => {
@@ -143,7 +151,7 @@ class HTTPResponseMatcher {
 }
 
 case class HttpSensor(
-    metadata: SensorMetaData,
+    override val metadata: SensorMetaData,
     uri: String,
     headers: List[Tuple2[String, String]] = List.empty[Tuple2[String, String]],
     matcher: HTTPResponseMatcher = HTTPResponseMatchers.default,
@@ -170,7 +178,7 @@ case class HttpSensor(
   override def performCheck = succeed(status._1.toString, status._2)
 }
 case class HttpSensorWithBasicAuth(
-    metadata: SensorMetaData,
+    override val metadata: SensorMetaData,
     uri: String,
     username: String,
     password: String,

@@ -7,7 +7,7 @@ import org.tmatesoft.svn.core.internal.io.svn.SVNRepositoryFactoryImpl
 import org.tmatesoft.svn.core.io.SVNRepositoryFactory
 import org.tmatesoft.svn.core.wc.SVNWCUtil
 
-case class SvnSensor(metadata: SensorMetaData,
+case class SvnSensor(override val metadata: SensorMetaData,
                      server: String,
                      username: String,
                      password: String,

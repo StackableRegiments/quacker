@@ -1,15 +1,37 @@
 package metl.view
 
-import metl.model.{HistoryServer, Servers, ServiceConfigurator}
-import net.liftweb.common.{Full, Logger}
+import metl.model.{HistoryServer, ServiceConfigurator}
+import net.liftweb.common.{Full, Logger, Empty}
 import net.liftweb.http._
 import net.liftweb.http.rest.RestHelper
 import net.liftweb.util.Helpers.tryo
 import metl.model.Globals
 import com.metl.liftAuthenticator._
+import metl.model.Sensor
+import scala.util.Random.shuffle
 
 object SystemRestHelper extends RestHelper with Logger {
   def repo = Globals.repository
+  object Keys {
+    val Repo = "repository"
+    val ConfigFile = "configurationFile"
+    val ValidUsers = "validUsers"
+    val HistoryListeners = "historyListeners"
+    val Notifiers = "notifiers"
+    val VisualElements = "visualElements"
+  }
+
+  protected def breakSomething(count: Int): Unit = {
+    shuffle(
+      repo.getVisualElements
+        .flatMap {
+          case p: Sensor => Some(p)
+          case _         => None
+        })
+      .take(count)
+      .foreach(_.fail("This is a drill"))
+  }
+
   serve {
     case r @ Req(List("history", service, server, serviceCheckName), _, _) =>
       () =>
@@ -50,23 +72,109 @@ object SystemRestHelper extends RestHelper with Logger {
                                         r.param("limit").map(_.toInt))
           Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
         }
-    /*
-    case Req("reloadXml" :: _, _, _) =>
-      () =>
-        {
-          val configurationStatus = ServiceConfigurator.describeAutoConfigure(
-            ServiceConfigurator.autoConfigure)
-          Full(
-            PlainTextResponse(
-              "Xml configuration reloaded\r\n%s".format(configurationStatus),
-              List.empty[Tuple2[String, String]],
-              200))
-        }
-     */
     case r @ Req("logout" :: _, _, _) => {
       Globals.setUser(LiftAuthStateDataForbidden)
       Full(RedirectResponse("/"))
     }
+    case Req("breakSomething" :: count :: _, _, _) if Globals.isSuperUser =>
+      () =>
+        {
+          val serversToBreak = tryo(count.toInt).openOr(3)
+          breakSomething(serversToBreak)
+          Full(
+            PlainTextResponse("%s servers broken".format(serversToBreak),
+                              List.empty[Tuple2[String, String]],
+                              200))
+        }
+    case Req("breakSomething" :: _, _, _) if Globals.isSuperUser =>
+      () =>
+        {
+          val serversToBreak = 3
+          breakSomething(serversToBreak)
+          Full(
+            PlainTextResponse("%s servers broken".format(serversToBreak),
+                              List.empty[Tuple2[String, String]],
+                              200))
+        }
+
+    case r @ Req(Keys.Repo :: Keys.ConfigFile :: _, _, _)
+        if Globals.isSuperUser =>
+      () =>
+        {
+          Empty
+        }
+    case r @ Req(Keys.Repo :: Keys.ValidUsers :: Nil, _, GetRequest)
+        if Globals.isSuperUser =>
+      () =>
+        {
+          Empty
+        }
+    case r @ Req(Keys.Repo :: Keys.ValidUsers :: Nil, _, PostRequest)
+        if Globals.isSuperUser =>
+      () =>
+        {
+          Empty
+        }
+    case r @ Req(Keys.Repo :: Keys.ValidUsers :: Nil, _, DeleteRequest)
+        if Globals.isSuperUser =>
+      () =>
+        {
+          Empty
+        }
+    case r @ Req(Keys.Repo :: Keys.VisualElements :: Nil, _, GetRequest)
+        if Globals.isSuperUser =>
+      () =>
+        {
+          Empty
+        }
+    case r @ Req(Keys.Repo :: Keys.VisualElements :: Nil, _, PostRequest)
+        if Globals.isSuperUser =>
+      () =>
+        {
+          Empty
+        }
+    case r @ Req(Keys.Repo :: Keys.VisualElements :: Nil, _, DeleteRequest)
+        if Globals.isSuperUser =>
+      () =>
+        {
+          Empty
+        }
+    case r @ Req(Keys.Repo :: Keys.HistoryListeners :: Nil, _, GetRequest)
+        if Globals.isSuperUser =>
+      () =>
+        {
+          Empty
+        }
+    case r @ Req(Keys.Repo :: Keys.HistoryListeners :: Nil, _, PostRequest)
+        if Globals.isSuperUser =>
+      () =>
+        {
+          Empty
+        }
+    case r @ Req(Keys.Repo :: Keys.HistoryListeners :: Nil, _, DeleteRequest)
+        if Globals.isSuperUser =>
+      () =>
+        {
+          Empty
+        }
+    case r @ Req(Keys.Repo :: Keys.Notifiers :: Nil, _, GetRequest)
+        if Globals.isSuperUser =>
+      () =>
+        {
+          Empty
+        }
+    case r @ Req(Keys.Repo :: Keys.Notifiers :: Nil, _, PostRequest)
+        if Globals.isSuperUser =>
+      () =>
+        {
+          Empty
+        }
+    case r @ Req(Keys.Repo :: Keys.Notifiers :: Nil, _, DeleteRequest)
+        if Globals.isSuperUser =>
+      () =>
+        {
+          Empty
+        }
   }
 }
 
@@ -76,31 +184,6 @@ object ProbeRestHelper extends RestHelper {
     case Req(cand :: _, _, _) if probeEndpoints.contains(cand) =>
       () =>
         Full(PlainTextResponse("OK", List.empty[Tuple2[String, String]], 200))
-  }
-}
-
-object DebugToolsRestHelper extends RestHelper {
-  serve {
-    case Req("breakSomething" :: count :: _, _, _) =>
-      () =>
-        {
-          val serversToBreak = tryo(count.toInt).openOr(3)
-          Servers.breakSomething(serversToBreak)
-          Full(
-            PlainTextResponse("%s servers broken".format(serversToBreak),
-                              List.empty[Tuple2[String, String]],
-                              200))
-        }
-    case Req("breakSomething" :: _, _, _) =>
-      () =>
-        {
-          val serversToBreak = 3
-          Servers.breakSomething(serversToBreak)
-          Full(
-            PlainTextResponse("%s servers broken".format(serversToBreak),
-                              List.empty[Tuple2[String, String]],
-                              200))
-        }
   }
 }
 

@@ -11,7 +11,7 @@ import metl.model.{
 import net.liftweb.common.{Box, Empty}
 import net.liftweb.util.Helpers.{tryo, _}
 
-case class PingICMPSensor(metadata: SensorMetaData,
+case class PingICMPSensor(override val metadata: SensorMetaData,
                           uri: String,
                           ipv6: Boolean = false,
                           time: TimeSpan = 5 seconds)

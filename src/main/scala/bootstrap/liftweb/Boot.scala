@@ -8,7 +8,6 @@ import _root_.net.liftweb.sitemap.Loc._
 import _root_.net.liftweb.sitemap._
 import _root_.net.liftweb.util._
 import Helpers._
-import metl.view.{DebugToolsRestHelper, ProbeRestHelper, SystemRestHelper}
 
 /**
   * A class that's instantiated early and run.  It allows the application
@@ -31,15 +30,6 @@ class Boot extends Logger {
           "%s?%s".format(s, prodRunId)
       }
     }
-
-    // Setup RESTful endpoints (these are in view/Endpoints.scala)
-    LiftRules.statelessDispatch.prepend(ProbeRestHelper)
-    // attempting to setup authentication using CAS, when running in prod mode or staging mode
-    if (Globals.isDevMode) {
-      //attach the debug-tools which break things
-      LiftRules.dispatch.append(DebugToolsRestHelper)
-    }
-    LiftRules.dispatch.prepend(SystemRestHelper)
 
     // where to search snippet
     LiftRules.addToPackages("metl")

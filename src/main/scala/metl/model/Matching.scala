@@ -150,6 +150,15 @@ case class DependencyDescription(pinger: String,
                                  service: Option[String],
                                  serviceCheckMode: Option[ServiceCheckMode])
 object DependencyMatchers extends ConfigFileReader {
+  import net.liftweb.json._
+  import Serialization._
+  protected implicit val formats = DefaultFormats
+  def configureFromJson(jv: JValue): DependencyMatcher = {
+    val matcher = new DependencyMatcher
+    //TODO
+    matcher
+  }
+
   def configureFromXml(n: Node): DependencyMatcher = {
     val matcher = new DependencyMatcher
     getNodes(n, "matcher").map(mn => {
@@ -215,10 +224,18 @@ class DependencyMatcher {
       .mkString(" and ")
   def verify(dependency: DependencyDescription): VerificationResponse = {
     var errors = List.empty[String]
-    val pingersToCheck = Servers.checksFor(dependency.pinger,
-                                           dependency.service,
-                                           dependency.server,
-                                           dependency.serviceCheckMode)
+    val pingersToCheck: List[Sensor] =
+      Globals.repository.getVisualElements.flatMap {
+        case p: Sensor
+            if (
+              p.name == dependency.pinger &&
+                dependency.service.map(_ == p.serviceName).getOrElse(true) &&
+                dependency.server.map(_ == p.serverName).getOrElse(true) &&
+                dependency.serviceCheckMode.map(_ == p.mode).getOrElse(true)
+            ) =>
+          Some(p)
+        case _ => None
+      }
     if (pingersToCheck.length == 0) {
       errors = errors ::: List(
         "no dependencies found for description: %s".format(dependency))
@@ -285,6 +302,12 @@ class DependencyMatcher {
 }
 
 object Matchers extends ConfigFileReader {
+  import net.liftweb.json._
+  import Serialization._
+  protected implicit val formats = DefaultFormats
+  def configureFromJson(jv: JValue): Map[String, Matcher] = {
+    Map.empty[String, Matcher] //TODO
+  }
   def configureFromXml(n: Node): Map[String, Matcher] = {
     Map(getNodes(n, "matcher").map(t => {
       val valueName = getAttr(t, "name").getOrElse("unknown")

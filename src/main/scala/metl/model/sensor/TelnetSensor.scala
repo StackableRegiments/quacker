@@ -7,7 +7,7 @@ import metl.model.{Sensor, SensorMetaData}
 import net.liftweb.util.Helpers._
 import org.apache.commons.net.telnet.TelnetClient
 
-class TelnetSensor(metadata: SensorMetaData,
+class TelnetSensor(override val metadata: SensorMetaData,
                    host: String,
                    port: Int,
                    time: TimeSpan = 5 seconds)

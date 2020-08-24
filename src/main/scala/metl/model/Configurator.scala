@@ -16,7 +16,7 @@ object ServiceConfigurator extends Logger {
   val isWindows = osName.toLowerCase.trim.startsWith("windows")
   val isLinux = osName.toLowerCase.trim.startsWith("linux")
   val isOSX = osName.toLowerCase.trim.startsWith("macos")
-  private def getParamOrElse(paramName: String, orElse: => String): String = {
+  def getParamOrElse(paramName: String, orElse: => String): String = {
     System.getProperty(paramName) match {
       case s: String if (s.length > 0) => s
       case _ => {
@@ -27,6 +27,7 @@ object ServiceConfigurator extends Logger {
       }
     }
   }
+  /*
   def processDirectory(path: File, visit: File => Tuple2[Boolean, String])
     : Map[String, Tuple2[Boolean, String]] = {
     var items = Map.empty[String, Tuple2[Boolean, String]]
@@ -129,4 +130,5 @@ object ServiceConfigurator extends Logger {
       }
     }
   }
+ */
 }

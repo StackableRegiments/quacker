@@ -206,7 +206,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
-case class OracleSensor(metadata: SensorMetaData,
+case class OracleSensor(override val metadata: SensorMetaData,
                         uri: String,
                         username: String,
                         password: String,
@@ -302,7 +302,7 @@ object MySQLSetup {
   def initialize = {}
 }
 
-case class MySQLSensor(metadata: SensorMetaData,
+case class MySQLSensor(override val metadata: SensorMetaData,
                        uri: String,
                        database: String,
                        query: String,
@@ -365,7 +365,7 @@ case class MySQLSensor(metadata: SensorMetaData,
   override def performCheck = succeed(status.toString)
 }
 
-case class SQLSensor(metadata: SensorMetaData,
+case class SQLSensor(override val metadata: SensorMetaData,
                      driver: String,
                      url: String,
                      query: String,

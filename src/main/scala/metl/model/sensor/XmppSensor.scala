@@ -9,7 +9,7 @@ import org.jivesoftware.smack.{
   XMPPConnection
 }
 
-case class XmppSensor(metadata: SensorMetaData,
+case class XmppSensor(override val metadata: SensorMetaData,
                       resource: String,
                       xmppServiceName: Option[String] = None,
                       allowAnonymousAccess: Boolean = false,

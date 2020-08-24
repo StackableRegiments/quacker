@@ -33,7 +33,7 @@ case class MuninCategoryDefinition(name: String,
                                    matchers: Map[String, Matcher] =
                                      Map.empty[String, Matcher])
 
-class MuninSensor(metadata: SensorMetaData,
+class MuninSensor(override val metadata: SensorMetaData,
                   host: String,
                   port: Int,
                   onlyFetch: List[MuninCategoryDefinition] = List(
@@ -161,7 +161,7 @@ class MuninSensor(metadata: SensorMetaData,
 }
 
 case class MuninSensorAgainstThreshhold(
-    metadata: SensorMetaData,
+    override val metadata: SensorMetaData,
     host: String,
     port: Int,
     thresholds: Map[String, MuninCategoryDefinition] =

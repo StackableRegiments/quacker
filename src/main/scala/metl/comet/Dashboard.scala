@@ -74,9 +74,10 @@ class Dashboard extends CometActor with CometListener with CheckRenderHelper {
   implicit val ec = ExecutionContext.global
   implicit val formats = DefaultFormats
   override def lifespan: Box[TimeSpan] = Full(2 minutes)
+  def repo = Globals.repository
   def registerWith: DashboardServer.type = DashboardServer
   def getJsonStructure: List[JObject] =
-    Servers.getVisualElements.map(ve => jsonForVisualElement(ve))
+    repo.getVisualElements.map(ve => jsonForVisualElement(ve))
   override def render = {
     Script(
       JsCrVar(

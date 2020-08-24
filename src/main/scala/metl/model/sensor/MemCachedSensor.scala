@@ -6,7 +6,7 @@ import metl.model.{Sensor, SensorMetaData}
 import net.liftweb.util.Helpers._
 import net.spy.memcached.MemcachedClient
 
-case class PingMemCached(metadata: SensorMetaData,
+case class PingMemCached(override val metadata: SensorMetaData,
                          uri: String,
                          time: TimeSpan = 5 seconds)
     extends Sensor(metadata) {

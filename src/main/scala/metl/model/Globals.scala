@@ -147,10 +147,9 @@ object Globals extends Logger {
       }
     })
 
-    val configurationStatus =
-      ServiceConfigurator.describeAutoConfigure(
-        ServiceConfigurator.autoConfigure)
-    warn("Xml configuration reloaded\r\n%s".format(configurationStatus))
+    // Setup RESTful endpoints (these are in view/Endpoints.scala)
+    LiftRules.statelessDispatch.prepend(metl.view.ProbeRestHelper)
+    LiftRules.dispatch.prepend(metl.view.SystemRestHelper)
   }
 
   var isDevMode = false

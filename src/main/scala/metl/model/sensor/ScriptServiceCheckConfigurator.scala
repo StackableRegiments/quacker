@@ -4,8 +4,14 @@ import metl.model.{ConfigFileReader, Matchers}
 import net.liftweb.common.Logger
 
 import scala.xml.Node
+import net.liftweb.json._
+import Serialization._
 
 object FunctionalServiceCheck extends ConfigFileReader {
+  protected implicit val formats = DefaultFormats
+  def configureFromJson(v: JValue): List[FunctionalServiceCheck] = {
+    Nil // TODO
+  }
   def configureFromXml(n: Node): List[FunctionalServiceCheck] = {
     getImmediateNodes(n, "step").flatMap(mn => {
       getAttr(mn, "type").getOrElse("unknown") match {

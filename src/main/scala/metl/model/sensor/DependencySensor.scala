@@ -4,7 +4,7 @@ import metl.model._
 import net.liftweb.util.Helpers._
 
 case class DependencySensor(
-    metadata: SensorMetaData,
+    override val metadata: SensorMetaData,
     dependencies: Map[DependencyDescription, DependencyMatcher],
     time: TimeSpan)
     extends Sensor(metadata) {

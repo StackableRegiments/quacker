@@ -22,6 +22,7 @@ import scala.xml._
 import net.liftweb.json._
 
 abstract class ServiceCheckMode
+case object UNKNOWNMODE extends ServiceCheckMode
 case object STAGING extends ServiceCheckMode
 case object PRODUCTION extends ServiceCheckMode
 case object TEST extends ServiceCheckMode
@@ -35,7 +36,7 @@ object ServiceCheckMode {
     case "test"        => TEST
     case "development" => DEVELOPMENT
     case "operations"  => OPERATIONS
-    case _             => TEST
+    case _             => UNKNOWNMODE
   }
 }
 
@@ -43,13 +44,14 @@ abstract class ServiceCheckSeverity
 case object IMPACT extends ServiceCheckSeverity
 case object ISSUE extends ServiceCheckSeverity
 case object ALERT extends ServiceCheckSeverity
+case object UNKNOWNSEVERITY extends ServiceCheckSeverity
 
 object ServiceCheckSeverity {
   def parse(s: String): ServiceCheckSeverity = s.toLowerCase.trim match {
     case "impact" => IMPACT
     case "issue"  => ISSUE
     case "alert"  => ALERT
-    case _        => ALERT
+    case _        => UNKNOWNSEVERITY
   }
 }
 
@@ -526,6 +528,7 @@ Error detail: '%s'.
       mailer.sendMailMessage(emailAddress, who, subject, message))
 }
 
+/*
 object ErrorRecorder extends LiftActor with ConfigFileReader {
   var mailers = List.empty[LiftActor]
   def clear = {
@@ -625,3 +628,4 @@ object ErrorRecorder extends LiftActor with ConfigFileReader {
     }
   }
 }
+ */

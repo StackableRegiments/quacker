@@ -6,7 +6,7 @@ import javax.naming.{Context, NamingEnumeration}
 import metl.model.{Sensor, SensorMetaData}
 import net.liftweb.util.Helpers._
 
-class LdapSensor(metadata: SensorMetaData,
+class LdapSensor(override val metadata: SensorMetaData,
                  host: String,
                  username: String,
                  password: String,

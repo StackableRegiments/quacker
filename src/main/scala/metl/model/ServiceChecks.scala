@@ -28,12 +28,13 @@ case object StartSensor
 case object StopSensor
 
 trait VisualElement {
-  val id: String = nextFuncName
+  def metadata: SensorMetaData
+  val id: String = metadata.id
   val label: String
-  val serviceName: String
-  val serviceLabel: String
-  val serverName: String
-  val serverLabel: String
+  val serviceName: String = metadata.serviceName
+  val serviceLabel: String = metadata.serviceLabel
+  val serverName: String = metadata.serverName
+  val serverLabel: String = metadata.serverLabel
   def jsonRenderer(sen: String = serviceName,
                    sel: String = serviceLabel,
                    srn: String = serverName,
@@ -51,14 +52,10 @@ trait VisualElement {
   protected def asJson: List[JField] = Nil
 }
 
-case class HtmlInformation(metadata: SensorMetaData,
+case class HtmlInformation(val metadata: SensorMetaData,
                            name: String,
                            html: NodeSeq)
     extends VisualElement {
-  override val serviceName: String = metadata.serviceName
-  override val serviceLabel: String = metadata.serviceLabel
-  override val serverName: String = metadata.serverName
-  override val serverLabel: String = metadata.serverLabel
   override val label: String = "%s information".format(name)
   override def asJson = List(
     JField("type", JString("htmlInformation")),
@@ -66,13 +63,11 @@ case class HtmlInformation(metadata: SensorMetaData,
   )
 }
 
-case class Information(metadata: SensorMetaData, name: String, message: String)
+case class Information(val metadata: SensorMetaData,
+                       name: String,
+                       message: String)
     extends VisualElement {
-  override val serviceName: String = metadata.serviceName
-  override val serviceLabel: String = metadata.serviceLabel
-  override val serverName: String = metadata.serverName
-  override val serverLabel: String = metadata.serverLabel
-  override val label: String = name
+  override val label: String = "%s information".format(name)
   override def asJson = List(
     JField("type", JString("information")),
     JField("information", JString(message))
@@ -85,10 +80,6 @@ case class ErrorInformation(metadata: SensorMetaData,
                             sourceString: String,
                             errors: List[String])
     extends VisualElement {
-  override val serviceName: String = metadata.serviceName
-  override val serviceLabel: String = metadata.serviceLabel
-  override val serverName: String = metadata.serverName
-  override val serverLabel: String = metadata.serverLabel
   override val label: String = "Error: %s".format(name)
   override def asJson = List(
     JField("type", JString("error")),
@@ -98,28 +89,19 @@ case class ErrorInformation(metadata: SensorMetaData,
   )
 }
 
-case class EndpointInformationWithString(metadata: SensorMetaData,
+case class EndpointInformationWithString(override val metadata: SensorMetaData,
                                          name: String,
                                          htmlDescriptor: String,
                                          endpoints: List[EndpointDescriptor])
     extends EndpointInformationWithHtml(metadata,
                                         name,
                                         Text(htmlDescriptor),
-                                        endpoints) {
-  override val serviceName: String = metadata.serviceName
-  override val serviceLabel: String = metadata.serviceLabel
-  override val serverName: String = metadata.serverName
-  override val serverLabel: String = metadata.serverLabel
-}
-class EndpointInformationWithHtml(metadata: SensorMetaData,
+                                        endpoints) {}
+class EndpointInformationWithHtml(val metadata: SensorMetaData,
                                   name: String,
                                   html: NodeSeq,
                                   endpoints: List[EndpointDescriptor])
     extends VisualElement {
-  override val serviceName: String = metadata.serviceName
-  override val serviceLabel: String = metadata.serviceLabel
-  override val serverName: String = metadata.serverName
-  override val serverLabel: String = metadata.serverLabel
   override val label: String = name
   override def asJson = List(
     JField("type", JString("endpoints")),
@@ -144,10 +126,14 @@ case class EndpointDescriptor(name: String,
                               description: String)
 
 case object NullCheck extends VisualElement {
-  override val serviceName: String = "null"
-  override val serviceLabel: String = "null"
-  override val serverName: String = "null"
-  override val serverLabel: String = "null"
+  val metadata = SensorMetaData("null",
+                                "null",
+                                UNKNOWNMODE,
+                                UNKNOWNSEVERITY,
+                                "null",
+                                "null",
+                                "null",
+                                "null")
   override val label = "null"
 }
 
@@ -159,20 +145,17 @@ case class SensorMetaData(name: String,
                           serviceLabel: String,
                           serverName: String,
                           serverLabel: String,
+                          id: String = nextFuncName,
                           expectFail: Boolean = false,
                           timeout: Option[TimeSpan] = None,
                           acceptedFailures: Int = 1)
 
-abstract class Sensor(metadata: SensorMetaData)
+abstract class Sensor(val metadata: SensorMetaData)
     extends LiftActor
     with VisualElement
     with metl.comet.CheckRenderHelper
     with Logger {
   import GraphableData._
-  override val serviceName: String = metadata.serviceName
-  override val serviceLabel: String = metadata.serviceLabel
-  override val serverName: String = metadata.serverName
-  override val serverLabel: String = metadata.serverLabel
   val mode: ServiceCheckMode = metadata.mode
   val severity: ServiceCheckSeverity = metadata.severity
   val name: String = metadata.name
@@ -194,9 +177,9 @@ abstract class Sensor(metadata: SensorMetaData)
                                shouldSendToError: Boolean = true) = {
     history = cr :: history.take(maxHistory - 1)
     DashboardServer ! cr
-    HistoryServer ! cr
+    Globals.repository.getHistoryListeners.foreach(_ ! cr)
     if (shouldSendToError) {
-      ErrorRecorder ! cr
+      Globals.repository.getNotifiers.foreach(_ ! cr)
     }
   }
   protected val pollInterval: Helpers.TimeSpan = 5 seconds
@@ -363,7 +346,7 @@ abstract class Sensor(metadata: SensorMetaData)
     case _ => {}
   }
 }
-case class CheckUnexceptional(metadata: SensorMetaData,
+case class CheckUnexceptional(override val metadata: SensorMetaData,
                               condition: Function0[Any],
                               time: TimeSpan = 5 seconds)
     extends Sensor(metadata) {
@@ -371,7 +354,7 @@ case class CheckUnexceptional(metadata: SensorMetaData,
   def status = condition()
   override def performCheck = succeed("Was expected")
 }
-case class CheckDoesnt(metadata: SensorMetaData,
+case class CheckDoesnt(override val metadata: SensorMetaData,
                        condition: Function0[Option[String]],
                        time: TimeSpan = 5 seconds)
     extends Sensor(metadata) {
@@ -386,7 +369,7 @@ case class CheckDoesnt(metadata: SensorMetaData,
     }
   }
 }
-case class MatcherCheck(metadata: SensorMetaData,
+case class MatcherCheck(override val metadata: SensorMetaData,
                         matcher: Matcher,
                         time: TimeSpan)
     extends Sensor(metadata) {

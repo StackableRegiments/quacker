@@ -6,7 +6,7 @@ import jcifs.smb.{NtlmPasswordAuthentication, SmbFile}
 import metl.model.{DashboardException, Sensor, SensorMetaData}
 import net.liftweb.util.Helpers._
 
-case class SambaSensor(metadata: SensorMetaData,
+case class SambaSensor(override val metadata: SensorMetaData,
                        hostname: String,
                        domain: String,
                        filename: String,

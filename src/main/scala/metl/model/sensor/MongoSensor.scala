@@ -5,7 +5,7 @@ import metl.model.{Sensor, SensorMetaData}
 import net.liftweb.util.Helpers
 import net.liftweb.util.Helpers._
 
-case class PingMongo(metadata: SensorMetaData,
+case class PingMongo(override val metadata: SensorMetaData,
                      hostname: String,
                      port: Int,
                      database: String,

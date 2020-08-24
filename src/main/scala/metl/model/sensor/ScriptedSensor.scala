@@ -1769,6 +1769,37 @@ case object EmptyInterpolator extends Interpolator {
   override def interpolate(in: String, values: Map[String, String]): String = in
 }
 object Interpolator extends ConfigFileReader {
+  import net.liftweb.json._
+  import Serialization._
+  protected implicit val defaults = DefaultFormats
+  import scala.xml._
+  def configureFromJson(n: JValue): Option[Interpolator] = {
+    n match {
+      case jo: JObject => {
+        (jo \ "type").extractOpt[String] match {
+          case Some("charKeyedStringInterpolator") => {
+            for {
+              startTag <- (jo \ "startTag").extractOpt[String]
+              endTag <- (jo \ "endTag").extractOpt[String]
+            } yield {
+              CharKeyedStringInterpolator(startTag, endTag)
+            }
+          }
+          case Some("escapedCharKeyedStringInterpolator") => {
+            for {
+              startTag <- (jo \ "startTag").extractOpt[String]
+              endTag <- (jo \ "endTag").extractOpt[String]
+              escapeTag <- (jo \ "escapeTag").extractOpt[String]
+            } yield {
+              EscapedCharKeyedStringInterpolator(startTag, endTag, escapeTag)
+            }
+          }
+          case _ => None
+        }
+      }
+      case _ => None
+    }
+  }
   def configureFromXml(n: Node): Option[Interpolator] = {
     getNodes(n, "interpolator").headOption.flatMap(mn => {
       getAttr(mn, "type").getOrElse("unknown") match {
@@ -1936,7 +1967,7 @@ class ScriptEngine(interpolator: Interpolator) {
   }
 }
 
-case class ScriptedSensor(metadata: SensorMetaData,
+case class ScriptedSensor(override val metadata: SensorMetaData,
                           sequence: List[FunctionalServiceCheck],
                           interpolator: Interpolator,
                           time: TimeSpan)
