@@ -9,6 +9,7 @@ import metl.model.Globals
 import com.metl.liftAuthenticator._
 
 object SystemRestHelper extends RestHelper with Logger {
+  def repo = Globals.repository
   serve {
     case r @ Req(List("history", service, server, serviceCheckName), _, _) =>
       () =>
@@ -49,6 +50,7 @@ object SystemRestHelper extends RestHelper with Logger {
                                         r.param("limit").map(_.toInt))
           Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
         }
+    /*
     case Req("reloadXml" :: _, _, _) =>
       () =>
         {
@@ -60,6 +62,7 @@ object SystemRestHelper extends RestHelper with Logger {
               List.empty[Tuple2[String, String]],
               200))
         }
+     */
     case r @ Req("logout" :: _, _, _) => {
       Globals.setUser(LiftAuthStateDataForbidden)
       Full(RedirectResponse("/"))
@@ -67,7 +70,7 @@ object SystemRestHelper extends RestHelper with Logger {
   }
 }
 
-object ProbeRestHelper extends RestHelper with Logger {
+object ProbeRestHelper extends RestHelper {
   val probeEndpoints = List("probe", "healthz", "serverStatus")
   serve {
     case Req(cand :: _, _, _) if probeEndpoints.contains(cand) =>

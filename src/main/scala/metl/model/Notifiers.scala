@@ -547,7 +547,7 @@ object ErrorRecorder extends LiftActor with ConfigFileReader {
                 ServicePermission.configureFromXml(sp)))
             .flatten
             .toList
-        val restrictions = UserAccessRestriction(name, servicePermissions)
+        val restrictions = UserAccessRestriction(name, name, servicePermissions)
         val filterFunc = (cr: CheckResult) => restrictions.permit(cr)
         val edl = new ErrorDiskLogger(name, file) {
           override val filterAction = (cr: CheckResult) => filterFunc(cr)
@@ -590,7 +590,7 @@ object ErrorRecorder extends LiftActor with ConfigFileReader {
                 ServicePermission.configureFromXml(sp)))
             .flatten
             .toList
-        val restrictions = UserAccessRestriction(name, servicePermissions)
+        val restrictions = UserAccessRestriction(name, name, servicePermissions)
         val filterFunc = (cr: CheckResult) => restrictions.permit(cr)
         val em = new ErrorMailer(name,
                                  smtp,

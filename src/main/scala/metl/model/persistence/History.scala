@@ -196,7 +196,8 @@ object HistoryServer extends LiftActor with ConfigFileReader with Logger {
                       ServicePermission.configureFromXml(sp)))
                   .flatten
                   .toList
-              val restrictions = UserAccessRestriction(name, servicePermissions)
+              val restrictions =
+                UserAccessRestriction(name, name, servicePermissions)
               val filterFunc = (cr: CheckResult) => restrictions.permit(cr)
               new SqlHistoryListener(name, driver, url, username, password) {
                 override val filterAction = filterFunc
@@ -221,7 +222,8 @@ object HistoryServer extends LiftActor with ConfigFileReader with Logger {
                     ServicePermission.configureFromXml(sp)))
                 .flatten
                 .toList
-            val restrictions = UserAccessRestriction(name, servicePermissions)
+            val restrictions =
+              UserAccessRestriction(name, name, servicePermissions)
             val filterFunc = (cr: CheckResult) => restrictions.permit(cr)
             new MongoHistoryListener(name, host, port, db, collection) {
               override val filterAction = filterFunc
@@ -235,7 +237,8 @@ object HistoryServer extends LiftActor with ConfigFileReader with Logger {
                     ServicePermission.configureFromXml(sp)))
                 .flatten
                 .toList
-            val restrictions = UserAccessRestriction(name, servicePermissions)
+            val restrictions =
+              UserAccessRestriction(name, name, servicePermissions)
             val filterFunc = (cr: CheckResult) => restrictions.permit(cr)
             new DebugHistoryListener(name) {
               override val filterAction = filterFunc

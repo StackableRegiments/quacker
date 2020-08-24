@@ -33,7 +33,7 @@ class Boot extends Logger {
     }
 
     // Setup RESTful endpoints (these are in view/Endpoints.scala)
-    LiftRules.dispatch.prepend(ProbeRestHelper)
+    LiftRules.statelessDispatch.prepend(ProbeRestHelper)
     // attempting to setup authentication using CAS, when running in prod mode or staging mode
     if (Globals.isDevMode) {
       //attach the debug-tools which break things

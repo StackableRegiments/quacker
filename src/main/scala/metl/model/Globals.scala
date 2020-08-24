@@ -56,6 +56,7 @@ object EnvVariable extends Logger {
 object Globals extends Logger {
   import java.io.File
   //Globals for the system
+  protected var repo: Option[Repository] = None
   var configDirectoryLocation = "config"
   EnvVariable
     .getProp("QUACKER_CONFIG_DIRECTORY_LOCATION",
@@ -113,11 +114,38 @@ object Globals extends Logger {
         }
       })
     })
-
   authenticator.foreach(_.attach)
+
+  val superUsers: List[String] = ((appConf \ "superUsers") \ "superUser").toList
+    .flatMap(n => (n \ "@username").map(_.text))
+    .toList
 
   def startup = {
     metl.comet.DashboardServer
+    repo = (appConf \ "repository").headOption.flatMap(repoXml => {
+      val repoChildren = repoXml.child.filter {
+        case e: Elem => true
+        case _       => false
+      }.toList
+      if (repoChildren.length > 1) {
+        throw new Exception(
+          "too many repos configured - Quacker only supports one repo")
+      }
+      repoChildren match {
+        case dbc: Elem if dbc.label == "sqlRepository" =>
+          for {
+            driver <- (dbc \ "@driver").headOption.map(_.text)
+            url <- (dbc \ "@url").headOption.map(_.text)
+            username = (dbc \ "@username").headOption.map(_.text).getOrElse("")
+            password = (dbc \ "@password").headOption.map(_.text).getOrElse("")
+          } yield {
+            new SqlRepository(driver, url, username, password)
+          }
+        case mc: Elem if mc.label == "inMemoryRepository" =>
+          Some(new InMemoryRepository)
+        case _ => None
+      }
+    })
 
     val configurationStatus =
       ServiceConfigurator.describeAutoConfigure(
@@ -126,19 +154,43 @@ object Globals extends Logger {
   }
 
   var isDevMode = false
-  protected var validUserAccesses: List[UserAccessRestriction] =
-    List.empty[UserAccessRestriction]
+
+  def isSuperUser: Boolean = superUsers.contains(casState.is.username)
+  def repository: Repository = repo.getOrElse(NullRepository)
+
+  //Globals for the current session
+  def setUser(newUser: LiftAuthStateData): Unit = {
+    casState(newUser)
+    currentUserAccessRestriction.update
+    S.session.foreach(s =>
+      metl.comet.DashboardServer ! metl.comet.UserLoggedIn(s))
+  }
+  object casState
+      extends SessionVar[LiftAuthStateData](LiftAuthStateDataForbidden)
+  object currentUserAccessRestriction {
+    protected var store = updatedUserAccessRestriction
+    def update = {
+      store = updatedUserAccessRestriction
+    }
+    def permit(input: AnyRef): Boolean = doGet.permit(input)
+    protected def doGet = store
+    def get = doGet
+    def is = doGet
+  }
 
   def setValidUsers(newUsers: List[UserAccessRestriction]) = {
-    validUserAccesses = (validUserAccesses ::: newUsers).toList
-    currentUserAccessRestriction(updatedUserAccessRestriction)
+    newUsers.foreach(uar => {
+      repository.updateValidUser(uar.id, Some(uar))
+    })
   }
   protected def updatedUserAccessRestriction: UserAccessRestriction = {
-    val me = currentUser.is
-    val validUserAccessesForMe = validUserAccesses.filter(vua => vua.name == me)
+    val me = Globals.casState.is.username
+    val validUserAccessesForMe =
+      repository.getValidUsers.filter(vua => vua.name == me)
     val myRestriction = validUserAccessesForMe.length match {
       case 0 =>
         UserAccessRestriction(me,
+                              me,
                               List(
                                 new ServicePermission("Public Access Only",
                                                       None,
@@ -147,6 +199,7 @@ object Globals extends Logger {
                                                       None)))
       case other =>
         UserAccessRestriction(me,
+                              me,
                               validUserAccessesForMe
                                 .map(vua => vua.servicePermissions)
                                 .flatten
@@ -156,20 +209,11 @@ object Globals extends Logger {
     myRestriction
   }
   def clearValidUsers = {
-    validUserAccesses = List.empty[UserAccessRestriction]
+    repository.getValidUsers.foreach(vu => {
+      repository.updateValidUser(vu.id, None)
+    })
   }
-  def isValidUser = validUserAccesses.exists(vua => vua.name == currentUser.is)
-  //Globals for the current session
-  def setUser(newUser: LiftAuthStateData): Unit = {
-    casState(newUser)
-    currentUser(newUser.username)
-    currentUserAccessRestriction(updatedUserAccessRestriction)
-    S.session.foreach(s =>
-      metl.comet.DashboardServer ! metl.comet.UserLoggedIn(s))
-  }
-  object casState
-      extends SessionVar[LiftAuthStateData](LiftAuthStateDataForbidden)
-  object currentUser extends SessionVar[String](casState.is.username)
-  object currentUserAccessRestriction
-      extends SessionVar[UserAccessRestriction](updatedUserAccessRestriction)
+  def isValidUser =
+    repository.getValidUsers.exists(vua =>
+      vua.name == Globals.casState.is.username)
 }

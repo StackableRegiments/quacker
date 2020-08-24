@@ -69,10 +69,14 @@ object ServicePermission extends ConfigFileReader {
                           whitelistedServers,
                           blacklistedServers)
   }
+  val PermissiveServicePermission =
+    new ServicePermission("", None, None, None, None) {
+      override def permit(input: AnyRef): Boolean = true
+    }
   def empty = PermissiveServicePermission
 }
 
-class ServicePermission(
+case class ServicePermission(
     serviceName: String,
     serviceCheckModeWhitelist: Option[List[ServiceCheckMode]],
     serviceCheckModeBlacklist: Option[List[ServiceCheckMode]],
@@ -162,13 +166,9 @@ class ServicePermission(
   }
 }
 
-case object PermissiveServicePermission
-    extends ServicePermission("", None, None, None, None) {
-  override def permit(input: AnyRef): Boolean = true
-}
-
 object UserAccessRestriction extends ConfigFileReader {
   def configureFromXml(node: Node): UserAccessRestriction = {
+    val id = getText(node, "id").getOrElse("")
     val username = getText(node, "authcate").getOrElse("")
     val servicePermissions = getNodes(node, "servicePermissions")
       .map(spNodes =>
@@ -176,12 +176,14 @@ object UserAccessRestriction extends ConfigFileReader {
           ServicePermission.configureFromXml(spNode)))
       .flatten
       .toList
-    UserAccessRestriction(username, servicePermissions)
+    UserAccessRestriction(id, username, servicePermissions)
   }
-  def empty = UserAccessRestriction("empty", List.empty[ServicePermission])
+  def empty =
+    UserAccessRestriction("empty", "empty", List.empty[ServicePermission])
 }
 
-case class UserAccessRestriction(name: String,
+case class UserAccessRestriction(id: String,
+                                 name: String,
                                  servicePermissions: List[ServicePermission]) {
   def permit(input: AnyRef): Boolean =
     servicePermissions.length == 0 || servicePermissions.exists(sp =>
