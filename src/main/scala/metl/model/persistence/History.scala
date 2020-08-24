@@ -10,6 +10,8 @@ import net.liftweb.common.Logger
 import com.mongodb._
 import scala.xml._
 
+import net.liftweb.json._
+
 abstract class HistoryListener(val name: String) extends LiftActor with Logger {
   protected val filterAction: (CheckResult) => Boolean = (c: CheckResult) =>
     true
@@ -29,6 +31,15 @@ abstract class HistoryListener(val name: String) extends LiftActor with Logger {
                     limit: Option[Int]): List[CheckResult] = Nil
   def start: Unit = {}
   def stop: Unit = {}
+  def asJson: JValue =
+    JObject(
+      List(
+        JField("name", JString(name))
+      ) ::: configAsJson)
+  def asXml: NodeSeq =
+    <historyListener name={name}>{configAsXml}</historyListener>
+  protected def configAsJson: List[JField]
+  protected def configAsXml: List[NodeSeq]
 }
 
 abstract class PushingToRemoteHistoryListener(name: String)
@@ -115,12 +126,17 @@ class InMemoryHistoryListener(override val name: String,
       .getOrElse(timeBoundedAfter)
     limit.map(l => timeBoundedBefore.take(l)).getOrElse(timeBoundedBefore)
   }
+
+  protected def configAsJson: List[JField] = Nil
+  protected def configAsXml: List[NodeSeq] = Nil
 }
 
 object NullListener extends HistoryListener("null") {
   override val filterAction: (CheckResult) => Boolean = (c: CheckResult) =>
     false
   override def outputAction(cr: CheckResult): Unit = {}
+  protected def configAsJson: List[JField] = Nil
+  protected def configAsXml: List[NodeSeq] = Nil
 }
 
 class DebugHistoryListener(override val name: String)
@@ -136,6 +152,8 @@ class DebugHistoryListener(override val name: String)
                                            cr.detail,
                                            cr.data.toString.take(10)))
   }
+  protected def configAsJson: List[JField] = Nil
+  protected def configAsXml: List[NodeSeq] = Nil
 }
 
 object HistoryServer extends LiftActor with ConfigFileReader with Logger {

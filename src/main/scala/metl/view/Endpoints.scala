@@ -1,6 +1,6 @@
 package metl.view
 
-import metl.model.{HistoryServer, ServiceConfigurator}
+import metl.model.{HistoryServer, ServiceConfigurator, JsonReader}
 import net.liftweb.common.{Full, Logger, Empty}
 import net.liftweb.http._
 import net.liftweb.http.rest.RestHelper
@@ -9,6 +9,7 @@ import metl.model.Globals
 import com.metl.liftAuthenticator._
 import metl.model.Sensor
 import scala.util.Random.shuffle
+import net.liftweb.json._
 
 object SystemRestHelper extends RestHelper with Logger {
   def repo = Globals.repository
@@ -97,13 +98,31 @@ object SystemRestHelper extends RestHelper with Logger {
                               200))
         }
 
-    case r @ Req(Keys.Repo :: Keys.ConfigFile :: _, _, _)
+    case r @ Req(Keys.Repo :: Keys.ConfigFile :: _, _, GetRequest)
+        if Globals.isSuperUser =>
+      () =>
+        {
+          Empty
+        }
+    case r @ Req(Keys.Repo :: Keys.ConfigFile :: _, _, PostRequest)
         if Globals.isSuperUser =>
       () =>
         {
           Empty
         }
     case r @ Req(Keys.Repo :: Keys.ValidUsers :: Nil, _, GetRequest)
+        if Globals.isSuperUser =>
+      () =>
+        {
+          Empty
+        }
+    case r @ Req(Keys.Repo :: Keys.ValidUsers :: id :: Nil, _, GetRequest)
+        if Globals.isSuperUser =>
+      () =>
+        {
+          Empty
+        }
+    case r @ Req(Keys.Repo :: Keys.ValidUsers :: id :: Nil, _, PostRequest)
         if Globals.isSuperUser =>
       () =>
         {
@@ -121,11 +140,29 @@ object SystemRestHelper extends RestHelper with Logger {
         {
           Empty
         }
-    case r @ Req(Keys.Repo :: Keys.VisualElements :: Nil, _, GetRequest)
+    case r @ Req(Keys.Repo :: Keys.VisualElements :: id :: Nil, _, GetRequest)
+        if Globals.isSuperUser =>
+      () =>
+        {
+          repo
+            .getVisualElement(id)
+            .map(ve => {
+              JsonResponse(ve.asJson, 200)
+            })
+        }
+    case r @ Req(Keys.Repo :: Keys.VisualElements :: id :: Nil, _, PostRequest)
         if Globals.isSuperUser =>
       () =>
         {
           Empty
+        }
+
+    case r @ Req(Keys.Repo :: Keys.VisualElements :: Nil, _, GetRequest)
+        if Globals.isSuperUser =>
+      () =>
+        {
+          val ves = repo.getVisualElements
+          Full(JsonResponse(JArray(ves.map(_.asJson)), 200))
         }
     case r @ Req(Keys.Repo :: Keys.VisualElements :: Nil, _, PostRequest)
         if Globals.isSuperUser =>
@@ -139,11 +176,30 @@ object SystemRestHelper extends RestHelper with Logger {
         {
           Empty
         }
+    case r @ Req(Keys.Repo :: Keys.HistoryListeners :: id :: Nil, _, GetRequest)
+        if Globals.isSuperUser =>
+      () =>
+        {
+          repo
+            .getHistoryListener(id)
+            .map(hl => {
+              JsonResponse(hl.asJson, 200)
+            })
+        }
+    case r @ Req(Keys.Repo :: Keys.HistoryListeners :: id :: Nil,
+                 _,
+                 PostRequest) if Globals.isSuperUser =>
+      () =>
+        {
+          Empty
+        }
+
     case r @ Req(Keys.Repo :: Keys.HistoryListeners :: Nil, _, GetRequest)
         if Globals.isSuperUser =>
       () =>
         {
-          Empty
+          val hls = repo.getHistoryListeners
+          Full(JsonResponse(JArray(hls.map(_.asJson)), 200))
         }
     case r @ Req(Keys.Repo :: Keys.HistoryListeners :: Nil, _, PostRequest)
         if Globals.isSuperUser =>
@@ -158,6 +214,18 @@ object SystemRestHelper extends RestHelper with Logger {
           Empty
         }
     case r @ Req(Keys.Repo :: Keys.Notifiers :: Nil, _, GetRequest)
+        if Globals.isSuperUser =>
+      () =>
+        {
+          Empty
+        }
+    case r @ Req(Keys.Repo :: Keys.Notifiers :: id :: Nil, _, GetRequest)
+        if Globals.isSuperUser =>
+      () =>
+        {
+          Empty
+        }
+    case r @ Req(Keys.Repo :: Keys.Notifiers :: id :: Nil, _, PostRequest)
         if Globals.isSuperUser =>
       () =>
         {

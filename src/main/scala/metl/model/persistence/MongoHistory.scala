@@ -7,6 +7,8 @@ import Helpers._
 import java.util.Date
 import net.liftweb.common.Logger
 
+import net.liftweb.json._
+import scala.xml._
 import com.mongodb._
 import scala.xml._
 
@@ -16,6 +18,18 @@ class MongoHistoryListener(override val name: String,
                            database: String,
                            collection: String)
     extends PushingToRemoteHistoryListener(name) {
+  protected def configAsJson = List(
+    JField("host", JString(host)),
+    JField("port", JInt(port)),
+    JField("database", JString(database)),
+    JField("collection", JString(collection))
+  )
+  protected def configAsXml = List(
+    <host>{host}</host>,
+    <port>{port.toString}</port>,
+    <database>{database}</database>,
+    <collection>{collection}</collection>
+  )
   var mongo = new MongoClient(host, port)
   //choosing to use the "normal" write concern.  http://api.mongodb.org/java/2.6/com/mongodb/WriteConcern.html for more information
   val defaultWriteConcern: WriteConcern = WriteConcern.valueOf("NORMAL")

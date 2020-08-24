@@ -6,11 +6,11 @@ import net.liftweb.actor._
 import net.liftweb.common._
 import http._
 import js._
-import json.JsonAST._
 import util.{Helpers, _}
 import Helpers._
 
 import xml._
+import net.liftweb.json._
 import java.util.Date
 
 import net.liftweb.common.Logger
@@ -47,9 +47,22 @@ trait VisualElement {
         JField("serverName", JString(srn)),
         JField("serverLabel", JString(srl)),
         JField("label", JString(label))
-      ) ::: asJson)
+      ) ::: configAsJson)
   }
-  protected def asJson: List[JField] = Nil
+  def asJson: JValue =
+    JObject(
+      List(
+        JField("id", JString(id)),
+        JField("serviceName", JString(serviceName)),
+        JField("serviceLabel", JString(serviceLabel)),
+        JField("serverName", JString(serverName)),
+        JField("serverLabel", JString(serverLabel)),
+        JField("label", JString(label))
+      ) ::: configAsJson)
+  def asXml: NodeSeq =
+    <visualElement id={id} label={label}>{configAsXml}</visualElement>
+  protected def configAsJson: List[JField]
+  protected def configAsXml: List[NodeSeq]
 }
 
 case class HtmlInformation(val metadata: SensorMetaData,
@@ -57,10 +70,9 @@ case class HtmlInformation(val metadata: SensorMetaData,
                            html: NodeSeq)
     extends VisualElement {
   override val label: String = "%s information".format(name)
-  override def asJson = List(
-    JField("type", JString("htmlInformation")),
-    JField("html", JString(html.toString))
-  )
+  protected def configAsJson: List[JField] =
+    List(JField("html", JString(html.toString)))
+  protected def configAsXml: List[NodeSeq] = List(<html>{html}</html>)
 }
 
 case class Information(val metadata: SensorMetaData,
@@ -68,10 +80,10 @@ case class Information(val metadata: SensorMetaData,
                        message: String)
     extends VisualElement {
   override val label: String = "%s information".format(name)
-  override def asJson = List(
-    JField("type", JString("information")),
-    JField("information", JString(message))
-  )
+  protected def configAsJson: List[JField] =
+    List(JField("message", JString(message)))
+  protected def configAsXml: List[NodeSeq] =
+    List(<information>{message}</information>)
 }
 
 case class ErrorInformation(metadata: SensorMetaData,
@@ -81,11 +93,16 @@ case class ErrorInformation(metadata: SensorMetaData,
                             errors: List[String])
     extends VisualElement {
   override val label: String = "Error: %s".format(name)
-  override def asJson = List(
+  override def configAsJson = List(
     JField("type", JString("error")),
     JField("source", JString(sourceString)),
     JField("expectedPeriod", JString(expectedPeriod)),
     JField("errors", JArray(errors.map(e => JString(e))))
+  )
+  protected def configAsXml: List[NodeSeq] = List(
+    <source>{sourceString}</source>,
+    <expectedPeriod>{expectedPeriod}</expectedPeriod>,
+    <errors>{errors.map(e => <error>{e}</error>)}</errors>
   )
 }
 
@@ -103,7 +120,11 @@ class EndpointInformationWithHtml(val metadata: SensorMetaData,
                                   endpoints: List[EndpointDescriptor])
     extends VisualElement {
   override val label: String = name
-  override def asJson = List(
+  override def configAsXml = List(
+    <html>{html}</html>,
+    <endpoints>{endpoints.map(ep => <endpoint name={ep.name} url={ep.endpoint} description={ep.description} />)}</endpoints>
+  )
+  override def configAsJson = List(
     JField("type", JString("endpoints")),
     JField("information", JString(html.toString)),
     JField(
@@ -135,6 +156,8 @@ case object NullCheck extends VisualElement {
                                 "null",
                                 "null")
   override val label = "null"
+  override def configAsXml = Nil
+  override def configAsJson = Nil
 }
 
 case class SensorMetaData(name: String,
@@ -282,7 +305,7 @@ abstract class Sensor(val metadata: SensorMetaData)
     }
     case _ => {}
   }
-  override def asJson = {
+  override def configAsJson = {
     val (why, detail) = lastStatus
       .map(s =>
         s match {
@@ -308,6 +331,17 @@ abstract class Sensor(val metadata: SensorMetaData)
     //lastStatus.map(ls => JField("status",JBool(ls))).toList :::
     //lastCheck.map(lc => JField("lastCheck",JInt(lc.getTime()))).toList
   }
+  override def configAsXml =
+    List(
+      <name>{name}</name>,
+      <period>{pollInterval.millis}</period>,
+      <mode>{mode.toString}</mode>,
+      <mode>{severity.toString}</mode>,
+      <expectFail>{metadata.expectFail.toString}</expectFail>,
+      <history>{(history.drop(1).map(_.generateXml))}</history>
+    ) ::: history.headOption.toList.flatMap(h => {
+      h.generateXml
+    })
   private var isStopped = true
   def isRunning: Boolean = !isStopped
   protected def performCheck = {}

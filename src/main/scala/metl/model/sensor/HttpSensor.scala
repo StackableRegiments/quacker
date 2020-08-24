@@ -6,19 +6,30 @@ import net.liftweb.common.Full
 import net.liftweb.util.Helpers._
 
 import scala.xml.Node
+import net.liftweb.json._
 
-object HTTPResponseMatchers extends ConfigFileReader {
-  import net.liftweb.json._
-  import Serialization._
-  protected implicit val formats = DefaultFormats
+object HTTPResponseMatchers extends ConfigFileReader with JsonReader {
   def configureFromJson(jv: JValue): HTTPResponseMatcher = {
     val matcher = new HTTPResponseMatcher
-    // TODO - fix this
+    asArrayOfObjs(jv \ "matcher").foreach(mn => {
+      lazy val vf = Matchers.configureVerificationFuncFromJson(mn)
+      asString(mn \ "name") match {
+        case Some("response")   => matcher.setResponseVerifier(vf)
+        case Some("requestUrl") => matcher.setRequestUrlVerifier(vf)
+        case Some("duration")   => matcher.setDurationVerifier(vf)
+        case Some("statusCode") => matcher.setCodeVerifier(vf)
+        case Some("headers")    => matcher.setHeadersVerifier(vf)
+        case Some("retries")    => matcher.setRetriesVerifier(vf)
+        case Some("redirects")  => matcher.setRedirectsVerifier(vf)
+        case Some("exceptions") => matcher.setExceptionsVerifier(vf)
+        case _                  => {}
+      }
+    })
     matcher
   }
   def configureFromXml(n: Node): HTTPResponseMatcher = {
     val matcher = new HTTPResponseMatcher
-    getNodes(n, "matcher").map(mn => {
+    getNodes(n, "matcher").foreach(mn => {
       getAttr(mn, "name").getOrElse("unknown") match {
         case "response" =>
           matcher.setResponseVerifier(

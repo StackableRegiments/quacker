@@ -211,6 +211,7 @@ case class CheckResult(id: String,
       .toList
 
   }
+  def generateXml: List[NodeSeq] = Nil
 }
 
 abstract class ErrorActor(name: String) extends LiftActor {

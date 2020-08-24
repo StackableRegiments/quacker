@@ -147,6 +147,18 @@ class SqlHistoryListener(override val name: String,
                          settings: DBSettings = DBSettings())
     extends PushingToRemoteHistoryListener(name)
     with Safely {
+  protected def configAsJson =
+    List(
+      JField("driver", JString(driver)),
+      JField("url", JString(url))
+    ) ::: username.toList.map(v => JField("username", JString(v))) ::: password.toList
+      .map(v => JField("password", JString(v)))
+  protected def configAsXml = List(
+    <driver>{driver}</driver>,
+    <url>{url}</url>,
+    <username>{username}</username>,
+    <password>{password}</password>
+  )
   object LocalConnectionIdentifier
       extends NamedConnectionIdentifier(
         "%s_%s_%s".format(driver, url, username))
