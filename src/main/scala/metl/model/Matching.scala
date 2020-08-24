@@ -3,6 +3,8 @@ package metl.model
 import metl.model.sensor.VerificationResponse
 
 import scala.xml._
+import net.liftweb.json._
+import Serialization._
 import scala.util.matching.Regex
 
 class Matcher {
@@ -149,13 +151,22 @@ case class DependencyDescription(pinger: String,
                                  server: Option[String],
                                  service: Option[String],
                                  serviceCheckMode: Option[ServiceCheckMode])
-object DependencyMatchers extends ConfigFileReader {
-  import net.liftweb.json._
-  import Serialization._
-  protected implicit val formats = DefaultFormats
+object DependencyMatchers extends ConfigFileReader with JsonReader {
   def configureFromJson(jv: JValue): DependencyMatcher = {
     val matcher = new DependencyMatcher
-    //TODO
+    asArrayOfObjs(jv \ "matcher").foreach(jo => {
+      lazy val vf = Matchers.configureVerificationFuncFromJson(jo)
+      asString(jo \ "name") match {
+        case Some("lastCheckBegin")     => matcher.setLastCheckBeginVerifier(vf)
+        case Some("lastUptime")         => matcher.setLastUptimeVerifier(vf)
+        case Some("lastCheckCompleted") => matcher.setLastCheckVerifier(vf)
+        case Some("lastWhy")            => matcher.setLastWhyVerifier(vf)
+        case Some("lastDetails")        => matcher.setLastDetailsVerifier(vf)
+        case Some("lastStatus")         => matcher.setLastStatusVerifier(vf)
+        case Some("checkIsRunning")     => matcher.setIsRunningVerifier(vf)
+        case _                          => {}
+      }
+    })
     matcher
   }
 
@@ -301,12 +312,87 @@ class DependencyMatcher {
   }
 }
 
-object Matchers extends ConfigFileReader {
-  import net.liftweb.json._
-  import Serialization._
-  protected implicit val formats = DefaultFormats
+object Matchers extends ConfigFileReader with JsonReader {
   def configureFromJson(jv: JValue): Map[String, Matcher] = {
-    Map.empty[String, Matcher] //TODO
+    Map(asArrayOfObjs(jv \ "matcher").map(t => {
+      val valueName = asString(t \ "name").getOrElse("unknown")
+      val matcher = configureVerificationFuncFromJson(t)
+      (valueName, matcher)
+    }): _*)
+  }
+  def configureVerificationFuncFromJson(jo: JValue): Matcher = {
+    val noneFuncs = asArrayOfObjs(jo \ "none").map(o => {
+      val children = configureVerificationFuncFromJson(o)
+      NoneMatcher(children.getSubMatchers)
+    })
+    val someFuncs = asArrayOfObjs(jo \ "some").map(o => {
+      val children = configureVerificationFuncFromJson(o)
+      SomeMatcher(children.getSubMatchers)
+    })
+    val notSomeFuncs = asArrayOfObjs(jo \ "notSome").map(o => {
+      val children = configureVerificationFuncFromJson(o)
+      SomeMatcher(children.getSubMatchers)
+    })
+    val someNotFuncs = asArrayOfObjs(jo \ "someNot").map(o => {
+      val children = configureVerificationFuncFromJson(o)
+      SomeNotMatcher(children.getSubMatchers)
+    })
+    val allFuncs = asArrayOfObjs(jo \ "all").map(a => {
+      val children = configureVerificationFuncFromJson(a)
+      AllMatcher(children.getSubMatchers)
+    })
+    val lessThanFuncs = asArrayOfObjs(jo \ "lessThan").map(l => {
+      val matcher = (l \ "value").extractOpt[Double].getOrElse(Double.NaN)
+      IsLessThanMatcher(matcher)
+    })
+    val moreThanFuncs = asArrayOfObjs(jo \ "greaterThan").map(m => {
+      val matcher = (m \ "value").extractOpt[Double].getOrElse(Double.NaN)
+      IsGreaterThanMatcher(matcher)
+    })
+    val equalsFuncs = asArrayOfObjs(jo \ "numericEquals").map(e => {
+      val matcher = (e \ "value").extractOpt[Double].getOrElse(Double.NaN)
+      IsNumericallyEqualsMatcher(matcher)
+    })
+    val booleanEqualsFuncs = asArrayOfObjs(jo \ "booleanEquals").map(l => {
+      val matcher = (l \ "value").extractOpt[Boolean].getOrElse(false)
+      new IsBooleanEqualsMatcher(matcher)
+    })
+    val dependencyFuncs = asArrayOfObjs(jo \ "dependency").map(o => {
+      val pinger = asString(o \ "check").getOrElse("unknown")
+      val service = asString(o \ "service")
+      val server = asString(o \ "server")
+      val serviceCheckMode =
+        asString(o \ "serviceCheckMode").map(scm => ServiceCheckMode.parse(scm))
+      val desc =
+        DependencyDescription(pinger, server, service, serviceCheckMode)
+      val matcher = DependencyMatchers.configureFromJson(o)
+      DependencyCheckMatcher(desc, matcher)
+    })
+    val equalsStringFuncs = asArrayOfObjs(jo \ "stringEquals").map(es => {
+      val matcher = asString(es \ "value").getOrElse("")
+      IsStringEqualsMatcher(matcher)
+    })
+    val containsStringFuncs = asArrayOfObjs(jo \ "stringContains").map(es => {
+      val matcher = asString(es \ "value").getOrElse("")
+      IsStringContainsMatcher(matcher)
+    })
+    val caseInsensitiveContainsStringFuncs =
+      asArrayOfObjs(jo \ "stringContainsIgnoreCase").map(es => {
+        val matcher = asString(es \ "value").getOrElse("").trim.toLowerCase
+        IsStringContainsIgnoreCaseMatcher(matcher)
+      })
+    val regexFuncs = asArrayOfObjs(jo \ "regexMatches").map(es => {
+      val matcher = asString(es \ "value").getOrElse("")
+      val regexPattern = matcher.r
+      IsRegexMatchedMatcher(matcher, regexPattern)
+    })
+    val caseInsensitiveEqualsStringFuncs =
+      asArrayOfObjs(jo \ "stringEqualsIgnoreCase").map(es => {
+        val matcher = asString(es \ "value").getOrElse("").trim.toLowerCase
+        IsStringEqualsIgnoreCaseMatcher(matcher)
+      })
+    AllMatcher(
+      noneFuncs ::: someFuncs ::: someNotFuncs ::: allFuncs ::: lessThanFuncs ::: moreThanFuncs ::: equalsFuncs ::: booleanEqualsFuncs ::: equalsStringFuncs ::: containsStringFuncs ::: caseInsensitiveContainsStringFuncs ::: regexFuncs ::: caseInsensitiveEqualsStringFuncs ::: dependencyFuncs)
   }
   def configureFromXml(n: Node): Map[String, Matcher] = {
     Map(getNodes(n, "matcher").map(t => {

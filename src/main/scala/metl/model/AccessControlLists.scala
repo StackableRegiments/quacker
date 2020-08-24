@@ -10,7 +10,29 @@ import com.mongodb.BasicDBObject
 import com.metl.cas._
 import metl.comet._
 
-object ServicePermission extends ConfigFileReader {
+import net.liftweb.json._
+
+object ServicePermission extends ConfigFileReader with JsonReader {
+  def configureFromJson(jo: JObject): ServicePermission = {
+    val serviceName = asString(jo \ "name").getOrElse("unknown")
+    val whitelistedServiceCheckModes = optOnKey(
+      jo,
+      "allowedServiceCheckModes",
+      v => asArrayOfStrings(v).map(ServiceCheckMode.parse _))
+    val blacklistedServiceCheckModes = optOnKey(
+      jo,
+      "disallowedServiceCheckModes",
+      v => asArrayOfStrings(v).map(ServiceCheckMode.parse _))
+    val whitelistedServers =
+      optOnKey(jo, "allowedServers", v => asArrayOfStrings(v))
+    val blacklistedServers =
+      optOnKey(jo, "disallowedServers", v => asArrayOfStrings(v))
+    new ServicePermission(serviceName,
+                          whitelistedServiceCheckModes,
+                          blacklistedServiceCheckModes,
+                          whitelistedServers,
+                          blacklistedServers)
+  }
   def configureFromXml(node: Node): ServicePermission = {
     val serviceName = getAttr(node, "name").getOrElse("unknown")
     val whitelistedServiceCheckModes =
@@ -166,7 +188,19 @@ case class ServicePermission(
   }
 }
 
-object UserAccessRestriction extends ConfigFileReader {
+object UserAccessRestriction extends ConfigFileReader with JsonReader {
+  def configureFromJson(jv: JValue): UserAccessRestriction = {
+    jv match {
+      case jo: JObject => {
+        val id = asString(jo \ "id").getOrElse("")
+        val username = asString(jo \ "authcate").getOrElse("")
+        val servicePermissions = asArrayOfObjs(jo \ "services").map(c =>
+          ServicePermission.configureFromJson(c))
+        UserAccessRestriction(id, username, servicePermissions)
+      }
+      case _ => empty
+    }
+  }
   def configureFromXml(node: Node): UserAccessRestriction = {
     val id = getText(node, "id").getOrElse("")
     val username = getText(node, "authcate").getOrElse("")
@@ -190,9 +224,15 @@ case class UserAccessRestriction(id: String,
       sp.permit(input))
 }
 
-object ValidUsers extends ConfigFileReader {
-  def configureFromXml(x: Node): List[String] = {
-    var output = List.empty[String]
+object ValidUsers extends ConfigFileReader with JsonReader {
+  def configureFromJson(n: JValue): List[UserAccessRestriction] = {
+    n match {
+      case JArray(items) => items.flatMap(configureFromJson _)
+      case jo: JObject   => List(UserAccessRestriction.configureFromJson(jo))
+      case _             => Nil
+    }
+  }
+  def configureFromXml(x: Node): List[UserAccessRestriction] = {
     var newUserNodes = List.empty[UserAccessRestriction]
     getNodes(x, "validUsers").foreach(validUsersNode => {
       val newUsers = getNodes(validUsersNode, "validUser")
@@ -203,10 +243,6 @@ object ValidUsers extends ConfigFileReader {
       newUserNodes = newUserNodes ::: newUsers
       Globals.setValidUsers(newUsers)
     })
-    newUserNodes.length match {
-      case 0     => {}
-      case other => output = output ::: List("loaded %s users".format(other))
-    }
-    output
+    newUserNodes
   }
 }
