@@ -405,13 +405,14 @@ case class SimpleMailer(smtp: String,
                       subject: String,
                       message: String): Unit = {
     try {
+			trace("sendingMailMessage to:%s, from:%s, subject:%s, message:%s".format(fromAddress,subject,message,to))
       sendMail(
         From(fromAddress.getOrElse("Service.Monitor@stackableregiments.com")),
         Subject(subject),
         PlainMailBodyType(message) :: List(To(to)): _*)
     } catch {
       case e: Throwable => {
-        error("exception while sending mail: %s".format(e.getMessage), e)
+        error("exception while sending mail: to:%s from: %s, %s".format(fromAddress, to, e.getMessage), e)
       }
     }
   }

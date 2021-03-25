@@ -4,6 +4,9 @@
       <Pattern>LOG %d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</Pattern>
     </encoder>
   </appender>
+	<logger name="net.liftweb.util.Mailer" level="trace" />
+	<logger name="metl.model.SimpleMailer" level="trace" />
+	<logger name="metl.model.ErrorMailer" level="trace" />
   <root level="WARN">
     <appender-ref ref="STDOUT"/>
   </root>
