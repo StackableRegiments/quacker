@@ -32,9 +32,11 @@ object ServiceConfigurator extends Logger {
     var items = Map.empty[String, Tuple2[Boolean, String]]
     path.listFiles
       .sortWith(_.getName < _.getName)
-      .map(f => {
+      .foreach(f => {
         val pathName = f.getAbsolutePath
-        if (f.isDirectory) {
+        if (f.getName.endsWith(".disabled") || f.getName.contains("..")) {
+          // skipping items
+        } else if (f.isDirectory) {
           if (f.getName == ".git" || f.getName == ".svn" || f.getName == ".hg" || f.getName == "_svn" || f.getName == "_git" || f.getName == "_hg") {
             items = items.updated(
               pathName,
