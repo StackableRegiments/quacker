@@ -401,11 +401,10 @@ case class SimpleMailer(smtp: String,
       new javax.mail.PasswordAuthentication(username, password)
   })
   def sendMailMessage(to: String,
-                      who: String,
                       subject: String,
                       message: String): Unit = {
     try {
-			trace("sendingMailMessage to:%s, from:%s, subject:%s, message:%s".format(fromAddress,subject,message,to))
+			trace("sendingMailMessage to:%s, from:%s, subject:%s, message:%s".format(to, fromAddress,subject,message))
       sendMail(
         From(fromAddress.getOrElse("Service.Monitor@stackableregiments.com")),
         Subject(subject),
