@@ -80,16 +80,33 @@ then
   exit_if_failed
 fi
 
-JAVA_MAX_MEM_FILE="envs/$NS/deployment-settings/JAVA_MAX_MEM"
-if [ -f $JAVA_MAX_MEM_FILE ];
+MAX_MEM_FILE="envs/$NS/deployment-settings/JAVA_MAX_MEM"
+MAX_MEM=$(cat ./default-max-mem)
+if [ -f $MAX_MEM_FILE ];
 then
-  sed -i "s/<<JAVA_MAX_MEM>>/$(cat $JAVA_MAX_MEM_FILE)/g" $DEPLOYMENT_FILE
-  #sed -i "/name: \"JAVA_MAX_MEM\"/{$!{N;s/value:.*$/value: \"$(cat $JAVA_MAX_MEM_FILE)\"/;ty;P;D;:y}}" $DEPLOYMENT_FILE
-  exit_if_failed
-else
-  sed -i "s/<<JAVA_MAX_MEM>>/$(cat ./default-max-mem)/g" $DEPLOYMENT_FILE
-  exit_if_failed
+  MAX_MEM=$(cat $MAX_MEM_FILE)
 fi
+
+sed -i "s/<<MAX_MEM>>/$MAX_MEM/g" $DEPLOYMENT_FILE
+
+JAVA_OVERHEAD_FILE="envs/$NS/deployment-settings/JAVA_OVERHEAD_MEM"
+JAVA_OVERHEAD_MEM=$(cat ./default-overhead-mem)
+if [ -f $JAVA_OVERHEAD_FILE ];
+then
+        JAVA_OVERHEAD_MEM=$(cat $JAVA_OVERHEAD_FILE)
+fi
+
+JAVA_MAX_MEM=$( expr $MAX_MEM - $JAVA_OVERHEAD_MEM  )
+
+sed -i "s/<<JAVA_OVERHEAD_MEM>>/$JAVA_OVERHEAD_MEM/g" $DEPLOYMENT_FILE
+exit_if_failed
+
+sed -i "s/<<JAVA_MAX_MEM>>/$JAVA_MAX_MEM/g" $DEPLOYMENT_FILE
+exit_if_failed
+
+echo "max mem $MAX_MEM"
+echo "java overhead $JAVA_OVERHEAD_MEM"
+echo "java heap $JAVA_MAX_MEM"
 
 JAVA_OPTIONS_FILE="envs/$NS/deployment-settings/JAVA_OPTIONS"
 if [ -f $JAVA_OPTIONS_FILE ];

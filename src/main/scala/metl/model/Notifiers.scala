@@ -425,7 +425,8 @@ class ErrorMailer(name: String,
                   fromAddress: Option[String] = None)
     extends LogChangesErrorActor(name) {
   protected val ssl: Boolean = true
-  protected lazy val mailer = SimpleMailer(smtp, port, ssl, username, password, fromAddress)
+  protected lazy val mailer =
+    SimpleMailer(smtp, port, ssl, username, password, fromAddress)
   protected val messagePrefix: String = ""
   protected val messageSuffix: String = ""
   protected val messageSubject: String = "alert"
