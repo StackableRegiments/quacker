@@ -401,17 +401,22 @@ case class SimpleMailer(smtp: String,
       new javax.mail.PasswordAuthentication(username, password)
   })
   def sendMailMessage(to: String,
+                      who: String,
                       subject: String,
                       message: String): Unit = {
     try {
-			trace("sendingMailMessage to:%s, from:%s, subject:%s, message:%s".format(to, fromAddress,subject,message))
+      trace(
+        "sendingMailMessage to:%s, from:%s, subject:%s, message:%s"
+          .format(to, fromAddress, subject, message))
       sendMail(
         From(fromAddress.getOrElse("Service.Monitor@stackableregiments.com")),
         Subject(subject),
         PlainMailBodyType(message) :: List(To(to)): _*)
     } catch {
       case e: Throwable => {
-        error("exception while sending mail: to:%s from: %s, %s".format(fromAddress, to, e.getMessage), e)
+        error("exception while sending mail: to:%s from: %s, %s"
+                .format(fromAddress, to, e.getMessage),
+              e)
       }
     }
   }

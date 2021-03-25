@@ -103,7 +103,7 @@ libraryDependencies in ThisBuild ++= {
     "org.ekrich" %% "sconfig" % "0.8.0",
     "javax.servlet" % "javax.servlet-api" % "3.0.1" % "provided",
     "org.eclipse.jetty" % "jetty-webapp" % "9.4.11.v20180605",
-    "net.rcarz" % "jira-client" % "0.6.3-IHTSDO",
+//    "net.rcarz" % "jira-client" % "0.6.3-IHTSDO",
     "javax.mail" % "javax.mail-api" % "1.6.2",
     "com.sun.mail" % "javax.mail" % "1.6.2",
     "com.hacklanta" %% "lift-formality_3.3" % "1.2.0",
