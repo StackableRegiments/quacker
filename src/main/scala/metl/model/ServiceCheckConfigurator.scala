@@ -28,16 +28,19 @@ object ServiceCheckConfigurator extends ConfigFileReader with Logger {
         val expectFail = getBool(sc, "expectFail")
         var failed = false
         var errors = List.empty[String]
-        val metadata = SensorMetaData(serviceCheckName,
-                                      label,
-                                      mode,
-                                      severity,
-                                      serviceName,
-                                      serviceLabel,
-                                      serverName,
-                                      serverLabel,
-                                      expectFail.getOrElse(false),
-                                      timeout)
+        val metadata = SensorMetaData(
+          serviceCheckName,
+          label,
+          mode,
+          severity,
+          serviceName,
+          serviceLabel,
+          serverName,
+          serverLabel,
+          expectFail.getOrElse(false),
+          timeout,
+          acceptedFailures.getOrElse(1)
+        )
         def getOrError[A](value: Option[A], default: A, error: String): A =
           value.getOrElse({
             failed = true
