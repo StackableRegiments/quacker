@@ -583,6 +583,7 @@ class CleanHttpClient(connMgr: ClientConnectionManager)
             response.startMilis
           ))
       }
+      /*
       case 400 =>
         throw new WebException(
           "bad request sent to %s: %s".format(uri, tempOutput),
@@ -610,6 +611,8 @@ class CleanHttpClient(connMgr: ClientConnectionManager)
             .format(other, uri),
           other,
           uri)
+       */
+      case other => response
     }
   }
   protected def applyClientCookies(request: AbstractHttpMessage, uri: URI) = {
