@@ -251,8 +251,13 @@ abstract class LogChangesErrorActor(name: String) extends ErrorActor(name) {
         why,
         (when, Math.min(interval * exponentialFactor, maximumInterval))))
   }
-  private def shouldFail(who: String, why: String, when: Long): Boolean = {
-    val lastMail = tryo(recentActions(who)(why)).openOr((0L, initialInterval))
+  private def shouldFail(who: String,
+                         serviceName: String,
+                         serverName: String,
+                         why: String,
+                         when: Long): Boolean = {
+    val raKey = "%s||%s||%s".format(serviceName, serverName, who)
+    val lastMail = tryo(recentActions(raKey)(why)).openOr((0L, initialInterval))
     ((when - lastMail._1) > lastMail._2)
   }
   override def registerFailure(cr: CheckResult): Unit = {
@@ -265,7 +270,8 @@ abstract class LogChangesErrorActor(name: String) extends ErrorActor(name) {
     val lastUp = cr.lastUp.map(lu => lu.toString).openOr("NEVER")
     val mode = cr.mode
     val when = date.getTime
-    if (shouldFail(who, why, when)) {
+    val raKey = "%s||%s||%s".format(serviceName, serverName, who)
+    if (shouldFail(who, serviceName, serverName, why, when)) {
       doFailureAction(who,
                       serviceName,
                       serverName,
@@ -274,7 +280,7 @@ abstract class LogChangesErrorActor(name: String) extends ErrorActor(name) {
                       date,
                       lastUp,
                       mode)
-      updateRecentActions(who, why, when)
+      updateRecentActions(raKey, why, when)
     }
   }
   override def registerSuccess(cr: CheckResult): Unit = {
@@ -284,9 +290,10 @@ abstract class LogChangesErrorActor(name: String) extends ErrorActor(name) {
     val date = cr.when
     val lastUp = cr.lastUp.map(lu => lu.toString).openOr("NEVER")
     val mode = cr.mode
-    if (recentActions(who).keys.toList.length > 0) {
+    val raKey = "%s||%s||%s".format(serviceName, serverName, who)
+    if (recentActions(raKey).keys.toList.length > 0) {
       doSuccessAction(who, serviceName, serverName, date, lastUp, mode)
-      recentActions.update(who, Map.empty[String, Tuple2[Long, Long]])
+      recentActions.update(raKey, Map.empty[String, Tuple2[Long, Long]])
     }
   }
   protected def doSuccessAction(who: String,
