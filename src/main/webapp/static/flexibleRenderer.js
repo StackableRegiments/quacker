@@ -157,7 +157,7 @@ $(function(){
         serviceNode.attr("id",generateServiceId(serviceName));
         serviceNode.find(".serviceCollapser").html(getCollapserOpen());
         serviceNode.find(".serviceLabel").text(serviceLabel);
-        // setupCollapser(serviceNode, serviceName, ".serviceCollapser", ".serviceHideable", "core.expandService", "core.collapseService", defaultExpandedServices);
+        setupCollapser(serviceNode, serviceName, ".serviceCollapser", ".serviceHideable", "core.expandService", "core.collapseService", defaultExpandedServices);
         return withElem(serviceNode,serviceName,servers);
     };
     var updateServiceElem = function(serviceNode,serviceName,serviceLabel,servers){
@@ -172,7 +172,7 @@ $(function(){
         var serverNode = templates["server"].clone();
         serverNode.attr("id",generateServerId(serverName));
         serverNode.find(".serverLabel").text(serverLabel);
-        // setupCollapser(serverNode, serverName, ".serverCollapser", ".serverHideable", "core.expandServer", "core.collapseServer", defaultExpandedServers);
+        setupCollapser(serverNode, serverName, ".serverCollapser", ".serverHideable", "core.expandServer", "core.collapseServer", defaultExpandedServers);
         return withElem(serverNode,serverName,serverLabel,checks);
     };
 
@@ -197,6 +197,10 @@ $(function(){
         checkNode.find(".checkName").text(check.name);
         var checkLabel = checkNode.find(".checkLabel");
         checkLabel.text(check.label);
+				var line1 = checkNode.find(".summaryLine1");
+				line1.find(".checkServiceContainer").hide();
+				line1.find(".checkServerContainer").hide();
+				var line2 = checkNode.find(".summaryLine2");
         checkNode.find(".checkServiceName").text(check.serviceName);
         checkNode.find(".checkServiceLabel").text(check.serviceLabel);
         checkNode.find(".checkServerName").text(check.serverName);
@@ -241,6 +245,7 @@ $(function(){
                 });
             });
 
+//				console.log('structure',structure);
         var rootElem = $(rootSelectorString);
         var existingDomElements = rootElem.find(".checkSummary");
         _.forEach(existingDomElements,function(domElement) {
@@ -253,21 +258,39 @@ $(function(){
 
         checkStructure = _.sortBy(checkStructure,['status','serviceLabel','serverLabel','label']);
 
+				_.forEach(structure,function(servers,serviceName){
+					var serviceElem = rootElem.find("#"+generateServiceId(serviceName));
+					if (serviceElem[0] === undefined){
+						serviceElem = createServiceElem(servers,serviceName,serviceName,function(e){return e; });
+						rootElem.append(serviceElem);
+					}
+					_.forEach(servers,function(checksForServer,serverName){
+						var serverElem = rootElem.find("#"+generateServerId(serverName));
+						if (serverElem[0] === undefined){
+							serverElem = createServerElem(checksForServer,serverName,serverName,function(e){ return e; });
+							serviceElem.find(".servers").append(serverElem);
+						}
+						_.forEach(checksForServer,function(check){
+							var checkName = check.name;
+							var checkRoot = rootElem.find("#"+generateCheckId(check));
+							if (checkRoot[0] === undefined){
+									 checkRoot = createCheckElem(check,updateCheckElem);
+									 rootElem.append(checkRoot);
+							} else {
+								 if ("dirty" in check && check.dirty === true) {
+										 updateCheckElem(checkRoot, check);
+										 delete check.dirty;
+								 }
+							}
+							checkRoot.find(".checkSvg").empty();
+							var singleCheckStructure = _.filter(checkStructure, function(o){
+									return o.id === check.id;
+							});
+						});
+					});
+				});
+
         _.forEach(checkStructure,function(check,checkName){
-           var checkRoot = rootElem.find("#"+generateCheckId(check));
-           if (checkRoot[0] === undefined){
-               checkRoot = createCheckElem(check,updateCheckElem);
-               rootElem.append(checkRoot);
-           } else {
-               if ("dirty" in check && check.dirty === true) {
-                   updateCheckElem(checkRoot, check);
-                   delete check.dirty;
-               }
-           }
-           checkRoot.find(".checkSvg").empty();
-           var singleCheckStructure = _.filter(checkStructure, function(o){
-                return o.id === check.id;
-            });
         });
 
         var passing = _.size(_.filter(checkStructure,function(check){return check.status;}));

@@ -54,17 +54,9 @@ var structureByServices = function(structure){
     });
 };
 var paused = false;
-var retile = function() {
-    $('.serviceOuter').masonry({
-      itemSelector: '.checkSummary'
-      // columnWidth: 200
-    });
-//    console.log("Retiled");
-};
 var renderChecks = _.once(function(){
 	$(function(){
 		var containerRootNode = $("#dashboardServerContainer");
-		console.log('rendering checks');
 		var redraw = function () {
 			if (!paused){
 				var serviceStructure = structureByServices(jsonStructure);
@@ -77,10 +69,6 @@ var renderChecks = _.once(function(){
 						}
 						pluginSystem.fireCommand('renderCheckHtml','core.renderChecks',serviceNode,checks);
 						pluginSystem.fireCommand('retile','core.renderChecks');
-	/*            var thisSvgRootNode = serviceNode.find(".serviceSvg");
-						var serviceIdInner = "service_" + serviceName;
-						// thisSvgRootNode.html(renderSvgRings(checks,serviceIdInner));
-						thisSvgRootNode.html(renderSvgCircles(checks,serviceIdInner));*/
 				});
 			}
 			requestAnimationFrame(redraw);
@@ -125,7 +113,6 @@ function createHistoricalChecks(newChecks){
   renderHistoricalChecks();
 }
 function createChecks(newChecks){
-		console.log('main.createChecks',newChecks);
     if (_.isArray(newChecks)){
         _.forEach(newChecks,function(check){
             createCheck(check);
