@@ -223,7 +223,7 @@ $(function(){
     };
 
     var safetyId = function(input){
-        return _.replace(input," ","_");
+        return input.replaceAll(" ","_").replaceAll(".","_");
     };
     var render = function(rootSelectorString,checkStructure) {
         var serviceNameToLabel = {};
@@ -264,18 +264,20 @@ $(function(){
 						serviceElem = createServiceElem(servers,serviceName,serviceName,function(e){return e; });
 						rootElem.append(serviceElem);
 					}
+					var serversRoot = serviceElem.find(".servers");
 					_.forEach(servers,function(checksForServer,serverName){
-						var serverElem = rootElem.find("#"+generateServerId(serverName));
+						var serverElem = serversRoot.find("#"+generateServerId(serverName));
 						if (serverElem[0] === undefined){
 							serverElem = createServerElem(checksForServer,serverName,serverName,function(e){ return e; });
-							serviceElem.find(".servers").append(serverElem);
+							serversRoot.append(serverElem);
 						}
+						var checksRoot = serverElem.find(".checks");
 						_.forEach(checksForServer,function(check){
 							var checkName = check.name;
-							var checkRoot = rootElem.find("#"+generateCheckId(check));
+							var checkRoot = checksRoot.find("#"+generateCheckId(check));
 							if (checkRoot[0] === undefined){
 									 checkRoot = createCheckElem(check,updateCheckElem);
-									 rootElem.append(checkRoot);
+									 checksRoot.append(checkRoot);
 							} else {
 								 if ("dirty" in check && check.dirty === true) {
 										 updateCheckElem(checkRoot, check);
