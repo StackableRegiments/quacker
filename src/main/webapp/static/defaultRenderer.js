@@ -510,6 +510,7 @@ $(function(){
         checkNode.find(".checkSeverityContainer").find(".tooltiptext").text(checkSeverity.text);
         checkNode.find(".checkMode").text(check.mode);
         checkNode.find(".checkFrequency").text(formatTimespan(check.period));
+				checkNode.find(".checkStatus").remove();
         setupCollapser(checkNode, check.name, ".checkCollapser", ".checkHideable", "core.expandCheck", "core.collapseCheck", defaultExpandedChecks);
         return withElem(checkNode,check);
     };
@@ -518,6 +519,7 @@ $(function(){
         checkNode.find(".lastCheck").text(new Date(check.lastCheck));
         checkNode.find(".checkWhy").text(check.why);
         checkNode.find(".checkDetail").text(check.detail);
+				checkNode.find(".checkStatus").remove();
         return checkNode;
     };
 

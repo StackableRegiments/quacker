@@ -113,35 +113,59 @@ $(function(){
 	}
 	var getCollapserClosed = function(){return getCollapser("\uf055");};
 	var getCollapserOpen = function(){return getCollapser("\uf056");};
-	function setupCollapser(containerNode, elemType, containerName, collapserSelector, hideableSelector, expandCommand, collapseCommand, defaultExpanded) {
-			var collapser = containerNode.find(collapserSelector);
-			collapser.html(getCollapserClosed());
+	function setupCollapser(containerNode, elemType, containerName, collapserSelector, hideableSelector, expandCommand, collapseCommand, defaultExpanded, hideExpander) {
+			var collapser;
+			var implicitCollapse = true;
+			if (collapserSelector === undefined){
+				collapser = containerNode;
+			} else {
+				collapser = containerNode.find(collapserSelector);
+			}
+			if (!hideExpander){
+				collapser.html(getCollapserClosed());
+			} else {
+				collapser.hide();
+			}
 
 			var hideable = containerNode.find(hideableSelector);
 			var expanded = false;
 
-			var expand = function () {
-					collapser.addClass(toggledInClass).removeClass(toggledOutClass);
-					hideable.removeClass(hideableHiddenClass);
-					collapser.html(getCollapserOpen());
-					expanded = true;
-					pluginSystem.fireCommand('layoutChanged', expandCommand);
-			};
-			var collapse = function () {
-					collapser.addClass(toggledOutClass).removeClass(toggledInClass);
-					hideable.addClass(hideableHiddenClass);
-					collapser.html(getCollapserClosed());
-					expanded = false;
-					pluginSystem.fireCommand('layoutChanged', collapseCommand);
-			};
-			collapser.on('click', function () {
+			var toggleFunc = function (e) {
+					e.preventDefault();
+					e.stopPropagation();
+					console.log('toggle',e);
 					if (expanded) {
 							collapse();
 					} else {
 							expand();
 					}
-			});
+					return false;
+			};
 
+			var expand = function () {
+					collapser.addClass(toggledInClass).removeClass(toggledOutClass);
+					hideable.removeClass(hideableHiddenClass);
+					collapser.html(getCollapserOpen()).show();
+					expanded = true;
+					pluginSystem.fireCommand('layoutChanged', expandCommand);
+					containerNode.unbind('click');
+					collapser.unbind('click').on('click', toggleFunc);
+			};
+			var collapse = function () {
+					collapser.addClass(toggledOutClass).removeClass(toggledInClass);
+					hideable.addClass(hideableHiddenClass);
+					if (!hideExpander){
+						collapser.html(getCollapserClosed());
+					} else {
+						collapser.hide();
+					}
+					expanded = false;
+					pluginSystem.fireCommand('layoutChanged', collapseCommand);
+					collapser.unbind('click').on('click', toggleFunc);
+					if (implicitCollapse){
+						containerNode.unbind('click').on('click',toggleFunc);
+					}
+			};
 			collapse();
 			if (_.startsWith(elemType,'server') || _.startsWith(elemType,'service') || _.find(defaultExpanded, function (item) {
 							return item == containerName;
@@ -208,12 +232,26 @@ $(function(){
 			checkNode.find(".checkServerLabel").text(check.serverLabel);
 			checkNode.find(".checkSeverity").text(check.severity);
 			var checkSeverity = calcCheckSeverity(check.severity);
-			checkNode.find(".checkSeverityIcon").text(checkSeverity.icon);
+			//checkNode.find(".checkSeverityIcon").text(checkSeverity.icon);
+			checkNode.find(".checkSeverityIcon").remove();
+			var cs = checkNode.find(".checkStatus");
+			if ('status' in check){
+				if (check.status){
+					cs.text('Y');
+					cs.addClass('checkOk').removeClass('checkError').removeClass('checkUnknown');
+				} else {
+					cs.text('N');
+					cs.removeClass('checkOk').addClass('checkError').removeClass('checkUnknown');
+				}
+			} else {
+				cs.text('?');
+				cs.removeClass('checkOk').removeClass('checkError').addClass('checkUnknown');
+			}
 			//checkNode.find(".checkSeverityContainer").find(".tooltiptext").text(checkSeverity.text);
-			checkNode.find(".checkSeverityContainer").find(".tooltiptext").text(check.name);
+			//checkNode.find(".checkSeverityContainer").find(".tooltiptext").text(check.name);
 			checkNode.find(".checkMode").text(check.mode);
 			checkNode.find(".checkFrequency").text(formatTimespan(check.period));
-			setupCollapser(checkNode, 'check', check.name, ".checkCollapser", ".checkHideable", "core.expandCheck", "core.collapseCheck", defaultExpandedChecks);
+			setupCollapser(checkNode, 'check', check.name, ".checkCollapser", ".checkHideable", "core.expandCheck", "core.collapseCheck", defaultExpandedChecks,true);
 			return withElem(checkNode,check);
 	};
 	var updateCheckElem = function(checkNode,check){
