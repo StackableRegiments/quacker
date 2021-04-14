@@ -49,6 +49,7 @@ class Boot extends Logger {
       SiteMap(
         Menu("Home") / "index" >> User.AddUserMenusAfter, // Simple menu form
         Menu("Flexible") / "flexible",
+        Menu("Simple") / "simple",
         // Menu with special Link
         Menu(
           Loc("Static",

@@ -19,6 +19,7 @@ $(function(){
 	});
 
 	function internalUpdateCheck(newCheck,targetNode){
+/*
     var rootNode = targetNode;
     var id = newCheck["id"];
     if (rootNode === undefined){
@@ -31,25 +32,7 @@ $(function(){
     var statusClasses = newCheck["statusClass"];
     var why = newCheck["why"];
     var detail = newCheck["detail"];
-    var tooltip = statusCode +": "+ label + " (@"+lastChecked+") : "+why;
-    rootNode.find(".serviceCapacity").text(label);
-    rootNode.find(".serviceLastChecked").text(newCheck["now"]);
-    var statusNode = rootNode.find(".serviceStatus").attr("title",tooltip).text(statusCode);
-    if (statusClasses["serverError"] === true) {
-        statusNode.addClass("serverError").removeClass("serverUnknown").removeClass("serverOk");
-        rootNode.find(".serviceWhy").text(why);
-        rootNode.find(".serviceDetail").text(detail);
-    } else if (statusClasses["serverOk"] === true) {
-        statusNode.addClass("serverOk").removeClass("serverUnknown").removeClass("serverError");
-        rootNode.find(".serviceWhy").text(truncate(why,500));
-        rootNode.find(".serviceDetail").text(truncate(detail,500));
-    } else {
-        statusNode.addClass("serverUnknown").removeClass("serverOk").removeClass("serverError");
-        rootNode.find(".serviceWhy").text("");
-        rootNode.find(".serviceDetail").text("");
-    }
-    rootNode.find(".serviceLastUp").text(newCheck["lastUp"]);
-    rootNode.find(".serviceClass").text(newCheck["mode"]);
+*/
 	}
 
 	var TimeSpanFormatter = (function(){
@@ -197,9 +180,11 @@ $(function(){
         checkNode.find(".checkName").text(check.name);
         var checkLabel = checkNode.find(".checkLabel");
         checkLabel.text(check.label);
+				var header = checkNode.find(".checkHeader");
+				header.find(".checkLabel").remove();
 				var line1 = checkNode.find(".summaryLine1");
-				line1.find(".checkServiceContainer").hide();
-				line1.find(".checkServerContainer").hide();
+				line1.find(".checkServiceContainer").remove();
+				line1.find(".checkServerContainer").remove();
 				var line2 = checkNode.find(".summaryLine2");
         checkNode.find(".checkServiceName").text(check.serviceName);
         checkNode.find(".checkServiceLabel").text(check.serviceLabel);
@@ -208,7 +193,8 @@ $(function(){
         checkNode.find(".checkSeverity").text(check.severity);
         var checkSeverity = calcCheckSeverity(check.severity);
         checkNode.find(".checkSeverityIcon").text(checkSeverity.icon);
-        checkNode.find(".checkSeverityContainer").find(".tooltiptext").text(checkSeverity.text);
+        //checkNode.find(".checkSeverityContainer").find(".tooltiptext").text(checkSeverity.text);
+        checkNode.find(".checkSeverityContainer").find(".tooltiptext").text(check.name);
         checkNode.find(".checkMode").text(check.mode);
         checkNode.find(".checkFrequency").text(formatTimespan(check.period));
         setupCollapser(checkNode, 'check', check.name, ".checkCollapser", ".checkHideable", "core.expandCheck", "core.collapseCheck", defaultExpandedChecks);
