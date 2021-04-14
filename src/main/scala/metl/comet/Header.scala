@@ -26,17 +26,29 @@ class Header extends CometActor with CometListener {
     "#loginLinkContainer" #> NodeSeq.Empty &
       "#headerScript *" #> OnLoad(Call("setDevMode", JBool(Globals.isDevMode)))
   }
+  override def sendInitialReq_? = true
+
+  protected var theReq: Box[Req] = Empty
+  override def captureInitialReq(initialReq: Box[Req]): Unit = {
+    theReq = initialReq
+  }
+  protected def reqPath: Option[String] =
+    theReq.map(req => {
+      req.request.uri
+    })
   override def render: RenderOut = {
     val res: CssSel = Globals.authenticator
       .map(auth => {
         val withAuth: CssSel = {
           Globals.casState.is.authenticated match {
             case true => {
-              "#loginLink [href]" #> "/logout" &
+              "#loginLink [href]" #> "/logout?returnTo=%s".format(
+                urlEncode(reqPath.getOrElse("/"))) &
                 "#loginLinkName *" #> "Logout"
             }
             case false => {
-              "#loginLink [href]" #> auth.loginLink &
+              "#loginLink [href]" #> (auth.loginLink + "?returnTo=%s".format(
+                urlEncode(reqPath.getOrElse("/")))) &
                 "#loginLinkName *" #> "Login"
             }
           }

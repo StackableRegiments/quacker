@@ -62,7 +62,7 @@ object SystemRestHelper extends RestHelper with Logger {
         }
     case r @ Req("logout" :: _, _, _) => {
       Globals.setUser(LiftAuthStateDataForbidden)
-      Full(RedirectResponse("/"))
+      Full(RedirectResponse(r.param("returnTo").getOrElse("/")))
     }
   }
 }
@@ -116,7 +116,7 @@ class MockAuthenticator extends Authenticator with RestHelper with Logger {
       () =>
         Full({
           val returnTo =
-            r.param("return_url").filter(_.trim() != "").getOrElse("/")
+            r.param("returnTo").filter(_.trim() != "").getOrElse("/")
           (for {
             username <- r.param("username")
           } yield {
@@ -128,7 +128,7 @@ class MockAuthenticator extends Authenticator with RestHelper with Logger {
             val mockLoginPage =
               <div>
   <form method="GET" action="/login/mock">
-    <input type="hidden" name="return_url">{returnTo}</input>
+    <input type="hidden" name="returnTo" value={returnTo}></input>
     <input id="username" type="text" name="username"></input>
     <input type="submit" value="login">login</input>
   </form>
