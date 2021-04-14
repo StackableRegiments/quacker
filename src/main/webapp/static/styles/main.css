@@ -1,11 +1,6 @@
 body{
     font-family: 'Cabin', sans-serif;
     font-size:12px;
-    background-image: url("/static/images/brushed-metal.jpg");
-    background-repeat: repeat;
-/*
-    background-color: rgba(100,100,100,1);
-*/
 }
 
 .icon {
@@ -46,126 +41,16 @@ body{
     font-size: 1.5em;
     background-color: red;
 }
-/*
-.serviceGroup {
-    display:inline-block;
-    vertical-align: top;
-    margin:2px;
-    padding:2px;
-    border:1px solid grey;
-    width:250px;
-    background-color: rgba(255,255,255,0.3);
-}
-.serviceHeader {
-    font-size: 1.5em;
-    display:inline-block;
-}
-*/
-/*
-.serviceContent{
-    margin-left:2em;
-}
-*/
-/*
-.serviceStatus{
-    padding:0 1em;
-}
-
-.serverGroup {
-    font-weight: normal;
-}
-.serverHeader {
-    font-size: 1.25em;
-    display:inline-block;
-}
-.serverContent{
-    margin-left:1.5em;
-}
-*/
-.checkSummary {
-    margin-left:1em;
-    background-color: rgba(255,255,255,0.1);
-    margin:2px;
-    padding:2px;
-    border:1px solid grey;
-    width:250px;
-}
-.checkSeverityContainer {
-    float: right;
-}
-.checkSvg {
-    display:block;
-    text-align: center;
-/*
-    max-width:180px;
-    max-height:180px;
-*/
-}
-.checkHeader{
-    font-size: 1em;
-    display:inline-block;
-    width: 100%;
-    font-weight: bold;
-    /*margin-left:1em;*/
-}
-.checkLabel {
-    /*display:block;*/
-/*
-    font-weight:bold;
-*/
-}
-.checkStatus {
-    margin-left:1em;
-}
-.summaryLine1 {
-    display:block;
-    margin-left:2em;
-    background-color: rgba(255,255,255,0.1);
-    font-weight: bold;
-}
-.summaryLine2 {
-    display:block;
-    background-color: rgba(255,255,255,0.1);
-}
-.summaryItemLabel {
-    font-weight: bold;
-}
-
-.checkUnknown{
-    background-color:orange;
-    color: black;
-}
-.checkError{
-    background-color:red;
-    color: white;
-}
-.checkOk {
-    background-color:lightgreen;
-    color: black;
-}
 
 .tableHeader {
     font-color: darkgray;
 }
 
-.detailContainer{
-    display:block;
-}
-.furtherDetail {
-    margin-left: 0.5em;
-    display:inline-block;
-}
 .toggleable {
 }
 .toggledIn {
-/*
-    background:mistyrose;
-*/
 }
 .toggledOut {
-/*
-    background:lightyellow;
-*/
 }
 .hideableHidden {
     display: none !important;
@@ -173,39 +58,6 @@ body{
 .collapserState {
     cursor: pointer !important;
 }
-.serviceDataDescriptor {
-    font-weight: bold;
-}
-.furtherDetailHidden {
-    /*display:none;*/
-}
-.checkExpanded {
-    margin-bottom:1em;
-}
-.checkCollapsed {
-    display: none !important;
-    margin-bottom:0em;
-    border:none;
-}
-.checkExpanded .checkDetail {
-    margin-top:0.5em;
-}
-.checkDetail {
-    background-color:lightgray;
-    border:1px solid gray;
-    color: black;
-    /*margin: 10px;*/
-    /*padding: 10px;*/
-}
-
-/*
-      #dashboardServerContainer .alwaysOn {
-      margin: 1em;
-      max-width: 45%;
-      background: white;
-      z-index:1;
-      }
-*/
 .fullWidth {
     max-width: 100% !important;
     width: 100% !important;
@@ -217,10 +69,7 @@ body{
     display: inline-block !important;
     margin: 0.3em !important;
 }
-.promotedService {
-    background-color: white !important;
-    z-index:100 !important;
-}
+
 /* Tooltip container */
 .tooltip {
     position: relative;
@@ -254,13 +103,4 @@ body{
     */
     top: -2px;
     right: 105%;
-}
-.historyElemGradientStart, .historyElemGradientEnd {
-  stop-color:rgb(192,192,192);
-}
-.historyElemGradientStart {
-  stop-opacity:0;
-}
-.historyElemGradientEnd {
-  stop-opacity:1;
 }

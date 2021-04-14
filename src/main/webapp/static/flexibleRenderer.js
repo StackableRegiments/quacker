@@ -114,7 +114,7 @@ $(function(){
     }
     var getCollapserClosed = function(){return getCollapser("\uf055");};
     var getCollapserOpen = function(){return getCollapser("\uf056");};
-    function setupCollapser(containerNode, containerName, collapserSelector, hideableSelector, expandCommand, collapseCommand, defaultExpanded) {
+    function setupCollapser(containerNode, elemType, containerName, collapserSelector, hideableSelector, expandCommand, collapseCommand, defaultExpanded) {
         var collapser = containerNode.find(collapserSelector);
         collapser.html(getCollapserClosed());
 
@@ -144,7 +144,7 @@ $(function(){
         });
 
         collapse();
-        if (_.find(defaultExpanded, function (item) {
+        if (_.startsWith(elemType,'server') || _.startsWith(elemType,'service') || _.find(defaultExpanded, function (item) {
                 return item == containerName;
             }) != undefined) {
             expand();
@@ -157,7 +157,7 @@ $(function(){
         serviceNode.attr("id",generateServiceId(serviceName));
         serviceNode.find(".serviceCollapser").html(getCollapserOpen());
         serviceNode.find(".serviceLabel").text(serviceLabel);
-        setupCollapser(serviceNode, serviceName, ".serviceCollapser", ".serviceHideable", "core.expandService", "core.collapseService", defaultExpandedServices);
+        setupCollapser(serviceNode, 'service', serviceName, ".serviceCollapser", ".serviceHideable", "core.expandService", "core.collapseService", defaultExpandedServices);
         return withElem(serviceNode,serviceName,servers);
     };
     var updateServiceElem = function(serviceNode,serviceName,serviceLabel,servers){
@@ -172,7 +172,7 @@ $(function(){
         var serverNode = templates["server"].clone();
         serverNode.attr("id",generateServerId(serverName));
         serverNode.find(".serverLabel").text(serverLabel);
-        setupCollapser(serverNode, serverName, ".serverCollapser", ".serverHideable", "core.expandServer", "core.collapseServer", defaultExpandedServers);
+        setupCollapser(serverNode, 'server', serverName, ".serverCollapser", ".serverHideable", "core.expandServer", "core.collapseServer", defaultExpandedServers);
         return withElem(serverNode,serverName,serverLabel,checks);
     };
 
@@ -211,7 +211,7 @@ $(function(){
         checkNode.find(".checkSeverityContainer").find(".tooltiptext").text(checkSeverity.text);
         checkNode.find(".checkMode").text(check.mode);
         checkNode.find(".checkFrequency").text(formatTimespan(check.period));
-        setupCollapser(checkNode, check.name, ".checkCollapser", ".checkHideable", "core.expandCheck", "core.collapseCheck", defaultExpandedChecks);
+        setupCollapser(checkNode, 'check', check.name, ".checkCollapser", ".checkHideable", "core.expandCheck", "core.collapseCheck", defaultExpandedChecks);
         return withElem(checkNode,check);
     };
     var updateCheckElem = function(checkNode,check){
@@ -245,7 +245,6 @@ $(function(){
                 });
             });
 
-//				console.log('structure',structure);
         var rootElem = $(rootSelectorString);
         var existingDomElements = rootElem.find(".checkSummary");
         _.forEach(existingDomElements,function(domElement) {
@@ -311,8 +310,4 @@ $(function(){
         render(rootSelectorString,checkStructure);
     };
 	})();
-
-
-
 });
-
