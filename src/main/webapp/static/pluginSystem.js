@@ -35,10 +35,11 @@ if (!(('listCommands' in pluginSystem) && ('registerCommand' in pluginSystem) &&
         delete s[funcId];
       }
     };
-    var fireSubscription = function(command,subName,subscription,callerId,dataPacket){
+    var fireSubscription = function(command,subName,subscription,callerId){
+			var dataPacket = _.drop(arguments,4);
       if (command != undefined && subscription != undefined){
         var start = Date.now();
-        subscription(dataPacket);            
+        subscription.apply(this,dataPacket);
         var end = Date.now();
         if (command.id != 'commandTimed' && command.id != 'exceptionThrown'){
           activateCommand('commandTimed','pluginSystem.fireSubscription',{
@@ -53,7 +54,8 @@ if (!(('listCommands' in pluginSystem) && ('registerCommand' in pluginSystem) &&
         }
       }
     }
-    var runCommand = function(command,callerId,dataPacket){
+    var runCommand = function(command,callerId){
+			var dataPacket = _.drop(arguments,2);
       var throwEx = function(onAction,ex){
         return {
           'command':command,
@@ -64,35 +66,37 @@ if (!(('listCommands' in pluginSystem) && ('registerCommand' in pluginSystem) &&
         };
       };
       var exs = [];
-        if ('beforeFunc' in command && command.beforeFunc != undefined && _.isFunction(command.beforeFunc)){
-          try {
-            command.beforeFunc();
-          } catch(ex){
-            exs.push(throwEx('beforeFunc',ex));
-          }
-        }
-        if ('subscriptions' in command){
-          _.forEach(_.keys(command.subscriptions),function(item){
-            try {
-              var subscription = command.subscriptions[item];
-              fireSubscription(command,item,subscription,callerId,dataPacket);
-            } catch(ex){
-              exs.push(throwEx(item,ex));
-            }
-          });
-        }
-        if ('afterFunc' in command && command.beforeFunc != undefined && _.isFunction(command.afterFunc)){
-          try {
-            command.afterFunc();
-          } catch(ex){
-            exs.push(throwEx('afterFunc',ex));
-          }
-        }
-        _.forEach(exs,function(e){
-          activateCommand('exceptionThrown','pluginSystem.runCommand',e);
-        });
+			if ('beforeFunc' in command && command.beforeFunc != undefined && _.isFunction(command.beforeFunc)){
+				try {
+					command.beforeFunc();
+				} catch(ex){
+					exs.push(throwEx('beforeFunc',ex));
+				}
+			}
+			if ('subscriptions' in command){
+				_.forEach(_.keys(command.subscriptions),function(item){
+					try {
+						var subscription = command.subscriptions[item];
+						var args = _.concat([command,item,subscription,callerId],dataPacket)
+						fireSubscription.apply(this,args);
+					} catch(ex){
+						exs.push(throwEx(item,ex));
+					}
+				});
+			}
+			if ('afterFunc' in command && command.beforeFunc != undefined && _.isFunction(command.afterFunc)){
+				try {
+					command.afterFunc();
+				} catch(ex){
+					exs.push(throwEx('afterFunc',ex));
+				}
+			}
+			_.forEach(exs,function(e){
+				activateCommand('exceptionThrown','pluginSystem.runCommand',e);
+			});
     };
-    var activateCommand = function(name,callerId,dataPacket){
+    var activateCommand = function(name,callerId){
+			var dataPacket = _.drop(arguments,2);
       if (name in commands){
         var c = commands[name];
         if (c.suspended){
@@ -103,11 +107,11 @@ if (!(('listCommands' in pluginSystem) && ('registerCommand' in pluginSystem) &&
           while (_.size(c.queuedActions) > 0){
             var qi = c.queuedActions.pop();
             if ('data' in qi && 'callerId' in qi){
-              runCommand(c,qi.callerId,qi.data);
+							runCommand.apply(this,_.concat([c,callerId],qi.data));
             }
           };
           if (callerId != undefined){
-            runCommand(c,callerId,dataPacket);
+						runCommand.apply(this,_.concat([c,callerId],dataPacket));
           }
         }
       }
@@ -157,7 +161,7 @@ if (!(('listCommands' in pluginSystem) && ('registerCommand' in pluginSystem) &&
         restartCommand(command);
       },
       fireCommand:function(command,caller,dataPacket){
-        activateCommand(command,caller,dataPacket);
+				activateCommand.apply(this,arguments);
       },
       setDebug:function(bool,timingFunc,exFunc){
         var inTimingFunc = timingFunc;

@@ -1,15 +1,13 @@
 <div class="lift:surround?with=unstyled;at=content">
-	<!--
-		<head>
-		<style>
-			.editingOnly {
-				display:none;
-			}
-			.alwaysOn {
-				//display:block;
-			}
-		</style>
+	<head>
+    <link data-lift="with-resource-id" href="/static/styles/index.css" rel="stylesheet"/>
+    <link data-lift="with-resource-id" href="/static/styles/googleFonts.css" rel="stylesheet"/>
+    <link data-lift="with-resource-id" href="/static/styles/svg.css" rel="stylesheet"/>
+    <link data-lift="with-resource-id" href="/static/styles/grid.css" rel="stylesheet"/>
+    <script data-lift="with-resource-id" src="/static/d3.min.js"></script>
+    <script data-lift="with-resource-id" src="/static/masonry.pkgd.min.js"></script>
 	</head>
-	-->
-	<div class="lift:embed?what=dashboardContent"/>
+	<div class="lift:embed?what=_templates"></div>
+	<div class="lift:embed?what=dashboardContent"></div>
+	<script data-lift="with-resource-id" src="/static/defaultRenderer.js"></script>
 </div>

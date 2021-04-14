@@ -7,7 +7,8 @@ import org.tmatesoft.svn.core.internal.io.svn.SVNRepositoryFactoryImpl
 import org.tmatesoft.svn.core.io.SVNRepositoryFactory
 import org.tmatesoft.svn.core.wc.SVNWCUtil
 
-case class CountingSensor(metadata:SensorMetaData, time:TimeSpan = 5 seconds) extends Sensor(metadata){
+case class CountingSensor(metadata: SensorMetaData, time: TimeSpan = 5 seconds)
+    extends Sensor(metadata) {
   override val pollInterval = time
   protected var count = 0
   def status = {
@@ -17,7 +18,11 @@ case class CountingSensor(metadata:SensorMetaData, time:TimeSpan = 5 seconds) ex
   override def performCheck = succeed(status.toString)
 }
 
-case class WaitingSensor(metadata:SensorMetaData, minTime:Long, maxAdditionalTime:Int, time:TimeSpan = 5 seconds) extends Sensor(metadata){
+case class WaitingSensor(metadata: SensorMetaData,
+                         minTime: Long,
+                         maxAdditionalTime: Int,
+                         time: TimeSpan = 5 seconds)
+    extends Sensor(metadata) {
   override val pollInterval = time
   def status = {
     val waitTime = minTime + (scala.util.Random.nextInt(maxAdditionalTime))

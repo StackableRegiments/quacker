@@ -8,22 +8,7 @@
       <param name="ConversionPattern" value="%-5p %c{1} - %m%n"/>
     </layout>
   </appender>
-
-	<appender name="util" class="org.apache.log4j.FileAppender">
-  	<param name="File" value="log/info.log" />
-    <param name="Append" value="true" />
-      <layout class="org.apache.log4j.PatternLayout">
-        <param name="ConversionPattern" value="%t %-5p %c{2} - %m%n"/>
-      </layout>           
-    </appender>
-
-  <root>
-    <priority value="warn" />
-   <appender-ref ref="console" /> 
+  <root level="warn">
+    <appender-ref ref="console" /> 
  </root>
- <logger name="org.apache.http">
-	 <level value="error"/>
-	 <appender-ref ref="console" />
- </logger>
-
 </log4j:configuration>

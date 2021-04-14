@@ -1,0 +1,6 @@
+<appConf>
+  <hostname>https://localhost:8444</hostname>
+  <authenticator>
+    <mockAuthenticator />
+  </authenticator>
+</appConf>

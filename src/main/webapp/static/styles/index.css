@@ -1,0 +1,104 @@
+body{
+    background-image: url("/static/images/brushed-metal.jpg");
+    background-repeat: repeat;
+}
+.checkSummary {
+    margin-left:1em;
+    background-color: rgba(255,255,255,0.1);
+    margin:2px;
+    padding:2px;
+    border:1px solid grey;
+    width:250px;
+}
+.checkSeverityContainer {
+    float: right;
+}
+.checkSvg {
+    display:block;
+    text-align: center;
+}
+.checkHeader{
+    font-size: 1em;
+    display:inline-block;
+    width: 100%;
+    font-weight: bold;
+}
+.checkLabel {
+}
+.checkStatus {
+    margin-left:1em;
+}
+.summaryLine1 {
+    display:block;
+    margin-left:2em;
+    background-color: rgba(255,255,255,0.1);
+    font-weight: bold;
+}
+.summaryLine2 {
+    display:block;
+    background-color: rgba(255,255,255,0.1);
+}
+.summaryItemLabel {
+    font-weight: bold;
+}
+
+.checkUnknown{
+    background-color:orange;
+    color: black;
+}
+.checkError{
+    background-color:red;
+    color: white;
+}
+.checkOk {
+    background-color:lightgreen;
+    color: black;
+}
+
+.tableHeader {
+    font-color: darkgray;
+}
+
+.detailContainer{
+    display:block;
+}
+.furtherDetail {
+    margin-left: 0.5em;
+    display:inline-block;
+}
+.serviceDataDescriptor {
+    font-weight: bold;
+}
+.furtherDetailHidden {
+    /*display:none;*/
+}
+.checkExpanded {
+    margin-bottom:1em;
+}
+.checkCollapsed {
+    display: none !important;
+    margin-bottom:0em;
+    border:none;
+}
+.checkExpanded .checkDetail {
+    margin-top:0.5em;
+}
+.checkDetail {
+    background-color:lightgray;
+    border:1px solid gray;
+    color: black;
+}
+
+.promotedService {
+    background-color: white !important;
+    z-index:100 !important;
+}
+.historyElemGradientStart, .historyElemGradientEnd {
+  stop-color:rgb(192,192,192);
+}
+.historyElemGradientStart {
+  stop-opacity:0;
+}
+.historyElemGradientEnd {
+  stop-opacity:1;
+}

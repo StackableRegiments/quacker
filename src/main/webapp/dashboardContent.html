@@ -1,14 +1,7 @@
 <div>
   <head>
     <link data-lift="with-resource-id" href="/static/styles/main.css" rel="stylesheet"/>
-    <link data-lift="with-resource-id" href="/static/styles/svg.css" rel="stylesheet"/>
-    <link data-lift="with-resource-id" href="/static/styles/grid.css" rel="stylesheet"/>
     <link data-lift="with-resource-id" href="/static/styles/font-awesome.min.css" rel="stylesheet"/>
-    <link data-lift="with-resource-id" href="/static/styles/googleFonts.css" rel="stylesheet"/>
-    <script data-lift="with-resource-id" src="/static/d3.min.js"></script>
-    <script data-lift="with-resource-id" src="/static/masonry.pkgd.min.js"></script>
-    <script data-lift="with-resource-id" src="/static/renderHtml.js"></script>
-    <script data-lift="with-resource-id" src="/static/renderSvgCircles.js"></script>
     <script data-lift="with-resource-id" src="/static/main.js"></script>
     <script data-lift="with-resource-id" src="/static/plugins.js"></script>
   </head>
@@ -18,7 +11,7 @@
     <div id="breakSomething" class="editingOnly"></div>
     <div id="reloadXml" class="editingOnly"></div>
     <!--<hr />-->
-    <div class="lift:embed?what=_templates"></div>
+
     <div id="enable"></div>
     <div id="quackerHeader">
       <span class="quackerHeading">Quacker</span>
@@ -26,11 +19,17 @@
       <span id="quackerStatus">
         <span id="checksFailing"><span id="failCount"></span> <span id="failDesc"></span>, </span> <span id="checksPassing"><span id="passCount"></span> <span id="passDesc"></span></span>
       </span>
-      <div class="lift:comet?type=Header" name="header"></div>
+      <span class="lift:UserSpecificActors.header">
+        <span id="loginLinkContainer">
+          <span id="loggedInUser"></span>
+          <a id="loginLink"><span id="loginLinkName">Login</span></a>
+          <script id="headerScript"></script>
+        </span>
+      </span>
       <span id="uiPluginContainer"></span>
     </div>
     <div id="dashboardServerContainer"></div>
-    <div class="lift:comet?type=Dashboard" name="dashboard"></div>
+    <div class="lift:UserSpecificActors.dashboard"></div>
   </div>
   <script>
     $(function(){
