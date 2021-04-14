@@ -27,14 +27,14 @@ $(function(){
 
 	var rootElem = $("#dashboardServerContainer");
 	function internalUpdateCheck(check,targetNode){
-			console.log('Simple.updateCheck',check);
+			//console.log('Simple.updateCheck',check);
 			var checkName = check.name;
 			var checkRoot = rootElem.find("#"+generateCheckId(check));
 			updateCheckElem(checkRoot, check);
 			updateCounts();
 	}
 	function internalCreateCheck(newCheck){
-		console.log('Simple.createCheck',newCheck);
+		//console.log('Simple.createCheck',newCheck);
 		var serviceElem = rootElem.find("#"+generateServiceId(newCheck.serviceName));
 		if (serviceElem[0] === undefined){
 			serviceElem = createServiceElem([],newCheck.serviceName,newCheck.serviceLabel,function(e){return e; });
@@ -61,7 +61,7 @@ $(function(){
 		updateCounts();
 	}
 	function internalRemoveCheck(checkId){
-		console.log('Simple.removeCheck',checkId);
+		//console.log('Simple.removeCheck',checkId);
 		rootElem.find("#"+generateCheckId(check)).remove();
 		updateCounts();
 	}
@@ -133,7 +133,7 @@ $(function(){
 			var toggleFunc = function (e) {
 					e.preventDefault();
 					e.stopPropagation();
-					console.log('toggle',e);
+					//console.log('toggle',e);
 					if (expanded) {
 							collapse();
 					} else {

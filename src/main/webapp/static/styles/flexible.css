@@ -115,3 +115,9 @@
 .historyElemGradientEnd {
   stop-opacity:1;
 }
+.serviceGroup .serverGroup {
+	margin-left:1em;
+}
+.serverGroup .checkSummary {
+/*	margin-left:1em; */
+}
