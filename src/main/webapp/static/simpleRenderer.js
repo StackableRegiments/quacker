@@ -30,10 +30,7 @@ $(function(){
 			console.log('Simple.updateCheck',check);
 			var checkName = check.name;
 			var checkRoot = rootElem.find("#"+generateCheckId(check));
-			if ("dirty" in check && check.dirty === true) {
-				 updateCheckElem(checkRoot, check);
-				 delete check.dirty;
-			}
+			updateCheckElem(checkRoot, check);
 			updateCounts();
 	}
 	function internalCreateCheck(newCheck){

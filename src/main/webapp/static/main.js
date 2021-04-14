@@ -44,7 +44,7 @@ $(function (){
     if (queryParamExpandedChecks !== undefined){
         defaultExpandedChecks = $.map(queryParamExpandedChecks.split(","),function(item){return item.split("+").join(" ");});
     }
-    createChecks();
+    renderChecks();
     pluginSystem.resumeCommand('dataChanged');
     pluginSystem.resumeCommand('layoutChanged');
 });
