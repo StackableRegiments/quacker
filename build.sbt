@@ -217,7 +217,9 @@ libraryDependencies in ThisBuild ++= {
   _.excludeAll(ExclusionRule(organization = "org.slf4j"))
     .exclude("com.sun.jdmk", "jmxtools")
     .exclude("javax.jms", "jms")
-    .exclude("com.sun.jmx", "jmxri"))
+    .exclude("com.sun.jmx", "jmxri")
+		.exclude("log4j","log4j")
+	)
 
 scalacOptions in ThisBuild ++= Seq(
   "-language:existentials",
