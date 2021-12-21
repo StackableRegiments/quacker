@@ -83,7 +83,7 @@ resolvers in ThisBuild ++= Seq(
   "mavenCentral" at "http://mvnrepository.com/artifact"
 )
 
-libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.+"
+libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.9"
 
 libraryDependencies in ThisBuild ++= {
   val liftVersion = "3.4.0"
@@ -92,7 +92,7 @@ libraryDependencies in ThisBuild ++= {
   Seq(
     "net.liftweb" %% "lift-webkit" % liftVersion,
     "net.liftweb" %% "lift-mapper" % liftVersion,
-    "ch.qos.logback" % "logback-classic" % "1.2.3",
+    "ch.qos.logback" % "logback-classic" % "1.2.9",
     "org.specs2" %% "specs2-core" % "3.9.4" % "test",
     "com.h2database" % "h2" % "1.4.187",
     "com.github.dakatsuka" %% "akka-http-oauth2-client" % "0.1.0",
