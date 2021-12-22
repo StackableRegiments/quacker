@@ -10,19 +10,8 @@ import com.metl.liftAuthenticator._
 
 object SystemRestHelper extends RestHelper with Logger {
   serve {
-    case r @ Req(List("history", service, server, serviceCheckName), _, _) =>
-      () =>
-        {
-          val checks = HistoryServer.getHistory(None,
-                                                service,
-                                                server,
-                                                serviceCheckName,
-                                                r.param("since").map(_.toLong),
-                                                r.param("until").map(_.toLong),
-                                                r.param("limit").map(_.toInt))
-          Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
-        }
     case r @ Req(List("history",
+                      "listener",
                       historyListenerName,
                       service,
                       server,
@@ -40,7 +29,22 @@ object SystemRestHelper extends RestHelper with Logger {
                                                 r.param("limit").map(_.toInt))
           Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
         }
-    case r @ Req(List("history", historyListenerName, service), _, _) =>
+
+    case r @ Req(List("history", service, server, serviceCheckName), _, _) =>
+      () =>
+        {
+          val checks = HistoryServer.getHistory(None,
+                                                service,
+                                                server,
+                                                serviceCheckName,
+                                                r.param("since").map(_.toLong),
+                                                r.param("until").map(_.toLong),
+                                                r.param("limit").map(_.toInt))
+          Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
+        }
+    case r @ Req(List("history", "listener", historyListenerName, service),
+                 _,
+                 _) =>
       () =>
         {
           val checks = HistoryServer.getHistory(Some(historyListenerName),
@@ -51,10 +55,35 @@ object SystemRestHelper extends RestHelper with Logger {
           Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
         }
 
-    case r @ Req(List("history", historyListenerName, service, server), _, _) =>
+    case r @ Req(List("history", service), _, _) =>
+      () =>
+        {
+          val checks = HistoryServer.getHistory(None,
+                                                service,
+                                                r.param("since").map(_.toLong),
+                                                r.param("until").map(_.toLong),
+                                                r.param("limit").map(_.toInt))
+          Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
+        }
+    case r @ Req(
+          List("history", "listener", historyListenerName, service, server),
+          _,
+          _) =>
       () =>
         {
           val checks = HistoryServer.getHistory(Some(historyListenerName),
+                                                service,
+                                                server,
+                                                r.param("since").map(_.toLong),
+                                                r.param("until").map(_.toLong),
+                                                r.param("limit").map(_.toInt))
+          Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
+        }
+
+    case r @ Req(List("history", service, server), _, _) =>
+      () =>
+        {
+          val checks = HistoryServer.getHistory(None,
                                                 service,
                                                 server,
                                                 r.param("since").map(_.toLong),
