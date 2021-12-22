@@ -198,6 +198,7 @@ class SqlHistoryListener(override val name: String,
         ))
 
       var dbcr = DBCheckResult.createInstance
+        .serviceCheck(in.serviceCheck)
         .service(in.service)
         .crId(in.id)
         .server(in.server)
@@ -226,7 +227,7 @@ class SqlHistoryListener(override val name: String,
       } yield {
         (w, vs)
       }
-      CheckResult(
+      val cr = CheckResult(
         in.crId.get,
         serviceCheck,
         label,
@@ -244,6 +245,7 @@ class SqlHistoryListener(override val name: String,
         parsedData,
         tryo(in.duration.get)
       )
+      cr
     }
   }
   class DBCheckResult extends LongKeyedMapper[DBCheckResult] {
@@ -286,34 +288,50 @@ class SqlHistoryListener(override val name: String,
   override def stop = {}
   override def resetEnvironment = {}
   override def getHistoryFor(service: String,
+                             after: Option[Long],
+                             before: Option[Long],
+                             limit: Option[Int]): List[CheckResult] =
+    doGetHistoryFor(Some(service), None, None, after, before, limit)
+  override def getHistoryFor(service: String,
+                             server: String,
+                             after: Option[Long],
+                             before: Option[Long],
+                             limit: Option[Int]): List[CheckResult] =
+    doGetHistoryFor(Some(service), Some(server), None, after, before, limit)
+  override def getHistoryFor(service: String,
                              server: String,
                              serviceCheck: String,
                              after: Option[Long],
                              before: Option[Long],
-                             limit: Option[Int]): List[CheckResult] = {
-    val terms: List[QueryParam[DBCheckResult]] = List(
-      By(DBCheckResult.service, service),
-      By(DBCheckResult.server, server),
-      By(DBCheckResult.serviceCheck, serviceCheck)) :::
-      after.toList.map(a =>
-      Cmp(DBCheckResult.when, OprEnum.>, Full(a), Empty, Empty)) :::
-      before.toList.map(b =>
-      Cmp(DBCheckResult.when, OprEnum.<, Full(b), Empty, Empty)) :::
-      limit.toList.map(l => new MaxRows[DBCheckResult](l.toLong))
+                             limit: Option[Int]): List[CheckResult] =
+    doGetHistoryFor(Some(service),
+                    Some(server),
+                    Some(serviceCheck),
+                    after,
+                    before,
+                    limit)
+  protected def doGetHistoryFor(service: Option[String],
+                                server: Option[String],
+                                serviceCheck: Option[String],
+                                after: Option[Long],
+                                before: Option[Long],
+                                limit: Option[Int]): List[CheckResult] = {
+    val terms: List[QueryParam[DBCheckResult]] =
+      service.toList.map(v => By(DBCheckResult.service, v)) :::
+        server.toList.map(v => By(DBCheckResult.server, v)) :::
+        serviceCheck.toList.map(v => By(DBCheckResult.serviceCheck, v)) :::
+        after.toList.map(a =>
+        Cmp(DBCheckResult.when, OprEnum.>, Full(a), Empty, Empty)) :::
+        before.toList.map(b =>
+        Cmp(DBCheckResult.when, OprEnum.<, Full(b), Empty, Empty)) :::
+        limit.toList.map(l => new MaxRows[DBCheckResult](l.toLong))
     withDb(DBCheckResult.findAll(terms: _*).map(DBCheckResult.toCheckResult _)).right.toOption
       .getOrElse(Nil)
   }
   override def getAllHistory(after: Option[Long],
                              before: Option[Long],
-                             limit: Option[Int]): List[CheckResult] = {
-    val terms: List[QueryParam[DBCheckResult]] = after.toList.map(a =>
-      Cmp(DBCheckResult.when, OprEnum.>, Full(a), Empty, Empty)) :::
-      before.toList.map(b =>
-      Cmp(DBCheckResult.when, OprEnum.<, Full(b), Empty, Empty)) :::
-      limit.toList.map(l => new MaxRows[DBCheckResult](l.toLong))
-    withDb(DBCheckResult.findAll(terms: _*).map(DBCheckResult.toCheckResult _)).right.toOption
-      .getOrElse(Nil)
-  }
+                             limit: Option[Int]): List[CheckResult] =
+    doGetHistoryFor(None, None, None, after, before, limit)
   override def performRepeatableAtomicAction(cr: CheckResult): Boolean = {
     withDb(DBCheckResult.fromCheckResult(cr).save).right.toOption
       .getOrElse(false)

@@ -40,6 +40,29 @@ object SystemRestHelper extends RestHelper with Logger {
                                                 r.param("limit").map(_.toInt))
           Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
         }
+    case r @ Req(List("history", historyListenerName, service), _, _) =>
+      () =>
+        {
+          val checks = HistoryServer.getHistory(Some(historyListenerName),
+                                                service,
+                                                r.param("since").map(_.toLong),
+                                                r.param("until").map(_.toLong),
+                                                r.param("limit").map(_.toInt))
+          Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
+        }
+
+    case r @ Req(List("history", historyListenerName, service, server), _, _) =>
+      () =>
+        {
+          val checks = HistoryServer.getHistory(Some(historyListenerName),
+                                                service,
+                                                server,
+                                                r.param("since").map(_.toLong),
+                                                r.param("until").map(_.toLong),
+                                                r.param("limit").map(_.toInt))
+          Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
+        }
+
     case r @ Req("allHistory" :: _, _, _) =>
       () =>
         {

@@ -218,8 +218,8 @@ libraryDependencies in ThisBuild ++= {
     .exclude("com.sun.jdmk", "jmxtools")
     .exclude("javax.jms", "jms")
     .exclude("com.sun.jmx", "jmxri")
-		.exclude("log4j","log4j")
-	)
+    .exclude("log4j", "log4j")
+)
 
 scalacOptions in ThisBuild ++= Seq(
   "-language:existentials",

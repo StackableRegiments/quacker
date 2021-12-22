@@ -19,6 +19,15 @@ abstract class HistoryListener(val name: String) extends LiftActor with Logger {
     case _                                 => {}
   }
   def getHistoryFor(service: String,
+                    after: Option[Long],
+                    before: Option[Long],
+                    limit: Option[Int]): List[CheckResult] = Nil
+  def getHistoryFor(service: String,
+                    server: String,
+                    after: Option[Long],
+                    before: Option[Long],
+                    limit: Option[Int]): List[CheckResult] = Nil
+  def getHistoryFor(service: String,
                     server: String,
                     serviceCheck: String,
                     after: Option[Long],
@@ -89,6 +98,41 @@ class InMemoryHistoryListener(override val name: String,
     store += ((key, newValue))
   }
   override def getHistoryFor(service: String,
+                             after: Option[Long],
+                             until: Option[Long],
+                             limit: Option[Int]): List[CheckResult] = {
+    val all =
+      store.keys.toList
+        .filter(t => t._1 == service)
+        .flatMap(k => store.get(k))
+        .flatMap(_.toList)
+    val timeBoundedAfter =
+      after.map(a => all.filter(_.when.getTime > a)).getOrElse(all)
+    val timeBoundedBefore = until
+      .map(u => timeBoundedAfter.filter(_.when.getTime < u))
+      .getOrElse(timeBoundedAfter)
+    limit.map(l => timeBoundedBefore.take(l)).getOrElse(timeBoundedBefore)
+
+  }
+  override def getHistoryFor(service: String,
+                             server: String,
+                             after: Option[Long],
+                             until: Option[Long],
+                             limit: Option[Int]): List[CheckResult] = {
+    val all =
+      store.keys.toList
+        .filter(t => t._1 == service && t._2 == server)
+        .flatMap(k => store.get(k))
+        .flatMap(_.toList)
+    val timeBoundedAfter =
+      after.map(a => all.filter(_.when.getTime > a)).getOrElse(all)
+    val timeBoundedBefore = until
+      .map(u => timeBoundedAfter.filter(_.when.getTime < u))
+      .getOrElse(timeBoundedAfter)
+    limit.map(l => timeBoundedBefore.take(l)).getOrElse(timeBoundedBefore)
+
+  }
+  override def getHistoryFor(service: String,
                              server: String,
                              serviceCheck: String,
                              after: Option[Long],
@@ -143,6 +187,28 @@ object HistoryServer extends LiftActor with ConfigFileReader with Logger {
   def clear = {
     historyListeners = List.empty[HistoryListener]
   }
+  def getHistory(listenerName: Option[String],
+                 service: String,
+                 since: Option[Long],
+                 until: Option[Long],
+                 limit: Option[Int]): List[CheckResult] = {
+    val listeners = listenerName
+      .map(n => historyListeners.filter(_.name == n))
+      .getOrElse(historyListeners)
+    listeners.flatMap(_.getHistoryFor(service, since, until, limit))
+  }
+  def getHistory(listenerName: Option[String],
+                 service: String,
+                 server: String,
+                 since: Option[Long],
+                 until: Option[Long],
+                 limit: Option[Int]): List[CheckResult] = {
+    val listeners = listenerName
+      .map(n => historyListeners.filter(_.name == n))
+      .getOrElse(historyListeners)
+    listeners.flatMap(_.getHistoryFor(service, server, since, until, limit))
+  }
+
   def getHistory(listenerName: Option[String],
                  service: String,
                  server: String,
