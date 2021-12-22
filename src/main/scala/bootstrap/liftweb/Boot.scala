@@ -39,7 +39,7 @@ class Boot extends Logger {
       //attach the debug-tools which break things
       LiftRules.dispatch.append(DebugToolsRestHelper)
     }
-    LiftRules.dispatch.prepend(SystemRestHelper)
+    LiftRules.dispatch.append(SystemRestHelper)
 
     // where to search snippet
     LiftRules.addToPackages("metl")

@@ -20,26 +20,32 @@ object SystemRestHelper extends RestHelper with Logger {
                  _) =>
       () =>
         {
-          val checks = HistoryServer.getHistory(Some(historyListenerName),
-                                                service,
-                                                server,
-                                                serviceCheckName,
-                                                r.param("since").map(_.toLong),
-                                                r.param("until").map(_.toLong),
-                                                r.param("limit").map(_.toInt))
+          val myRestriction = Globals.currentUserAccessRestriction
+          val checks = HistoryServer
+            .getHistory(Some(historyListenerName),
+                        service,
+                        server,
+                        serviceCheckName,
+                        r.param("since").map(_.toLong),
+                        r.param("until").map(_.toLong),
+                        r.param("limit").map(_.toInt))
+            .filter(checkResult => myRestriction.permit(checkResult))
           Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
         }
 
     case r @ Req(List("history", service, server, serviceCheckName), _, _) =>
       () =>
         {
-          val checks = HistoryServer.getHistory(None,
-                                                service,
-                                                server,
-                                                serviceCheckName,
-                                                r.param("since").map(_.toLong),
-                                                r.param("until").map(_.toLong),
-                                                r.param("limit").map(_.toInt))
+          val myRestriction = Globals.currentUserAccessRestriction
+          val checks = HistoryServer
+            .getHistory(None,
+                        service,
+                        server,
+                        serviceCheckName,
+                        r.param("since").map(_.toLong),
+                        r.param("until").map(_.toLong),
+                        r.param("limit").map(_.toInt))
+            .filter(checkResult => myRestriction.permit(checkResult))
           Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
         }
     case r @ Req(List("history", "listener", historyListenerName, service),
@@ -47,22 +53,28 @@ object SystemRestHelper extends RestHelper with Logger {
                  _) =>
       () =>
         {
-          val checks = HistoryServer.getHistory(Some(historyListenerName),
-                                                service,
-                                                r.param("since").map(_.toLong),
-                                                r.param("until").map(_.toLong),
-                                                r.param("limit").map(_.toInt))
+          val myRestriction = Globals.currentUserAccessRestriction
+          val checks = HistoryServer
+            .getHistory(Some(historyListenerName),
+                        service,
+                        r.param("since").map(_.toLong),
+                        r.param("until").map(_.toLong),
+                        r.param("limit").map(_.toInt))
+            .filter(checkResult => myRestriction.permit(checkResult))
           Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
         }
 
     case r @ Req(List("history", service), _, _) =>
       () =>
         {
-          val checks = HistoryServer.getHistory(None,
-                                                service,
-                                                r.param("since").map(_.toLong),
-                                                r.param("until").map(_.toLong),
-                                                r.param("limit").map(_.toInt))
+          val myRestriction = Globals.currentUserAccessRestriction
+          val checks = HistoryServer
+            .getHistory(None,
+                        service,
+                        r.param("since").map(_.toLong),
+                        r.param("until").map(_.toLong),
+                        r.param("limit").map(_.toInt))
+            .filter(checkResult => myRestriction.permit(checkResult))
           Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
         }
     case r @ Req(
@@ -71,34 +83,43 @@ object SystemRestHelper extends RestHelper with Logger {
           _) =>
       () =>
         {
-          val checks = HistoryServer.getHistory(Some(historyListenerName),
-                                                service,
-                                                server,
-                                                r.param("since").map(_.toLong),
-                                                r.param("until").map(_.toLong),
-                                                r.param("limit").map(_.toInt))
+          val myRestriction = Globals.currentUserAccessRestriction
+          val checks = HistoryServer
+            .getHistory(Some(historyListenerName),
+                        service,
+                        server,
+                        r.param("since").map(_.toLong),
+                        r.param("until").map(_.toLong),
+                        r.param("limit").map(_.toInt))
+            .filter(checkResult => myRestriction.permit(checkResult))
           Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
         }
 
     case r @ Req(List("history", service, server), _, _) =>
       () =>
         {
-          val checks = HistoryServer.getHistory(None,
-                                                service,
-                                                server,
-                                                r.param("since").map(_.toLong),
-                                                r.param("until").map(_.toLong),
-                                                r.param("limit").map(_.toInt))
+          val myRestriction = Globals.currentUserAccessRestriction
+          val checks = HistoryServer
+            .getHistory(None,
+                        service,
+                        server,
+                        r.param("since").map(_.toLong),
+                        r.param("until").map(_.toLong),
+                        r.param("limit").map(_.toInt))
+            .filter(checkResult => myRestriction.permit(checkResult))
           Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
         }
 
     case r @ Req("allHistory" :: _, _, _) =>
       () =>
         {
+          val myRestriction = Globals.currentUserAccessRestriction
           val checks =
-            HistoryServer.getAllHistory(r.param("since").map(_.toLong),
-                                        r.param("until").map(_.toLong),
-                                        r.param("limit").map(_.toInt))
+            HistoryServer
+              .getAllHistory(r.param("since").map(_.toLong),
+                             r.param("until").map(_.toLong),
+                             r.param("limit").map(_.toInt))
+              .filter(checkResult => myRestriction.permit(checkResult))
           Full(JsonResponse(net.liftweb.json.Extraction.decompose(checks), 200))
         }
     case Req("reloadXml" :: _, _, _) =>
