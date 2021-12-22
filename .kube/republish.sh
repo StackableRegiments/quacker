@@ -13,11 +13,18 @@ function exit_if_failed() {
 		exit $CMD_RESULT;
 	fi
 }
+REPO_HOST="541765997109.dkr.ecr.us-east-1.amazonaws.com"
+REPO="$REPO_HOST/ucroo/quacker"
+
+function login_to_ecr() {
+	aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $REPO_HOST
+}
 
 export PATH=~/kube:~/.local/bin:$PATH
 GIT_REV="$(git rev-parse HEAD)"
 docker login
-docker pull 541765997109.dkr.ecr.us-east-1.amazonaws.com/ucroo/quacker:$GIT_REV
+IMAGE_META="$( aws ecr describe-images --repository-name=ucroo/quacker --image-ids=imageTag=$GIT_REV )"
+## docker pull $REPO:$GIT_REV
 if [ $? -eq 0 ];
 then
 	echo "image already exists";
@@ -32,7 +39,7 @@ else
 	./sbt.sh clean
 	exit_if_failed
 	cd .kube
-	$(aws ecr get-login --no-include-email --region us-east-1)
+	login_to_ecr
 	exit_if_failed
 	# pull the latest version of the jetty image
 #	docker pull jetty/jetty:latest
