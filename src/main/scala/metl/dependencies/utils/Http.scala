@@ -628,11 +628,23 @@ class CleanHttpClient(connMgr: ClientConnectionManager)
               case Some(dom) => dom.getValue
               case None      => "/"
             }
-          val testTrue =
-            uri.toString.toLowerCase.contains(cookieDomain.toLowerCase)
-          if (testTrue)
+          val testTrue = {
+            val safeCookieDomain: String =
+              cookieDomain.toString.toLowerCase match {
+                case u if u.startsWith(".") => u.dropWhile(c => c == '.')
+                case u                      => u
+              }
+            val safeUri: String = uri.toString.toLowerCase match {
+              case u if u.startsWith(".") => u.dropWhile(c => c == '.')
+              case u                      => u
+            }
+            safeUri.contains(safeCookieDomain)
+          }
+          if (testTrue) {
             "%s=%s".format(cookieName, cookieValue)
-          else ""
+          } else {
+            ""
+          }
         })
       })
       .flatten

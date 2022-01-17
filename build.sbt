@@ -184,7 +184,8 @@ libraryDependencies in ThisBuild ++= {
     "commons-io" % "commons-io" % "1.4",
     "commons-codec" % "commons-codec" % "1.9",
     /*http*/
-    "org.apache.httpcomponents" % "httpcore" % "4.1.2",
+    //"org.apache.httpcomponents" % "httpcore" % "4.1.2",
+    "org.apache.httpcomponents" % "httpcore" % "4.4.15",
     /*memcached*/
     //"spy" % "spymemcached" % "2.6",
     "net.spy" % "spymemcached" % "2.12.1",
