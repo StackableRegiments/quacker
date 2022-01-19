@@ -428,7 +428,7 @@ abstract class FunctionalServiceCheck extends Logger {
       previousResult: FunctionalCheckReturn,
       interpolator: Interpolator): Either[Exception, FunctionalCheckReturn] =
     try {
-      debug(
+      trace(
         "STEP: %s \r\n (env: %s)".format(this,
                                          previousResult.updatedEnvironment))
       Right(innerAct(previousResult, interpolator))

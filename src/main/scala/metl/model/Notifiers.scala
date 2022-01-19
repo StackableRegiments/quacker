@@ -77,68 +77,68 @@ case class GraphableBoolean(v: Boolean) extends GraphableDatum {
 
 object GraphableStringSerializer
     extends CustomSerializer[GraphableString](
-      (formats: net.liftweb.json.Formats) =>
-        ({
-          case JString(s) => GraphableString(s)
-        }, {
-          case GraphableString(s) => JString(s)
-        }))
+  (formats: net.liftweb.json.Formats) =>
+  ({
+    case JString(s) => GraphableString(s)
+  }, {
+    case GraphableString(s) => JString(s)
+  }))
 object GraphableIntSerializer
     extends CustomSerializer[GraphableInt](
-      (formats: net.liftweb.json.Formats) =>
-        ({
-          case JInt(s) => GraphableInt(s.toInt)
-        }, {
-          case GraphableInt(s) => JInt(s)
-        }))
+  (formats: net.liftweb.json.Formats) =>
+  ({
+    case JInt(s) => GraphableInt(s.toInt)
+  }, {
+    case GraphableInt(s) => JInt(s)
+  }))
 object GraphableLongSerializer
     extends CustomSerializer[GraphableLong](
-      (formats: net.liftweb.json.Formats) =>
-        ({
-          case JInt(s) => GraphableLong(s.toLong)
-        }, {
-          case GraphableLong(s) => JInt(s)
-        }))
+  (formats: net.liftweb.json.Formats) =>
+  ({
+    case JInt(s) => GraphableLong(s.toLong)
+  }, {
+    case GraphableLong(s) => JInt(s)
+  }))
 object GraphableFloatSerializer
     extends CustomSerializer[GraphableFloat](
-      (formats: net.liftweb.json.Formats) =>
-        ({
-          case JDouble(s) => GraphableFloat(s.toFloat)
-        }, {
-          case GraphableFloat(s) => JDouble(s)
-        }))
+  (formats: net.liftweb.json.Formats) =>
+  ({
+    case JDouble(s) => GraphableFloat(s.toFloat)
+  }, {
+    case GraphableFloat(s) => JDouble(s)
+  }))
 object GraphableDoubleSerializer
     extends CustomSerializer[GraphableDouble](
-      (formats: net.liftweb.json.Formats) =>
-        ({
-          case JDouble(s) => GraphableDouble(s.toDouble)
-        }, {
-          case GraphableDouble(s) => JDouble(s)
-        }))
+  (formats: net.liftweb.json.Formats) =>
+  ({
+    case JDouble(s) => GraphableDouble(s.toDouble)
+  }, {
+    case GraphableDouble(s) => JDouble(s)
+  }))
 object GraphableBooleanSerializer
     extends CustomSerializer[GraphableBoolean](
-      (formats: net.liftweb.json.Formats) =>
-        ({
-          case JBool(s) => GraphableBoolean(s)
-        }, {
-          case GraphableBoolean(s) => JBool(s)
-        }))
+  (formats: net.liftweb.json.Formats) =>
+  ({
+    case JBool(s) => GraphableBoolean(s)
+  }, {
+    case GraphableBoolean(s) => JBool(s)
+  }))
 object GraphableDatumSerializer
     extends CustomSerializer[GraphableDatum](
-      (formats: net.liftweb.json.Formats) =>
-        ({
-          case JString(s) => GraphableString(s)
-          case JInt(s)    => GraphableLong(s.toLong)
-          case JDouble(s) => GraphableDouble(s.toDouble)
-          case JBool(s)   => GraphableBoolean(s)
-        }, {
-          case GraphableBoolean(s) => JBool(s)
-          case GraphableDouble(s)  => JDouble(s)
-          case GraphableFloat(s)   => JDouble(s)
-          case GraphableLong(s)    => JInt(s)
-          case GraphableInt(s)     => JInt(s)
-          case GraphableString(s)  => JString(s)
-        }))
+  (formats: net.liftweb.json.Formats) =>
+  ({
+    case JString(s) => GraphableString(s)
+    case JInt(s)    => GraphableLong(s.toLong)
+    case JDouble(s) => GraphableDouble(s.toDouble)
+    case JBool(s)   => GraphableBoolean(s)
+  }, {
+    case GraphableBoolean(s) => JBool(s)
+    case GraphableDouble(s)  => JDouble(s)
+    case GraphableFloat(s)   => JDouble(s)
+    case GraphableLong(s)    => JInt(s)
+    case GraphableInt(s)     => JInt(s)
+    case GraphableString(s)  => JString(s)
+  }))
 
 object GraphableData {
   val formats = net.liftweb.json.DefaultFormats + GraphableDatumSerializer + GraphableDoubleSerializer + GraphableFloatSerializer + GraphableLongSerializer + GraphableIntSerializer + GraphableBooleanSerializer
@@ -151,22 +151,22 @@ object GraphableData {
 }
 
 case class CheckResult(id: String,
-                       serviceCheck: String,
-                       label: String,
-                       service: String,
-                       serviceLabel: String,
-                       server: String,
-                       serverLabel: String,
-                       when: Date,
-                       why: String,
-                       lastUp: Box[Date],
-                       detail: String,
-                       mode: ServiceCheckMode,
-                       severity: ServiceCheckSeverity,
-                       success: Boolean,
-                       data: List[Tuple2[Long, Map[String, GraphableDatum]]] =
-                         Nil,
-                       duration: Box[Double] = Empty) {
+  serviceCheck: String,
+  label: String,
+  service: String,
+  serviceLabel: String,
+  server: String,
+  serverLabel: String,
+  when: Date,
+  why: String,
+  lastUp: Box[Date],
+  detail: String,
+  mode: ServiceCheckMode,
+  severity: ServiceCheckSeverity,
+  success: Boolean,
+  data: List[Tuple2[Long, Map[String, GraphableDatum]]] =
+    Nil,
+  duration: Box[Double] = Empty) {
   def generateJson: List[JField] = {
     List(
       JField("id", JString(id)),
@@ -211,17 +211,24 @@ case class CheckResult(id: String,
   }
 }
 
-abstract class ErrorActor(name: String) extends LiftActor {
+abstract class ErrorActor(name: String) extends LiftActor with Logger {
   protected def outputAction(cr: CheckResult) = {
+    debug("ErrorActor matching: %s".format(cr))
     cr.success match {
       case false => registerFailure(cr)
       case true  => registerSuccess(cr)
     }
   }
   protected val filterAction: (CheckResult) => Boolean = (c: CheckResult) =>
-    true
+  true
   override def messageHandler = {
-    case c: CheckResult if filterAction(c) => outputAction(c)
+    case c: CheckResult => {
+      val matchesFilter = filterAction(c)
+      if (matchesFilter){
+        debug("ErrorActor handling %s? %s".format(c,matchesFilter))
+        outputAction(c)
+      }
+    }
     case _                                 => {}
   }
   protected def registerFailure(cr: CheckResult): Unit
@@ -236,14 +243,14 @@ abstract class LogChangesErrorActor(name: String) extends ErrorActor(name) {
   protected val maximumInterval: Long = 3600000L
   private val recentActions =
     new scala.collection.mutable.HashMap[String,
-                                         Map[String, Tuple2[Long, Long]]] {
+      Map[String, Tuple2[Long, Long]]] {
       override def default(who: String) = {
         Map.empty[String, Tuple2[Long, Long]]
       }
     }
   private def updateRecentActions(who: String,
-                                  why: String,
-                                  when: Long): Unit = {
+    why: String,
+    when: Long): Unit = {
     val interval = tryo(recentActions(who)(why)._2).openOr(initialInterval)
     recentActions.update(
       who,
@@ -252,10 +259,10 @@ abstract class LogChangesErrorActor(name: String) extends ErrorActor(name) {
         (when, Math.min(interval * exponentialFactor, maximumInterval))))
   }
   private def shouldFail(who: String,
-                         serviceName: String,
-                         serverName: String,
-                         why: String,
-                         when: Long): Boolean = {
+    serviceName: String,
+    serverName: String,
+    why: String,
+    when: Long): Boolean = {
     val raKey = "%s||%s||%s".format(serviceName, serverName, who)
     val lastMail = tryo(recentActions(raKey)(why)).openOr((0L, initialInterval))
     ((when - lastMail._1) > lastMail._2)
@@ -269,17 +276,20 @@ abstract class LogChangesErrorActor(name: String) extends ErrorActor(name) {
     val detail = cr.detail
     val lastUp = cr.lastUp.map(lu => lu.toString).openOr("NEVER")
     val mode = cr.mode
+    val severity = cr.severity
     val when = date.getTime
     val raKey = "%s||%s||%s".format(serviceName, serverName, who)
+    debug("register failure: %s".format(cr))
     if (shouldFail(who, serviceName, serverName, why, when)) {
       doFailureAction(who,
-                      serviceName,
-                      serverName,
-                      why,
-                      detail,
-                      date,
-                      lastUp,
-                      mode)
+        serviceName,
+        serverName,
+        why,
+        detail,
+        date,
+        lastUp,
+        mode,
+        severity)
       updateRecentActions(raKey, why, when)
     }
   }
@@ -290,26 +300,35 @@ abstract class LogChangesErrorActor(name: String) extends ErrorActor(name) {
     val date = cr.when
     val lastUp = cr.lastUp.map(lu => lu.toString).openOr("NEVER")
     val mode = cr.mode
+    val severity = cr.severity
     val raKey = "%s||%s||%s".format(serviceName, serverName, who)
     if (recentActions(raKey).keys.toList.length > 0) {
-      doSuccessAction(who, serviceName, serverName, date, lastUp, mode)
+      doSuccessAction(who,
+        serviceName,
+        serverName,
+        date,
+        lastUp,
+        mode,
+        severity)
       recentActions.update(raKey, Map.empty[String, Tuple2[Long, Long]])
     }
   }
   protected def doSuccessAction(who: String,
-                                serviceName: String,
-                                serverName: String,
-                                date: Date,
-                                lastUp: String,
-                                mode: ServiceCheckMode): Unit = {}
+    serviceName: String,
+    serverName: String,
+    date: Date,
+    lastUp: String,
+    mode: ServiceCheckMode,
+    severity: ServiceCheckSeverity): Unit = {}
   protected def doFailureAction(who: String,
-                                serviceName: String,
-                                serverName: String,
-                                why: String,
-                                detail: String,
-                                date: Date,
-                                lastUp: String,
-                                mode: ServiceCheckMode): Unit = {}
+    serviceName: String,
+    serverName: String,
+    why: String,
+    detail: String,
+    date: Date,
+    lastUp: String,
+    mode: ServiceCheckMode,
+    severity: ServiceCheckSeverity): Unit = {}
 }
 
 class AppendableFile(filename: String) extends Logger {
@@ -322,14 +341,14 @@ class AppendableFile(filename: String) extends Logger {
         } catch {
           case e: java.io.IOException => {
             error("failed to create filewriter with expected IOException: %s"
-                    .format(e.getMessage.toString),
-                  e)
+              .format(e.getMessage.toString),
+              e)
             Empty
           }
           case e: Throwable => {
             error("failed to create filewriter with unexpected exception: %s"
-                    .format(e.getMessage.toString),
-                  e)
+              .format(e.getMessage.toString),
+              e)
             Empty
           }
         }
@@ -389,11 +408,11 @@ class ErrorDiskLogger(name: String, filename: String)
 }
 
 case class SimpleMailer(smtp: String,
-                        port: Int,
-                        ssl: Boolean,
-                        username: String,
-                        password: String,
-                        fromAddress: Option[String] = None)
+  port: Int,
+  ssl: Boolean,
+  username: String,
+  password: String,
+  fromAddress: Option[String] = None)
     extends net.liftweb.util.Mailer
     with Logger {
   import net.liftweb.util.Mailer._
@@ -408,11 +427,11 @@ case class SimpleMailer(smtp: String,
       new javax.mail.PasswordAuthentication(username, password)
   })
   def sendMailMessage(to: String,
-                      who: String,
-                      subject: String,
-                      message: String): Unit = {
+    who: String,
+    subject: String,
+    message: String): Unit = {
     try {
-      trace(
+      debug(
         "sendingMailMessage to:%s, from:%s, subject:%s, message:%s"
           .format(to, fromAddress, subject, message))
       sendMail(
@@ -422,19 +441,19 @@ case class SimpleMailer(smtp: String,
     } catch {
       case e: Throwable => {
         error("exception while sending mail: to:%s from: %s, %s"
-                .format(fromAddress, to, e.getMessage),
-              e)
+          .format(fromAddress, to, e.getMessage),
+          e)
       }
     }
   }
 }
 
 class ErrorMailer(name: String,
-                  smtp: String,
-                  port: Int,
-                  username: String,
-                  password: String,
-                  fromAddress: Option[String] = None)
+  smtp: String,
+  port: Int,
+  username: String,
+  password: String,
+  fromAddress: Option[String] = None)
     extends LogChangesErrorActor(name) {
   protected val ssl: Boolean = true
   protected lazy val mailer =
@@ -446,17 +465,22 @@ class ErrorMailer(name: String,
   protected val shortcutHost: String = ""
 
   protected def successSubject(mode: ServiceCheckMode,
-                               serviceName: String,
-                               serverName: String): String =
+    serviceName: String,
+    serverName: String): String =
     "%s PASS %s %s %s"
       .format(modeContractor(mode), messageSubject, serviceName, serverName)
       .take(155)
       .toString
   protected def failureSubject(mode: ServiceCheckMode,
-                               serviceName: String,
-                               serverName: String): String =
+    severity: ServiceCheckSeverity,
+    serviceName: String,
+    serverName: String): String =
     "%s FAIL %s %s %s"
-      .format(modeContractor(mode), messageSubject, serviceName, serverName)
+      .format(modeContractor(mode),
+        severity.toString,
+        messageSubject,
+        serviceName,
+        serverName)
       .take(155)
       .toString
 
@@ -469,43 +493,46 @@ class ErrorMailer(name: String,
   }
 
   override def doSuccessAction(who: String,
-                               serviceName: String,
-                               serverName: String,
-                               date: Date,
-                               lastUp: String,
-                               mode: ServiceCheckMode): Unit = {
-    val successMessage = """%s%s : %s 
-SUCCESS: '%s'  [%s].
+    serviceName: String,
+    serverName: String,
+    date: Date,
+    lastUp: String,
+    mode: ServiceCheckMode,
+    severity: ServiceCheckSeverity): Unit = {
+    val successMessage = """%s%s : %s
+SUCCESS: '%s'  [%s] [%s].
 
 %s/?expandedServices=%s&expandedChecks=%s
 
 %s Detection time.
 %s Last known uptime.
 %s""".format(messagePrefix,
-             serviceName,
-             serverName,
-             who,
-             mode.toString,
-             shortcutHost,
-             urlEncode(serviceName),
-             urlEncode(who),
-             date,
-             lastUp,
-             messageSuffix)
+  serviceName,
+  serverName,
+  who,
+  mode.toString,
+  severity.toString,
+  shortcutHost,
+  urlEncode(serviceName),
+  urlEncode(who),
+  date,
+  lastUp,
+  messageSuffix)
     sendMailMessage(who,
-                    successSubject(mode, serviceName, serverName),
-                    successMessage)
+      successSubject(mode, serviceName, serverName),
+      successMessage)
   }
   override def doFailureAction(who: String,
-                               serviceName: String,
-                               serverName: String,
-                               why: String,
-                               detail: String,
-                               date: Date,
-                               lastUp: String,
-                               mode: ServiceCheckMode): Unit = {
+    serviceName: String,
+    serverName: String,
+    why: String,
+    detail: String,
+    date: Date,
+    lastUp: String,
+    mode: ServiceCheckMode,
+    severity: ServiceCheckSeverity): Unit = {
     val failMessage = """%s%s : %s
-FAIL: '%s'  [%s].
+FAIL: '%s'  [%s] [%s].
 Error message: '%s'.
 
 %s/?expandedServices=%s&expandedChecks=%s
@@ -515,28 +542,32 @@ Error message: '%s'.
 
 Error detail: '%s'.
 
-%s""".format(messagePrefix,
-             serviceName,
-             serverName,
-             who,
-             mode.toString,
-             why,
-             shortcutHost,
-             urlEncode(serviceName),
-             urlEncode(who),
-             date,
-             lastUp,
-             detail,
-             messageSuffix)
+%s""".format(
+      messagePrefix,
+  serviceName,
+  serverName,
+  who,
+  mode.toString,
+  severity.toString,
+  why,
+  shortcutHost,
+  urlEncode(serviceName),
+  urlEncode(who),
+  date,
+  lastUp,
+  detail,
+  messageSuffix
+    )
     sendMailMessage(who,
-                    failureSubject(mode, serviceName, serverName),
-                    failMessage)
+      failureSubject(mode, severity, serviceName, serverName),
+      failMessage)
   }
   protected def sendMailMessage(who: String,
-                                subject: String,
-                                message: String): Unit =
+    subject: String,
+    message: String): Unit = {
     interestedParties.foreach(emailAddress =>
       mailer.sendMailMessage(emailAddress, who, subject, message))
+  }
 }
 
 object ErrorRecorder extends LiftActor with ConfigFileReader {
@@ -545,6 +576,7 @@ object ErrorRecorder extends LiftActor with ConfigFileReader {
     mailers = List.empty[LiftActor]
   }
   def configureFromXml(xml: Node): List[String] = {
+    trace("configure from XML: %s".format(xml))
     val diskLoggers = (xml \\ "diskLogger")
       .map(n => {
         val name = getText(n, "name").getOrElse("")
@@ -591,9 +623,9 @@ object ErrorRecorder extends LiftActor with ConfigFileReader {
         val xmlInterestedParties = getNodes(n, "recipients")
           .map(
             rNode =>
-              getNodes(rNode, "emailAddress")
-                .map(eNode => eNode.text.toString)
-                .filterNot(emailAddress => emailAddress == ""))
+            getNodes(rNode, "emailAddress")
+              .map(eNode => eNode.text.toString)
+              .filterNot(emailAddress => emailAddress == ""))
           .flatten
           .toList
         val servicePermissions: List[ServicePermission] =
@@ -606,11 +638,11 @@ object ErrorRecorder extends LiftActor with ConfigFileReader {
         val restrictions = UserAccessRestriction(name, servicePermissions)
         val filterFunc = (cr: CheckResult) => restrictions.permit(cr)
         val em = new ErrorMailer(name,
-                                 smtp,
-                                 port,
-                                 username,
-                                 password,
-                                 xmlFromAddress) {
+          smtp,
+          port,
+          username,
+          password,
+          xmlFromAddress) {
           override val shortcutHost = shortcutLinkServerName
           override val interestedParties: List[String] = xmlInterestedParties
           override val filterAction = (cr: CheckResult) => filterFunc(cr)
@@ -622,6 +654,7 @@ object ErrorRecorder extends LiftActor with ConfigFileReader {
           override val messageSubject: String = xmlMessageSubject
           override val ssl: Boolean = configSsl
         }
+        debug("Creating mailer %s".format(em))
         em
       })
       .toList

@@ -346,14 +346,14 @@ abstract class Sensor(metadata: SensorMetaData)
     }
     case StopSensor => {
       if (!isStopped) {
-        debug("stopping pinger: %s:%s (%s)".format(label, mode, id))
+        trace("stopping pinger: %s:%s (%s)".format(label, mode, id))
         DashboardServer ! RemoveCheck(this)
         isStopped = true
       }
     }
     case StartSensor => {
       if (isStopped) {
-        debug("starting pinger: %s:%s (%s)".format(label, mode, id))
+        trace("starting pinger: %s:%s (%s)".format(label, mode, id))
         isStopped = false
         resetEnvironment
         DashboardServer ! CreateCheck(this)
@@ -398,8 +398,8 @@ case class MatcherCheck(metadata: SensorMetaData,
 }
 /*
 case class InvertedCheck(pinger:Pinger) extends Pinger(pinger.name,pinger.label,pinger.mode,pinger.severity) {
-	override def performCheck = {
-		pinger.performCheck
-	}
+        override def performCheck = {
+                pinger.performCheck
+        }
 }
  */

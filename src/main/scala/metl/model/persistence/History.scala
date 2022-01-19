@@ -236,7 +236,7 @@ object HistoryServer extends LiftActor with ConfigFileReader with Logger {
     }
   }
   def configureFromXml(xml: Node): List[String] = {
-    debug("configureFromXml: %s".format(xml))
+    trace("configureFromXml: %s".format(xml))
     val newHistoryListeners = (xml \ "historyListeners")
       .map(hls => (hls \ "historyListener"))
       .flatten

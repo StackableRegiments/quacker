@@ -569,14 +569,14 @@ case class MuninFunctionalCheck(host: String,
                 out
               }
               case (p: scala.Double, i: scala.Double) => {
-                debug(
+                trace(
                   "correct counter behaviour: %s (%s -> %s)".format(ink, p, i))
                 val out = i - p
                 po.put(ink, i)
                 out
               }
               case other => {
-                debug("resetting to zero: %s (%s)".format(ink, other))
+                trace("resetting to zero: %s (%s)".format(ink, other))
                 val out = 0.0
                 po.put(ink, 0.0)
                 out

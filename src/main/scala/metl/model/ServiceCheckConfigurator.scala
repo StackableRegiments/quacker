@@ -15,7 +15,7 @@ object ServiceCheckConfigurator extends ConfigFileReader with Logger {
     trace("loading xml: %s".format(xml))
     (xml \\ "serviceCheck")
       .map(sc => {
-        debug("Configuring serviceCheck from:\n%s".format(sc))
+        trace("Configuring serviceCheck from:\n%s".format(sc))
         val periodInt = (getLong(sc, "period").getOrElse(60L)) * 1000
         val period = new TimeSpan(periodInt)
         val serviceCheckName = getAttr(sc, "name").getOrElse("unnamed")

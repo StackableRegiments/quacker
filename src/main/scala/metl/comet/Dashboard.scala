@@ -23,7 +23,8 @@ case class StatusCall(id: String,
                       replacementActions: JsCmd,
                       service: String,
                       server: String,
-                      serviceCheckMode: ServiceCheckMode)
+                      serviceCheckMode: ServiceCheckMode,
+                      serviceCheckSeverity: ServiceCheckSeverity)
 
 case class UserLoggedIn(session: LiftSession)
 

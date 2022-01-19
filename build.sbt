@@ -31,8 +31,8 @@ lazy val root = (project in file("."))
     buildInfoPackage := "code.buildInfo"
   )
 
-scalafmtOnCompile in ThisBuild := true
-scalafmtShowDiff in ThisBuild := true
+scalafmtOnCompile in ThisBuild := false
+scalafmtShowDiff in ThisBuild := false
 
 scapegoatVersion in ThisBuild := "1.3.11"
 
@@ -62,6 +62,7 @@ javaOptions in Jetty ++= Seq(
   "-Djavax.net.ssl.keyStorePassword=changeit",
   "-Dquacker.configDirectoryLocation=monitoringDashboardConfig",
   "-Dquacker.appConfigDirectoryLocation=appConf",
+  "-Drun.mode=production",
   "-Dlogback.configurationFile=appConf/logback.xml"
 )
 

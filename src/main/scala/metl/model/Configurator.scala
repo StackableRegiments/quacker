@@ -112,6 +112,7 @@ object ServiceConfigurator extends Logger {
         }
       }
       safelyConfigure("validUsers", () => ValidUsers.configureFromXml(x))
+      debug("In dev mode? %s".format(Globals.isDevMode))
       if (!Globals.isDevMode) {
         safelyConfigure("notifiers", () => ErrorRecorder.configureFromXml(x))
       }

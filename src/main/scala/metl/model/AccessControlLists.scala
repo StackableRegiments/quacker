@@ -13,15 +13,41 @@ import metl.comet._
 object ServicePermission extends ConfigFileReader {
   def configureFromXml(node: Node): ServicePermission = {
     val serviceName = getAttr(node, "name").getOrElse("unknown")
+    val whitelistedServiceCheckSeverity =
+      getNodes(node, "allowedServiceCheckSeverity") match {
+        case l: List[Node] if (l.length > 0) =>
+          Some(
+            l.map(
+              ascmn =>
+              getNodes(ascmn, "serviceCheckSeverity")
+                .map(scmn => getAttr(scmn, "level").getOrElse("unknown"))
+                .filter(a => a != "unknown"))
+              .flatten
+              .map(scString => ServiceCheckSeverity.parse(scString)))
+        case _ => None
+      }
+    val blacklistedServiceCheckSeverity =
+      getNodes(node, "disallowedServiceCheckSeverity") match {
+        case l: List[Node] if (l.length > 0) =>
+          Some(
+            l.map(
+              ascmn =>
+              getNodes(ascmn, "serviceCheckSeverity")
+                .map(scmn => getAttr(scmn, "level").getOrElse("unknown"))
+                .filter(a => a != "unknown"))
+              .flatten
+              .map(scString => ServiceCheckSeverity.parse(scString)))
+        case _ => None
+      }
     val whitelistedServiceCheckModes =
       getNodes(node, "allowedServiceCheckModes") match {
         case l: List[Node] if (l.length > 0) =>
           Some(
             l.map(
-                ascmn =>
-                  getNodes(ascmn, "serviceCheckMode")
-                    .map(scmn => getAttr(scmn, "level").getOrElse("unknown"))
-                    .filter(a => a != "unknown"))
+              ascmn =>
+              getNodes(ascmn, "serviceCheckMode")
+                .map(scmn => getAttr(scmn, "level").getOrElse("unknown"))
+                .filter(a => a != "unknown"))
               .flatten
               .map(scString => ServiceCheckMode.parse(scString)))
         case _ => None
@@ -31,10 +57,10 @@ object ServicePermission extends ConfigFileReader {
         case l: List[Node] if (l.length > 0) =>
           Some(
             l.map(
-                ascmn =>
-                  getNodes(ascmn, "serviceCheckMode")
-                    .map(scmn => getAttr(scmn, "level").getOrElse("unknown"))
-                    .filter(a => a != "unknown"))
+              ascmn =>
+              getNodes(ascmn, "serviceCheckMode")
+                .map(scmn => getAttr(scmn, "level").getOrElse("unknown"))
+                .filter(a => a != "unknown"))
               .flatten
               .map(scString => ServiceCheckMode.parse(scString)))
         case _ => None
@@ -43,10 +69,10 @@ object ServicePermission extends ConfigFileReader {
       case l: List[Node] if (l.length > 0) =>
         Some(
           l.map(
-              ascmn =>
-                getNodes(ascmn, "server")
-                  .map(scmn => getAttr(scmn, "name").getOrElse("unknown"))
-                  .filter(a => a != "unknown"))
+            ascmn =>
+            getNodes(ascmn, "server")
+              .map(scmn => getAttr(scmn, "name").getOrElse("unknown"))
+              .filter(a => a != "unknown"))
             .flatten
             .toList)
       case _ => None
@@ -55,35 +81,45 @@ object ServicePermission extends ConfigFileReader {
       case l: List[Node] if (l.length > 0) =>
         Some(
           l.map(
-              ascmn =>
-                getNodes(ascmn, "server")
-                  .map(scmn => getAttr(scmn, "name").getOrElse("unknown"))
-                  .filter(a => a != "unknown"))
+            ascmn =>
+            getNodes(ascmn, "server")
+              .map(scmn => getAttr(scmn, "name").getOrElse("unknown"))
+              .filter(a => a != "unknown"))
             .flatten
             .toList)
       case _ => None
     }
-    new ServicePermission(serviceName,
-                          whitelistedServiceCheckModes,
-                          blacklistedServiceCheckModes,
-                          whitelistedServers,
-                          blacklistedServers)
+    new ServicePermission(
+      serviceName,
+      whitelistedServiceCheckModes,
+      blacklistedServiceCheckModes,
+      whitelistedServers,
+      blacklistedServers,
+      whitelistedServiceCheckSeverity,
+      blacklistedServiceCheckSeverity
+    )
   }
   def empty = PermissiveServicePermission
 }
 
-class ServicePermission(
-    serviceName: String,
-    serviceCheckModeWhitelist: Option[List[ServiceCheckMode]],
-    serviceCheckModeBlacklist: Option[List[ServiceCheckMode]],
-    serverWhitelist: Option[List[String]],
-    serverBlacklist: Option[List[String]]) {
+class ServicePermission (
+  serviceName: String,
+  serviceCheckModeWhitelist: Option[List[ServiceCheckMode]],
+  serviceCheckModeBlacklist: Option[List[ServiceCheckMode]],
+  serverWhitelist: Option[List[String]],
+  serverBlacklist: Option[List[String]],
+  serviceCheckSeverityWhitelist: Option[List[ServiceCheckSeverity]],
+  serviceCheckSeverityBlacklist: Option[List[ServiceCheckSeverity]]) extends Logger {
   override def toString: String = {
-    "ServicePermission(%s,%s,%s,%s,%s)".format(serviceName,
-                                               serviceCheckModeWhitelist,
-                                               serviceCheckModeBlacklist,
-                                               serverWhitelist,
-                                               serverBlacklist)
+    "ServicePermission(%s,%s,%s,%s,%s,%s,%s)".format(
+      serviceName,
+      serviceCheckModeWhitelist,
+      serviceCheckModeBlacklist,
+      serverWhitelist,
+      serverBlacklist,
+      serviceCheckSeverityWhitelist,
+      serviceCheckSeverityBlacklist
+    )
   }
   def permit(input: AnyRef): Boolean = input match {
     case s: ServiceDefinition => {
@@ -111,8 +147,28 @@ class ServicePermission(
       val serviceCheckModeBlacklisted = serviceCheckModeBlacklist
         .map(scmb => scmb.contains(cr.mode))
         .getOrElse(false)
+      val serviceCheckSeverityWhitelisted = serviceCheckSeverityWhitelist
+        .map(scsw => scsw.contains(cr.severity))
+        .getOrElse(true)
+      val serviceCheckSeverityBlacklisted = serviceCheckSeverityBlacklist
+        .map(scsb => scsb.contains(cr.severity))
+        .getOrElse(false)
       val serviceOkay = serviceName == cr.service
-      serviceCheckModeWhitelisted && !serviceCheckModeBlacklisted && serverWhitelisted && !serverBlacklisted && serviceOkay
+
+      if(serviceOkay){
+        debug("(Looking for TF TF TF T)\n\n%s%s\n%s%s\n%s%s\n%s".format(
+          serviceCheckModeWhitelisted,serviceCheckModeBlacklisted,
+          serverWhitelisted,serverBlacklisted,
+          serviceCheckSeverityWhitelisted,serviceCheckSeverityBlacklisted,
+          serviceOkay))
+        debug(this)
+        debug(cr)
+      }
+
+      serviceCheckModeWhitelisted && !serviceCheckModeBlacklisted &&
+      serverWhitelisted && !serverBlacklisted &&
+      serviceCheckSeverityWhitelisted && !serviceCheckSeverityBlacklisted &&
+      serviceOkay
     }
     case p: Sensor => {
       val pServerName = p.serverName
@@ -127,8 +183,17 @@ class ServicePermission(
       val serviceCheckModeBlacklisted = serviceCheckModeBlacklist
         .map(scmb => scmb.contains(p.mode))
         .getOrElse(false)
+      val serviceCheckSeverityWhitelisted = serviceCheckSeverityWhitelist
+        .map(scsw => scsw.contains(p.severity))
+        .getOrElse(true)
+      val serviceCheckSeverityBlacklisted = serviceCheckSeverityBlacklist
+        .map(scsb => scsb.contains(p.severity))
+        .getOrElse(false)
       val serviceOkay = serviceName == pServiceName
-      val result = serviceCheckModeWhitelisted && !serviceCheckModeBlacklisted && serverWhitelisted && !serverBlacklisted && serviceOkay
+      val result = serviceCheckModeWhitelisted && !serviceCheckModeBlacklisted &&
+      serverWhitelisted && !serverBlacklisted &&
+      serviceCheckSeverityWhitelisted && !serviceCheckSeverityBlacklisted &&
+      serviceOkay
       result
     }
     case ve: VisualElement => {
@@ -145,6 +210,7 @@ class ServicePermission(
       val sServerName = s.server
       val sServiceName = s.service
       val sServiceCheckMode = s.serviceCheckMode
+      val sServiceCheckSeverity = s.serviceCheckSeverity
       val serverWhitelisted =
         serverWhitelist.map(sw => sw.contains(sServerName)).getOrElse(true)
       val serverBlacklisted =
@@ -155,15 +221,24 @@ class ServicePermission(
       val serviceCheckModeBlacklisted = serviceCheckModeBlacklist
         .map(scmb => scmb.contains(sServiceCheckMode))
         .getOrElse(false)
+      val serviceCheckSeverityWhitelisted = serviceCheckSeverityWhitelist
+        .map(scsw => scsw.contains(sServiceCheckSeverity))
+        .getOrElse(true)
+      val serviceCheckSeverityBlacklisted = serviceCheckSeverityBlacklist
+        .map(scsb => scsb.contains(sServiceCheckSeverity))
+        .getOrElse(false)
       val serviceOkay = serviceName == sServiceName
-      serviceCheckModeWhitelisted && !serviceCheckModeBlacklisted && serverWhitelisted && !serverBlacklisted && serviceOkay
+      serviceCheckModeWhitelisted && !serviceCheckModeBlacklisted &&
+      serverWhitelisted && !serverBlacklisted &&
+      serviceCheckSeverityWhitelisted && !serviceCheckSeverityBlacklisted &&
+      serviceOkay
     }
     case _ => false
   }
 }
 
 case object PermissiveServicePermission
-    extends ServicePermission("", None, None, None, None) {
+    extends ServicePermission("", None, None, None, None, None, None) {
   override def permit(input: AnyRef): Boolean = true
 }
 
@@ -182,7 +257,7 @@ object UserAccessRestriction extends ConfigFileReader {
 }
 
 case class UserAccessRestriction(name: String,
-                                 servicePermissions: List[ServicePermission]) {
+  servicePermissions: List[ServicePermission]) {
   def permit(input: AnyRef): Boolean =
     servicePermissions.length == 0 || servicePermissions.exists(sp =>
       sp.permit(input))
