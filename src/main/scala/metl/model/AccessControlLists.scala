@@ -156,13 +156,13 @@ class ServicePermission (
       val serviceOkay = serviceName == cr.service
 
       if(serviceOkay){
-        debug("(Looking for TF TF TF T)\n\n%s%s\n%s%s\n%s%s\n%s".format(
+        trace("(Looking for TF TF TF T)\n\n%s%s\n%s%s\n%s%s\n%s".format(
           serviceCheckModeWhitelisted,serviceCheckModeBlacklisted,
           serverWhitelisted,serverBlacklisted,
           serviceCheckSeverityWhitelisted,serviceCheckSeverityBlacklisted,
           serviceOkay))
-        debug(this)
-        debug(cr)
+        trace(this)
+        trace(cr)
       }
 
       serviceCheckModeWhitelisted && !serviceCheckModeBlacklisted &&
