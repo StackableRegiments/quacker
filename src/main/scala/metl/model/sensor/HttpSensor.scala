@@ -1,6 +1,6 @@
 package metl.model.sensor
 
-import com.metl.utils.{HTTPResponse, Http}
+import com.metl.utils.{HTTPResponse, Http, AsyncHttp}
 import metl.model._
 import net.liftweb.common.Full
 import net.liftweb.util.Helpers._
@@ -150,11 +150,76 @@ case class HttpSensor(
     time: TimeSpan = 5 seconds)
     extends Sensor(metadata) {
   override val pollInterval = time
-  def getClient = Http.getClient
+  def getClient = AsyncHttp.getClient
+  var client = getClient
+  headers.foreach(h => client.addHttpHeader(h._1, h._2))
+  override def resetEnvironment = {
+		client.stop
+    client = getClient
+		client.start
+    headers.foreach(h => client.addHttpHeader(h._1, h._2))
+  }
+  override def performCheck(after:() => Unit) = {
+		client.getExpectingHTTPResponse(uri,Nil,0,0,Nil,new java.util.Date().getTime(),(response1:HTTPResponse) => {
+			client.respondToResponse(response1,Nil,(response:HTTPResponse) => {
+				val verificationResponse = matcher.verify(response)
+				if (!verificationResponse.success) {
+					throw new DashboardException("HTTP Verification failed",
+																			 verificationResponse.errors.mkString("\r\n"))
+				}
+				succeed(response.toString, Full(response.duration.toDouble))
+				after()
+			})
+		})
+	}
+}
+case class HttpSensorWithBasicAuth(
+    metadata: SensorMetaData,
+    uri: String,
+    username: String,
+    password: String,
+    headers: List[Tuple2[String, String]] = List.empty[Tuple2[String, String]],
+    matcher: HTTPResponseMatcher = HTTPResponseMatchers.default,
+    time: TimeSpan = 5 seconds)
+    extends Sensor(metadata) {
+  override val pollInterval = time
+  def getClient = AsyncHttp.getAuthedClient(username, password)
   var client = getClient
   headers.foreach(h => client.addHttpHeader(h._1, h._2))
   override def resetEnvironment = {
     client = getClient
+    headers.foreach(h => client.addHttpHeader(h._1, h._2))
+  }
+  override def performCheck(after:() => Unit) = {
+		client.getExpectingHTTPResponse(uri,Nil,0,0,Nil,new java.util.Date().getTime(),(response1:HTTPResponse) => {
+			client.respondToResponse(response1,Nil,(response:HTTPResponse) => {
+				val verificationResponse = matcher.verify(response)
+				if (!verificationResponse.success) {
+					throw new DashboardException("HTTP Verification failed",
+																			 verificationResponse.errors.mkString("\r\n"))
+				}
+				succeed(response.toString, Full(response.duration.toDouble))
+				after()
+			})
+		})
+	}
+}
+
+case class SyncHttpSensor(
+    metadata: SensorMetaData,
+    uri: String,
+    headers: List[Tuple2[String, String]] = List.empty[Tuple2[String, String]],
+    matcher: HTTPResponseMatcher = HTTPResponseMatchers.default,
+    time: TimeSpan = 5 seconds)
+    extends Sensor(metadata) {
+  override val pollInterval = time
+  def getClient = Http.getClient
+  var client = getClient
+  headers.foreach(h => client.addHttpHeader(h._1, h._2))
+  override def resetEnvironment = {
+		client.stop
+    client = getClient
+		client.start
     headers.foreach(h => client.addHttpHeader(h._1, h._2))
   }
   def status = {
@@ -162,17 +227,18 @@ case class HttpSensor(
       client.respondToResponse(client.getExpectingHTTPResponse(uri))
     val verificationResponse = matcher.verify(response)
     if (!verificationResponse.success) {
-      throw new DashboardException("HTTP Verification failed",
+      throw new DashboardException("HTTPwithAuth Verification failed",
                                    verificationResponse.errors.mkString("\r\n"))
     }
     (response, Full(response.duration.toDouble))
   }
   override def performCheck(after:() => Unit) = {
-		succeed(status._1.toString, status._2)
+		val s = status
+		succeed(s._1.toString, s._2)
 		after()
 	}
 }
-case class HttpSensorWithBasicAuth(
+case class SyncHttpSensorWithBasicAuth(
     metadata: SensorMetaData,
     uri: String,
     username: String,
@@ -200,7 +266,8 @@ case class HttpSensorWithBasicAuth(
     (response, Full(response.duration.toDouble))
   }
   override def performCheck(after:() => Unit) = {
-		succeed(status._1.toString, status._2)
+		val s = status
+		succeed(s._1.toString, s._2)
 		after()
 	}
 }

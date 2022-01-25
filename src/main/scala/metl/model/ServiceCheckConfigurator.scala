@@ -309,6 +309,63 @@ object ServiceCheckConfigurator extends ConfigFileReader with Logger {
                                             "password not specified")
                   SvnSensor(metadata, host, username, password, period)
                 }
+                case "sync_http" => {
+                  val url =
+                    getOrError(getText(sc, "url"), "", "url not specified")
+                  val matcher: HTTPResponseMatcher =
+                    HTTPResponseMatchers.configureFromXml(
+                      <thresholdsPacket>{getNodes(sc,"thresholds")}</thresholdsPacket>)
+                  val additionalHeaders = getNodes(sc, "header")
+                    .map(c => {
+                      (getText(c, "name").getOrElse(""),
+                       getText(c, "value").getOrElse(""))
+                    })
+                    .filter(h => {
+                      h match {
+                        case (n: String, v: String)
+                            if n.length > 0 && v.length > 0 =>
+                          true
+                        case _ => false
+                      }
+                    })
+                    .toList
+                  SyncHttpSensor(metadata, url, additionalHeaders, matcher, period)
+                }
+                case "sync_http_with_credentials" => {
+                  val url =
+                    getOrError(getText(sc, "url"), "", "url not specified")
+                  val username = getOrError(getText(sc, "username"),
+                                            "",
+                                            "username not specified")
+                  val password = getOrError(getText(sc, "password"),
+                                            "",
+                                            "password not specified")
+                  val matcher: HTTPResponseMatcher =
+                    HTTPResponseMatchers.configureFromXml(
+                      <thresholdsPacket>{getNodes(sc,"thresholds")}</thresholdsPacket>)
+                  val additionalHeaders = getNodes(sc, "header")
+                    .map(c => {
+                      (getText(c, "name").getOrElse(""),
+                       getText(c, "value").getOrElse(""))
+                    })
+                    .filter(h => {
+                      h match {
+                        case (n: String, v: String)
+                            if n.length > 0 && v.length > 0 =>
+                          true
+                        case _ => false
+                      }
+                    })
+                    .toList
+                  SyncHttpSensorWithBasicAuth(metadata,
+                                          url,
+                                          username,
+                                          password,
+                                          additionalHeaders,
+                                          matcher,
+                                          period)
+                }
+
                 case "http" => {
                   val url =
                     getOrError(getText(sc, "url"), "", "url not specified")

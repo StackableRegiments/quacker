@@ -48,6 +48,8 @@ case class WebException(message: String, code: Int, path: String)
     extends Exception(message) {}
 
 trait IMeTLHttpClient {
+	def start:Unit = {}
+	def stop:Unit = {}
   def addAuthorization(domain: String, username: String, password: String): Unit
 
   def get(uri: String): String = get(uri, List.empty[(String, String)])
@@ -196,7 +198,7 @@ class CleanHttpClient(connMgr: ClientConnectionManager)
                                 uri: URI): Unit = {
     val port = determinePort(uri)
     val host = determineHost(uri)
-    val blacklist = List(80, 443)
+    val blacklist = List(80, 443, -1)
     if (blacklist.contains(port))
       message.addHeader(new BasicHeader("Host", host))
     else
