@@ -80,7 +80,8 @@ case class XmppSensor(metadata: SensorMetaData,
         "Xmpp connection to %s didn't successfully connect".format(hostname))
     }
   }
-  override def performCheck = {
+  override def performCheck(after:() => Unit) = {
     succeed(status.toString)
+		after()
   }
 }

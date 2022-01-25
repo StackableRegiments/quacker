@@ -1950,5 +1950,8 @@ case class ScriptedSensor(metadata: SensorMetaData,
     val data = fcr.data
     (finalResult, Full(totalDuration), data)
   }
-  override def performCheck = succeed(status._1.body, status._2, status._3)
+  override def performCheck(after:() => Unit) = {
+		succeed(status._1.body, status._2, status._3)
+		after()
+	}
 }

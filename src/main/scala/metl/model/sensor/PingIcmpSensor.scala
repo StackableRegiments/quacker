@@ -106,5 +106,8 @@ case class PingICMPSensor(metadata: SensorMetaData,
     val timeTaken = pingTimeExtractor(stringOutput)
     (stringOutput, timeTaken)
   }
-  override def performCheck = succeed(status._1, status._2)
+  override def performCheck(after:() => Unit) = {
+		succeed(status._1, status._2)
+		after()
+	}
 }

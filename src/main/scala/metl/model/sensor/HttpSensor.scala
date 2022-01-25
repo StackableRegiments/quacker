@@ -167,7 +167,10 @@ case class HttpSensor(
     }
     (response, Full(response.duration.toDouble))
   }
-  override def performCheck = succeed(status._1.toString, status._2)
+  override def performCheck(after:() => Unit) = {
+		succeed(status._1.toString, status._2)
+		after()
+	}
 }
 case class HttpSensorWithBasicAuth(
     metadata: SensorMetaData,
@@ -196,5 +199,8 @@ case class HttpSensorWithBasicAuth(
     }
     (response, Full(response.duration.toDouble))
   }
-  override def performCheck = succeed(status._1.toString, status._2)
+  override def performCheck(after:() => Unit) = {
+		succeed(status._1.toString, status._2)
+		after()
+	}
 }

@@ -27,5 +27,8 @@ case class SvnSensor(metadata: SensorMetaData,
     repo.closeSession
     logEntries.toString
   }
-  override def performCheck = succeed(status.toString)
+  override def performCheck(after:() => Unit) = {
+		succeed(status.toString)
+		after()
+	}
 }

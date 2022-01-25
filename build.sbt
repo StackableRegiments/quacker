@@ -187,6 +187,7 @@ libraryDependencies in ThisBuild ++= {
     /*http*/
     //"org.apache.httpcomponents" % "httpcore" % "4.1.2",
     "org.apache.httpcomponents" % "httpcore" % "4.4.15",
+		"org.apache.httpcomponents" % "httpcore" % "5.1",
     /*memcached*/
     //"spy" % "spymemcached" % "2.6",
     "net.spy" % "spymemcached" % "2.12.1",

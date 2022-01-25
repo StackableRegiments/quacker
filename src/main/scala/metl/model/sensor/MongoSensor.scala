@@ -23,5 +23,8 @@ case class PingMongo(metadata: SensorMetaData,
     mongo.close
     output
   }
-  override def performCheck: Unit = succeed(status.toString)
+  override def performCheck(after:() => Unit): Unit = {
+		succeed(status.toString)
+		after()
+	}
 }

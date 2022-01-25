@@ -218,7 +218,7 @@ case class OracleSensor(metadata: SensorMetaData,
   override val pollInterval = time
   OracleSetup.initialize
   protected val connectionCreationTimeout = 10000L
-  override def performCheck = {
+  override def performCheck(after:() => Unit) = {
     var output = SQLResultSet(Map.empty[Int, SQLRow])
     var errors = List.empty[Throwable]
     try {
@@ -294,6 +294,7 @@ case class OracleSensor(metadata: SensorMetaData,
     } else if (errors.length > 0) {
       throw new CombinedExceptionsException(errors)
     }
+		after()
   }
 }
 
@@ -362,7 +363,10 @@ case class MySQLSensor(metadata: SensorMetaData,
     }
     output
   }
-  override def performCheck = succeed(status.toString)
+  override def performCheck(after:() => Unit) = {
+		succeed(status.toString)
+		after()
+	}
 }
 
 case class SQLSensor(metadata: SensorMetaData,
@@ -429,5 +433,8 @@ case class SQLSensor(metadata: SensorMetaData,
     }
     output
   }
-  override def performCheck = succeed(status.toString)
+  override def performCheck(after:() => Unit) = {
+		succeed(status.toString)
+		after()
+	}
 }

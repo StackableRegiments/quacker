@@ -239,7 +239,6 @@ abstract class Sensor(metadata: SensorMetaData)
                          success = false,
                          duration = checkDuration)
     addCheckResult(cr, currentFailures >= failureTolerance)
-
   }
   def calculateCheckDuration(timeTaken: Box[Double] = Empty): Double = {
     val now = new Date()
@@ -327,21 +326,22 @@ abstract class Sensor(metadata: SensorMetaData)
   }
   private var isStopped = true
   def isRunning: Boolean = !isStopped
-  protected def performCheck = {}
+  protected def performCheck(after:()=>Unit) = {}
   private var isPerformingCheck = false
-  protected def privatePerformCheck = {
+  protected def privatePerformCheck(after:() => Unit) = {
     if (!isPerformingCheck) {
       isPerformingCheck = true
       lastCheckBegin = Full(new Date())
-      performCheck
-      isPerformingCheck = false
+      performCheck(() => {
+				isPerformingCheck = false
+				after()
+			})
     }
   }
   override def messageHandler = {
     case Check => {
       if (!isStopped) {
-        privatePerformCheck
-        schedule()
+        privatePerformCheck(() => schedule())
       }
     }
     case StopSensor => {
@@ -369,14 +369,17 @@ case class CheckUnexceptional(metadata: SensorMetaData,
     extends Sensor(metadata) {
   override val pollInterval = time
   def status = condition()
-  override def performCheck = succeed("Was expected")
+  override def performCheck(after:()=>Unit) = {
+		succeed("Was expected")
+		after()
+	}
 }
 case class CheckDoesnt(metadata: SensorMetaData,
                        condition: Function0[Option[String]],
                        time: TimeSpan = 5 seconds)
     extends Sensor(metadata) {
   override val pollInterval = 5 seconds
-  override def performCheck = {
+  override def performCheck(after:() => Unit) = {
     condition() match {
       case None => {
         succeed("Ok")
@@ -384,6 +387,7 @@ case class CheckDoesnt(metadata: SensorMetaData,
       case Some(error) =>
         throw new DashboardException("checkDoesn't failed", error)
     }
+		after()
   }
 }
 case class MatcherCheck(metadata: SensorMetaData,
@@ -394,12 +398,16 @@ case class MatcherCheck(metadata: SensorMetaData,
   failureTolerance = 3
   def status =
     "%s is %s".format(matcher.describe, matcher.verify(true).toString)
-  override def performCheck = succeed(status)
+  override def performCheck(after:() => Unit) = {
+		succeed(status)
+		after()
+	}
 }
 /*
 case class InvertedCheck(pinger:Pinger) extends Pinger(pinger.name,pinger.label,pinger.mode,pinger.severity) {
-        override def performCheck = {
+        override def performCheck(after:() => Unit) = {
                 pinger.performCheck
+								after()
         }
 }
  */
