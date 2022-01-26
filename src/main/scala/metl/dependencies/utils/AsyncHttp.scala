@@ -91,7 +91,18 @@ import org.apache.hc.client5.http.ssl.ClientTlsStrategyBuilder
 import org.apache.hc.core5.http.ssl.TLS
 import org.apache.hc.core5.pool.PoolConcurrencyPolicy
 import org.apache.hc.core5.pool.PoolReusePolicy
-class CleanAsyncHttpClient
+
+object AsyncHelpers {
+	lazy val trustingSslContext = org.apache.hc.core5.ssl.SSLContexts.custom().loadTrustMaterial(new org.apache.hc.client5.http.ssl.TrustAllStrategy).build()
+	lazy val verifyingSslContext = org.apache.hc.core5.ssl.SSLContexts.createSystemDefault()
+  protected class TrustAllHosts extends javax.net.ssl.HostnameVerifier {
+    override def verify(_host: String, _session: javax.net.ssl.SSLSession) = true
+  }
+	lazy val verifyingHostnameVerifier = javax.net.ssl.HttpsURLConnection.getDefaultHostnameVerifier
+	lazy val trustingHostnameVerifier = new TrustAllHosts
+}
+
+class CleanAsyncHttpClient(checkCerts:Boolean = false)
     extends IMeTLAsyncHttpClient
     with Logger {
   protected val connectionTimeout = 120
@@ -102,15 +113,18 @@ class CleanAsyncHttpClient
   protected val maxRetries = 2
 	protected val enableHttp2 = false
 
-  private object TrustAllHosts extends javax.net.ssl.HostnameVerifier {
-    override def verify(_host: String, _session: javax.net.ssl.SSLSession) = true
-  }
 
 	protected val connMgr = {
 		PoolingAsyncClientConnectionManagerBuilder.create()
 		.setTlsStrategy(ClientTlsStrategyBuilder.create()
-			.setHostnameVerifier(TrustAllHosts)
-			.setSslContext(org.apache.http.ssl.SSLContexts.createSystemDefault())
+			.setHostnameVerifier(checkCerts match {
+				case false => AsyncHelpers.trustingHostnameVerifier
+				case true => AsyncHelpers.verifyingHostnameVerifier
+			})
+			.setSslContext(checkCerts match {
+				case false => AsyncHelpers.trustingSslContext
+				case true => AsyncHelpers.verifyingSslContext
+			})
 			.setTlsVersions(TLS.V_1_3, TLS.V_1_2)
 			.build())
 		.setPoolConcurrencyPolicy(PoolConcurrencyPolicy.STRICT)
@@ -137,8 +151,7 @@ class CleanAsyncHttpClient
 		client.start()
 	}
 	override def stop:Unit = {
-		//client.close(CloseMode.IMMEDIATE)
-		client.close(CloseMode.GRACEFUL)
+		client.close(CloseMode.IMMEDIATE)
 	}
   private var authorizations: Map[String, (String, String)] = Map
     .empty[String, (String, String)]
@@ -155,6 +168,7 @@ class CleanAsyncHttpClient
 		.setMaxRedirects(maxRedirects)
 		.setRedirectsEnabled(true)
 		.setResponseTimeout(readTimeout,TimeUnit.MILLISECONDS)
+		.setCircularRedirectsAllowed(true)
 		.build()
   override def setCookies(cook: Map[String, Header]): Unit = cookies = cook
   override def getCookies: Map[String, Header] = cookies
