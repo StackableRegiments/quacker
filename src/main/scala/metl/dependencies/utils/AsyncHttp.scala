@@ -93,13 +93,20 @@ import org.apache.hc.core5.pool.PoolConcurrencyPolicy
 import org.apache.hc.core5.pool.PoolReusePolicy
 
 object AsyncHelpers {
-	lazy val trustingSslContext = org.apache.hc.core5.ssl.SSLContexts.custom().loadTrustMaterial(new org.apache.hc.client5.http.ssl.TrustAllStrategy).build()
-	lazy val verifyingSslContext = org.apache.hc.core5.ssl.SSLContexts.createSystemDefault()
   protected class TrustAllHosts extends javax.net.ssl.HostnameVerifier {
     override def verify(_host: String, _session: javax.net.ssl.SSLSession) = true
   }
-	lazy val verifyingHostnameVerifier = javax.net.ssl.HttpsURLConnection.getDefaultHostnameVerifier
-	lazy val trustingHostnameVerifier = new TrustAllHosts
+	lazy val verifyingTlsStrategy = ClientTlsStrategyBuilder.create()
+			.setTlsVersions(TLS.V_1_3, TLS.V_1_2)
+			.build()
+	lazy val trustingTlsStrategy = ClientTlsStrategyBuilder.create()
+			.setHostnameVerifier(new TrustAllHosts)
+			.setSslContext(org.apache.hc.core5.ssl.SSLContexts.custom()
+				.loadTrustMaterial(new org.apache.hc.client5.http.ssl.TrustAllStrategy)
+				.build()
+			)
+			.setTlsVersions(TLS.V_1_3, TLS.V_1_2)
+			.build()
 }
 
 class CleanAsyncHttpClient(checkCerts:Boolean = false)
@@ -116,17 +123,10 @@ class CleanAsyncHttpClient(checkCerts:Boolean = false)
 
 	protected val connMgr = {
 		PoolingAsyncClientConnectionManagerBuilder.create()
-		.setTlsStrategy(ClientTlsStrategyBuilder.create()
-			.setHostnameVerifier(checkCerts match {
-				case false => AsyncHelpers.trustingHostnameVerifier
-				case true => AsyncHelpers.verifyingHostnameVerifier
-			})
-			.setSslContext(checkCerts match {
-				case false => AsyncHelpers.trustingSslContext
-				case true => AsyncHelpers.verifyingSslContext
-			})
-			.setTlsVersions(TLS.V_1_3, TLS.V_1_2)
-			.build())
+		.setTlsStrategy(checkCerts match {
+			case true => AsyncHelpers.verifyingTlsStrategy
+			case false => AsyncHelpers.trustingTlsStrategy
+		})
 		.setPoolConcurrencyPolicy(PoolConcurrencyPolicy.STRICT)
 		.setConnPoolPolicy(PoolReusePolicy.LIFO)
 		.setConnectionTimeToLive(org.apache.hc.core5.util.TimeValue.ofMinutes(1L))
@@ -476,21 +476,22 @@ class CleanAsyncHttpClient(checkCerts:Boolean = false)
 }
 
 object AsyncHttp {
+	protected val checkCerts = false 
   def getClient = Stopwatch.time("AsyncHttp.getClient", {
-		new CleanAsyncHttpClient()
+		new CleanAsyncHttpClient(checkCerts)
 	})
   def getAuthedClient(username: String,
                       password: String,
                       domain: String = "*") = {
     Stopwatch.time("AsyncHttp.getAuthedClient", {
-      val client = new CleanAsyncHttpClient()
+      val client = new CleanAsyncHttpClient(checkCerts)
       client.addAuthorization(domain, username, password)
       client
     })
 	}
   def cloneClient(incoming: CleanAsyncHttpClient): CleanAsyncHttpClient = {
     Stopwatch.time( "AsyncHttp.cloneClient", {
-			val client = new CleanAsyncHttpClient()
+			val client = new CleanAsyncHttpClient(checkCerts)
 			client.setCookies(incoming.getCookies)
 			client.setHttpHeaders(incoming.getHttpHeaders)
 			client
@@ -499,7 +500,7 @@ object AsyncHttp {
   def getClient(headers: List[(String, String)]): CleanAsyncHttpClient = {
     Stopwatch.time( "AsyncHttp.getClient(headers)", {
 			val newHeaders = headers.map(tup => new BasicHeader(tup._1, tup._2)).toList
-			val client = new CleanAsyncHttpClient() {
+			val client = new CleanAsyncHttpClient(checkCerts) {
 				override val connectionTimeout = 3600
 				override val keepAliveTimeout = 5400
 				override val readTimeout = 7200000
