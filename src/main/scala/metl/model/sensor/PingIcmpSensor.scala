@@ -99,7 +99,7 @@ case class PingICMPSensor(metadata: SensorMetaData,
     if (output.contains("cannot resolve") || output.contains("Unknown host") || output
           .contains("could not find host"))
       throw DashboardException("Ping failed", "Unknown host: " + output)
-    if (!(output.contains(" 0% packet loss") || output.contains("(0% loss)")))
+    if (!(output.contains(" 0% packet loss") || output.contains("(0% loss)") || output.contains(" 0.0% packet loss") || output.contains("(0.0% loss)")))
       throw DashboardException("Ping failed",
                                "Packet loss recognised: " + output)
     val stringOutput = output.toString
