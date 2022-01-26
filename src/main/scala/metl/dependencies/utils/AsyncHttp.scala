@@ -165,10 +165,11 @@ class CleanAsyncHttpClient(checkCerts:Boolean = false)
 		.setConnectTimeout(connectionTimeout,TimeUnit.SECONDS)
 		.setDefaultKeepAlive(keepAliveTimeout,TimeUnit.SECONDS)
 		.setHardCancellationEnabled(true)
-		.setMaxRedirects(maxRedirects)
-		.setRedirectsEnabled(true)
+//		.setMaxRedirects(maxRedirects)
+//		.setRedirectsEnabled(true)
+		.setRedirectsEnabled(false)
 		.setResponseTimeout(readTimeout,TimeUnit.MILLISECONDS)
-		.setCircularRedirectsAllowed(true)
+//		.setCircularRedirectsAllowed(true)
 		.build()
   override def setCookies(cook: Map[String, Header]): Unit = cookies = cook
   override def getCookies: Map[String, Header] = cookies
@@ -273,7 +274,9 @@ class CleanAsyncHttpClient(checkCerts:Boolean = false)
 							start,
 							new Date().getTime()
 						)
-						callback(hResp)
+						respondToResponse(hResp,Nil,(hr2:HTTPResponse) => {
+							callback(hr2)
+						})
 					}
 					override def failed(ex:Exception) = {
 						throw ex
@@ -386,7 +389,7 @@ class CleanAsyncHttpClient(checkCerts:Boolean = false)
       exceptions: List[Throwable] = List.empty[Throwable],
       startTime: Long = new Date().getTime,
 			callback:HTTPResponse => Unit): Unit = {
-			executeHttpCall("get",uri,additionalHeaders,None,callback)
+			doExecuteHttpCall("get",uri,additionalHeaders,None,callback,retriesSoFar,redirectsSoFar,exceptions,startTime)
 	}
   def respondToResponse(response: HTTPResponse,
                         additionalHeaders: List[(String, String)] = List.empty[(String, String)],
@@ -395,7 +398,6 @@ class CleanAsyncHttpClient(checkCerts:Boolean = false)
     val tempOutput = response.bytes
     response.statusCode match {
       case 200 => callback(response)
-/*
       case 300 | 301 | 302 | 303 => {
         val newLoc = response.headers("Location")
         val newLocUri = new URI(newLoc)
@@ -405,18 +407,18 @@ class CleanAsyncHttpClient(checkCerts:Boolean = false)
         } else {
           newLoc
         }
-          getExpectingHTTPResponse(
-            newLocString,
-            additionalHeaders,
-            response.numberOfRetries,
-            response.numberOfRedirects + 1,
-            response.exceptions ::: List(
-              new RedirectException(
-                "healthy redirect from %s to %s".format(uri, newLocString),
-                response.exceptions)),
-            response.startMilis,
-						callback
-          )
+				getExpectingHTTPResponse(
+					newLocString,
+					additionalHeaders,
+					response.numberOfRetries,
+					response.numberOfRedirects + 1,
+					response.exceptions ::: List(
+						new RedirectException(
+							"healthy redirect from %s to %s".format(uri, newLocString),
+							response.exceptions)),
+					response.startMilis,
+					callback
+				)
       }
       case 307 => {
         val newLoc = response.headers("Location")
@@ -440,7 +442,6 @@ class CleanAsyncHttpClient(checkCerts:Boolean = false)
 						callback
           )
       }
-*/
       /*
       case 400 =>
         throw new WebException(
