@@ -37,5 +37,8 @@ case class DependencySensor(
         .mkString(" AND ")
     }
   }
-  override def performCheck = succeed(status)
+  override def performCheck(after:() => Unit) = {
+		succeed(status)
+		after()
+	}
 }

@@ -53,5 +53,8 @@ class TelnetSensor(metadata: SensorMetaData,
     tc.disconnect
     output.mkString("\n")
   }
-  override def performCheck = succeed(status)
+  override def performCheck(after:() => Unit) = {
+		succeed(status)
+		after()
+	}
 }

@@ -60,5 +60,8 @@ class LdapSensor(metadata: SensorMetaData,
     ctx.close
     output
   }
-  override def performCheck = succeed(status.toString)
+  override def performCheck(after:() => Unit) = {
+		succeed(status.toString)
+		after()
+	}
 }

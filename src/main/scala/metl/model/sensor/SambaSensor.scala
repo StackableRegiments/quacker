@@ -47,5 +47,8 @@ case class SambaSensor(metadata: SensorMetaData,
       fileList.mkString(", ")
     }
   }
-  override def performCheck = succeed(status.toString)
+  override def performCheck(after:() => Unit) = {
+		succeed(status.toString)
+		after()
+	}
 }

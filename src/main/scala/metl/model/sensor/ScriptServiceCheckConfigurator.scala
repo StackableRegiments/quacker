@@ -18,6 +18,7 @@ object FunctionalServiceCheck extends ConfigFileReader {
                    (key, value)
                  }
                });
+							 body = getNodes(mn, "body").headOption.map(_.text);
                headers = Map(getNodes(mn, "header").flatMap(hn => {
                  for (key <- getAttr(hn, "key");
                       value <- getAttr(hn, "value")) yield {
@@ -27,7 +28,29 @@ object FunctionalServiceCheck extends ConfigFileReader {
                matcher: HTTPResponseMatcher = HTTPResponseMatchers
                  .configureFromXml(
                    <thresholdsPacket>{getNodes(mn,"thresholds")}</thresholdsPacket>))
-            yield HttpFunctionalCheck(method, url, params, headers, matcher)
+            yield AsyncHttpFunctionalCheck(method, url, params, headers, body, matcher)
+        }
+
+        case "syncHttp" => {
+          for (url <- getAttr(mn, "url");
+               method <- getAttr(mn, "method");
+               params = getNodes(mn, "parameter").flatMap(pn => {
+                 for (key <- getAttr(pn, "key");
+                      value <- getAttr(pn, "value")) yield {
+                   (key, value)
+                 }
+               });
+							 body = getNodes(mn, "body").headOption.map(_.text);
+               headers = Map(getNodes(mn, "header").flatMap(hn => {
+                 for (key <- getAttr(hn, "key");
+                      value <- getAttr(hn, "value")) yield {
+                   (key, value)
+                 }
+               }): _*);
+               matcher: HTTPResponseMatcher = HTTPResponseMatchers
+                 .configureFromXml(
+                   <thresholdsPacket>{getNodes(mn,"thresholds")}</thresholdsPacket>))
+            yield HttpFunctionalCheck(method, url, params, headers, body, matcher)
         }
         case "sql" => {
           for (driver <- getAttr(mn, "driver");
@@ -423,16 +446,13 @@ abstract class FunctionalServiceCheck extends Logger {
     see = Some(newSee)
   }
   protected def innerAct(previousResult: FunctionalCheckReturn,
-                         interpolator: Interpolator): FunctionalCheckReturn
+                         interpolator: Interpolator,
+			callback: Either[Throwable, FunctionalCheckReturn] => Unit):Unit
   def act(
       previousResult: FunctionalCheckReturn,
-      interpolator: Interpolator): Either[Exception, FunctionalCheckReturn] =
-    try {
-      trace(
-        "STEP: %s \r\n (env: %s)".format(this,
-                                         previousResult.updatedEnvironment))
-      Right(innerAct(previousResult, interpolator))
-    } catch {
-      case e: Exception => Left(e)
-    }
+      interpolator: Interpolator,
+			callback: Either[Throwable, FunctionalCheckReturn] => Unit):Unit = {
+      trace( "STEP: %s \r\n (env: %s)".format(this, previousResult.updatedEnvironment))
+      innerAct(previousResult, interpolator,callback)
+	}
 }

@@ -35,5 +35,8 @@ case class PingMemCached(metadata: SensorMetaData,
         schedule()
       }
     }: PartialFunction[Throwable, Unit]) orElse super.exceptionHandler
-  override def performCheck = succeed(status.toString)
+  override def performCheck(after:() => Unit) = {
+		succeed(status.toString)
+		after()
+	}
 }

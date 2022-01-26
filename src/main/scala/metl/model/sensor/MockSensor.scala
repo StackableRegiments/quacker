@@ -15,7 +15,10 @@ case class CountingSensor(metadata: SensorMetaData, time: TimeSpan = 5 seconds)
     count += 1
     count.toString
   }
-  override def performCheck = succeed(status.toString)
+  override def performCheck(after:() => Unit) = {
+		succeed(status.toString)
+		after
+	}
 }
 
 case class WaitingSensor(metadata: SensorMetaData,
@@ -29,5 +32,8 @@ case class WaitingSensor(metadata: SensorMetaData,
     Thread.sleep(waitTime)
     "waited %s".format(waitTime)
   }
-  override def performCheck = succeed(status.toString)
+  override def performCheck(after:() => Unit) = {
+		succeed(status.toString)
+		after()
+	}
 }
