@@ -13,7 +13,7 @@
       <Pattern>LOG %d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</Pattern>
     </encoder>
   </appender>
-  <root level="DEBUG">
+  <root level="WARN">
     <appender-ref ref="STDOUT"/>
   </root>
 </configuration>

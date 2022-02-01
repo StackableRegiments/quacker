@@ -18,6 +18,7 @@ object FunctionalServiceCheck extends ConfigFileReader {
                    (key, value)
                  }
                });
+								timeout:Option[Long] = getAttr(mn, "timeout").headOption.map(_.toLong);
 							 body = getNodes(mn, "body").headOption.map(_.text);
                headers = Map(getNodes(mn, "header").flatMap(hn => {
                  for (key <- getAttr(hn, "key");
@@ -28,7 +29,7 @@ object FunctionalServiceCheck extends ConfigFileReader {
                matcher: HTTPResponseMatcher = HTTPResponseMatchers
                  .configureFromXml(
                    <thresholdsPacket>{getNodes(mn,"thresholds")}</thresholdsPacket>))
-            yield AsyncHttpFunctionalCheck(method, url, params, headers, body, matcher)
+            yield AsyncHttpFunctionalCheck(method, url, params, headers, body, matcher,timeout)
         }
 
         case "syncHttp" => {

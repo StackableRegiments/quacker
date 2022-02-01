@@ -415,7 +415,8 @@ case class AsyncHttpFunctionalCheck(
     parameters: List[Tuple2[String, String]] = Nil,
     headers: Map[String, String] = Map.empty[String, String],
 		body: Option[String] = None,
-    matcher: HTTPResponseMatcher = HTTPResponseMatchers.empty)
+    matcher: HTTPResponseMatcher = HTTPResponseMatchers.empty,
+		timeout:Option[Long] = None)
     extends FunctionalServiceCheck {
   override protected def innerAct(fcr: FunctionalCheckReturn,
                                   interpolator: Interpolator,
@@ -436,11 +437,13 @@ case class AsyncHttpFunctionalCheck(
 						 interpolator.interpolate(p._2, environment)))
 				val cb = (innerResponse:HTTPResponse) => {
 					client.respondToResponse(innerResponse,headers.toList,(response:HTTPResponse) => {
+							//println("async: %s %s success: %s".format(method,url,response))
 						val verificationResponse = matcher.verify(response)
 						if (!verificationResponse.success) {
 							callback(Left(new DashboardException("HTTP Verification failed",
 																					 verificationResponse.errors.mkString("\r\n"))))
 						} else {
+							//println("async: %s %s verified: %s".format(method,url,verificationResponse))
 							val newData: Tuple2[Long, Map[String, GraphableDatum]] =
 								(now.getTime,
 								 Map(
@@ -459,16 +462,16 @@ case class AsyncHttpFunctionalCheck(
 								data = newData :: fcr.data
 							)))
 						}
-					})
+					},timeout)
 				}
 				try {
 					method.trim.toLowerCase match {
-						case "get" => client.getExpectingHTTPResponse(interpolatedUrl,headers.toList,0,0,Nil,new Date().getTime(),cb)
+						case "get" => client.getExpectingHTTPResponse(interpolatedUrl,headers.toList,0,0,Nil,new Date().getTime(),cb,timeout)
 						case "post" => body.map(b => {
 							val interpolatedBody = interpolator.interpolate(b,environment)
-							client.postBytesExpectingHTTPResponse(interpolatedUrl,interpolatedBody.getBytes("UTF-8"),headers.toList,cb)
+							client.postBytesExpectingHTTPResponse(interpolatedUrl,interpolatedBody.getBytes("UTF-8"),headers.toList,cb,timeout)
 						}).getOrElse({
-							client.postFormExpectingHTTPResponse(interpolatedUrl,interpolatedParameters,headers.toList,cb)
+							client.postFormExpectingHTTPResponse(interpolatedUrl,interpolatedParameters,headers.toList,cb,timeout)
 						})
 						case unsupportedMethod =>
 							callback(Left(new DashboardException(
@@ -1148,8 +1151,13 @@ abstract class EnvironmentMutator extends FunctionalServiceCheck {
     val previousResult = fcr.result
     val totalDuration = fcr.duration
     val environment = fcr.updatedEnvironment
-    callback(Right(fcr.copy(
-      updatedEnvironment = mutate(previousResult, environment, interpolator))))
+		try {
+			callback(Right(fcr.copy(updatedEnvironment = mutate(previousResult, environment, interpolator))))
+		} catch {
+			case e:Exception => {
+				callback(Left(e))
+			}
+		}
   }
 }
 case class LastDataExtractor(key: String, dataAttribute: String)
@@ -2098,14 +2106,20 @@ class ScriptEngine(interpolator: Interpolator) {
 					callback(finalFcr)
 				}
 				head.attachScriptExecutionEnvironment(see)
-				head.act(fcr.getOrElse(FunctionalCheckReturn.empty),interpolator,(v:Either[Throwable,FunctionalCheckReturn]) => v match {
-					case Left(e) => {
+				try {
+					head.act(fcr.getOrElse(FunctionalCheckReturn.empty),interpolator,(v:Either[Throwable,FunctionalCheckReturn]) => v match {
+						case Left(e) => {
+							finalCallback(Left(e))
+						}
+						case Right(fcr) => {
+							execute(rest,finalCallback,Some(see),Some(fcr))
+						}
+					})
+				} catch {	
+					case e:Exception => {
 						finalCallback(Left(e))
 					}
-					case Right(fcr) => {
-						execute(rest,finalCallback,Some(see),Some(fcr))
-					}
-				})
+				}
 			}
 		}
   }

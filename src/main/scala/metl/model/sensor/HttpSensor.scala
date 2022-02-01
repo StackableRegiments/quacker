@@ -160,6 +160,7 @@ case class HttpSensor(
     headers.foreach(h => client.addHttpHeader(h._1, h._2))
   }
   override def performCheck(after:() => Unit) = {
+		val timeout = checkTimeout.toOption.map(_.millis)
 		client.getExpectingHTTPResponse(uri,Nil,0,0,Nil,new java.util.Date().getTime(),(response1:HTTPResponse) => {
 			client.respondToResponse(response1,Nil,(response:HTTPResponse) => {
 				val verificationResponse = matcher.verify(response)
@@ -169,8 +170,8 @@ case class HttpSensor(
 				}
 				succeed(response.toString, Full(response.duration.toDouble))
 				after()
-			})
-		})
+			},timeout)
+		},timeout)
 	}
 }
 case class HttpSensorWithBasicAuth(
@@ -191,6 +192,7 @@ case class HttpSensorWithBasicAuth(
     headers.foreach(h => client.addHttpHeader(h._1, h._2))
   }
   override def performCheck(after:() => Unit) = {
+		val timeout = checkTimeout.toOption.map(_.millis)
 		client.getExpectingHTTPResponse(uri,Nil,0,0,Nil,new java.util.Date().getTime(),(response1:HTTPResponse) => {
 			client.respondToResponse(response1,Nil,(response:HTTPResponse) => {
 				val verificationResponse = matcher.verify(response)
@@ -200,8 +202,8 @@ case class HttpSensorWithBasicAuth(
 				}
 				succeed(response.toString, Full(response.duration.toDouble))
 				after()
-			})
-		})
+			},timeout)
+		},timeout)
 	}
 }
 

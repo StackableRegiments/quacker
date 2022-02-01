@@ -27,8 +27,8 @@ trait IMeTLAsyncHttpClient {
 	def stop:Unit = {}
   def addAuthorization(domain: String, username: String, password: String): Unit
 
-  def get(uri: String,callback:String=>Unit): Unit = get(uri, List.empty[(String, String)],callback)
-  def get(uri: String, additionalHeaders: List[(String, String)],callback:String=>Unit): Unit
+  def get(uri: String,callback:String=>Unit, timeout:Option[Long]): Unit = get(uri, List.empty[(String, String)],callback, timeout)
+  def get(uri: String, additionalHeaders: List[(String, String)],callback:String=>Unit, timeout:Option[Long]): Unit
   def getExpectingHTTPResponse(
       uri: String,
       additionalHeaders: List[(String, String)] = List.empty[(String, String)],
@@ -36,48 +36,49 @@ trait IMeTLAsyncHttpClient {
       redirectsSoFar: Int = 0,
       exceptions: List[Throwable] = List.empty[Throwable],
       startTime: Long = new Date().getTime,
-			callback: HTTPResponse => Unit):Unit
+			callback: HTTPResponse => Unit,
+			timeout:Option[Long]):Unit
 
-  def getAsString(uri: String,callback:String => Unit):Unit =
-    getAsString(uri, List.empty[(String, String)],callback)
+  def getAsString(uri: String,callback:String => Unit,timeout:Option[Long]):Unit =
+    getAsString(uri, List.empty[(String, String)],callback,timeout)
   def getAsString(uri: String,
-                  additionalHeaders: List[(String, String)],callback:String => Unit): Unit
+                  additionalHeaders: List[(String, String)],callback:String => Unit,timeout:Option[Long]): Unit
 
-  def getAsBytes(uri: String,callback:Array[Byte]=>Unit):Unit =
-    getAsBytes(uri, List.empty[(String, String)],callback)
+  def getAsBytes(uri: String,callback:Array[Byte]=>Unit,timeout:Option[Long]):Unit =
+    getAsBytes(uri, List.empty[(String, String)],callback,timeout)
   def getAsBytes(uri: String,
-                 additionalHeaders: List[(String, String)],callback: Array[Byte]=>Unit):Unit
+                 additionalHeaders: List[(String, String)],callback: Array[Byte]=>Unit,timeout:Option[Long]):Unit
 
-  def postBytes(uri: String, bytes: Array[Byte],callback:Array[Byte]=>Unit): Unit =
-    postBytes(uri, bytes, List.empty[(String, String)],callback)
+  def postBytes(uri: String, bytes: Array[Byte],callback:Array[Byte]=>Unit,timeout:Option[Long]): Unit =
+    postBytes(uri, bytes, List.empty[(String, String)],callback,timeout)
   def postBytes(uri: String,
                 bytes: Array[Byte],
-                additionalHeaders: List[(String, String)],callback: Array[Byte]=>Unit):Unit
+                additionalHeaders: List[(String, String)],callback: Array[Byte]=>Unit,timeout:Option[Long]):Unit
   def postBytesExpectingHTTPResponse(
       uri: String,
       bytes: Array[Byte],
-      additionalHeaders: List[(String, String)],callback: HTTPResponse=>Unit):Unit
+      additionalHeaders: List[(String, String)],callback: HTTPResponse=>Unit,timeout:Option[Long]):Unit
 
-  def postForm(uri: String, postItemList: List[(String, String)],callback: Array[Byte]=>Unit):Unit =
-    postForm(uri, postItemList, List.empty[(String, String)],callback)
+  def postForm(uri: String, postItemList: List[(String, String)],callback: Array[Byte]=>Unit,timeout:Option[Long]):Unit =
+    postForm(uri, postItemList, List.empty[(String, String)],callback,timeout)
   def postForm(uri: String,
                postItemList: List[(String, String)],
-               additionalHeaders: List[(String, String)], callback: Array[Byte]=>Unit):Unit
+               additionalHeaders: List[(String, String)], callback: Array[Byte]=>Unit,timeout:Option[Long]):Unit
   def postFormExpectingHTTPResponse(
       uri: String,
       postItemList: List[(String, String)],
-      additionalHeaders: List[(String, String)],callback: HTTPResponse=>Unit):Unit
+      additionalHeaders: List[(String, String)],callback: HTTPResponse=>Unit,timeout:Option[Long]):Unit
 
   def postUnencodedForm(uri: String,
-                        postItemList: List[(String, String)],callback: Array[Byte]=>Unit):Unit =
-    postUnencodedForm(uri, postItemList, List.empty[(String, String)],callback)
+                        postItemList: List[(String, String)],callback: Array[Byte]=>Unit,timeout:Option[Long]):Unit =
+    postUnencodedForm(uri, postItemList, List.empty[(String, String)],callback,timeout)
   def postUnencodedForm(uri: String,
                         postItemList: List[(String, String)],
-                        additionalHeaders: List[(String, String)],callback: Array[Byte]=>Unit):Unit
+                        additionalHeaders: List[(String, String)],callback: Array[Byte]=>Unit,timeout:Option[Long]):Unit
   def postUnencodedFormExpectingHttpResponse(
       uri: String,
       postItemList: List[(String, String)],
-      additionalHeaders: List[(String, String)],callback: HTTPResponse=>Unit):Unit
+      additionalHeaders: List[(String, String)],callback: HTTPResponse=>Unit,timeout:Option[Long]):Unit
 
   def setCookies(cookies: Map[String, Header]): Unit
   def getCookies: Map[String, Header]
@@ -191,8 +192,8 @@ class CleanAsyncHttpClient(checkCerts:Boolean = false)
 		uri:String,
 		headers:List[Tuple2[String,String]],
 		body:Option[Either[Array[Byte],List[Tuple2[String,String]]]],
-		callback:HTTPResponse=>Unit):Unit = {
-		doExecuteHttpCall(method,uri,headers,body,callback,0,0)
+		callback:HTTPResponse=>Unit,timeout:Option[Long]):Unit = {
+		doExecuteHttpCall(method,uri,headers,body,callback,0,0,Nil,new Date().getTime,timeout)
 	}
 	protected def defaultHeaders(uri:String):List[Tuple2[String,String]] = {
 		val u = new URI(uri)
@@ -215,7 +216,7 @@ class CleanAsyncHttpClient(checkCerts:Boolean = false)
 		retryNumber:Int = 0,
 		redirectNumber:Int = 0,
 		exceptionsSoFar: List[Throwable] = List.empty[Throwable],
-		start: Long = new Date().getTime
+		start: Long = new Date().getTime,timeout:Option[Long] = None
 	):Unit = {
 		try {
 			if ((maxRedirects > 0) && (redirectNumber > maxRedirects || exceptionsSoFar
@@ -276,78 +277,95 @@ class CleanAsyncHttpClient(checkCerts:Boolean = false)
 						)
 						respondToResponse(hResp,Nil,(hr2:HTTPResponse) => {
 							callback(hr2)
-						})
+						},timeout)
 					}
 					override def failed(ex:Exception) = {
+						//println("%s %s (%s,%s) failed %s".format(method,uri,retryNumber,redirectNumber,ex))
 						throw ex
 					}
 					override def cancelled() = {
+						//println("%s %s (%s,%s) cancelled".format(method,uri,retryNumber,redirectNumber))
 						throw new Exception("cancelled")
 					}
 				}
 			)
-			futureResp.get
+			try {
+				futureResp.get(timeout.getOrElse(AsyncHttp.defaultTimeout),java.util.concurrent.TimeUnit.MILLISECONDS)
+			} catch {
+				case e:java.util.concurrent.TimeoutException => {
+					//println("%s %s (%s,%s) timeout reached".format(method,uri,retryNumber,redirectNumber))
+					futureResp.cancel(AsyncHttp.immediateCancel)
+					throw e
+				}
+			}
 		} catch {
-			case ex: RetryException =>
+			case ex: RetryException => {
+				//println("%s %s (%s,%s) catch retry".format(method,uri,retryNumber,redirectNumber))
 				throw new RetryException(ex.getMessage, ex.exceptions)
-			case ex: RedirectException =>
+			}
+			case ex: RedirectException => {
+				//println("%s %s (%s,%s) catch redirect".format(method,uri,retryNumber,redirectNumber))
 				throw new RedirectException(ex.getMessage, ex.exceptions)
-			case ex: Throwable => throw ex
+			}
+			case ex: Throwable => {
+				//println("%s %s (%s,%s) OTHER ERROR %s".format(method,uri,retryNumber,redirectNumber,ex))
+				throw ex
+			}
 		}
 	}
 
   override def postBytes(uri: String,
                          bytes: Array[Byte],
                          additionalHeaders: List[(String, String)] =
-                           List.empty[(String, String)], callback:Array[Byte] => Unit): Unit = {
+                           List.empty[(String, String)], callback:Array[Byte] => Unit,timeout:Option[Long]): Unit = {
 		postBytesExpectingHTTPResponse(uri, bytes, additionalHeaders,(hr:HTTPResponse) => {
 			respondToResponse(hr,additionalHeaders,(hr2:HTTPResponse) => {
 				callback(hr2.bytes)
-			})
-		})
+			},timeout)
+		},timeout)
 	}
   override def postBytesExpectingHTTPResponse(
       uri: String,
       bytes: Array[Byte],
       additionalHeaders: List[(String, String)] = List.empty[(String, String)],
-			callback:HTTPResponse=>Unit)
+			callback:HTTPResponse=>Unit,timeout:Option[Long])
     : Unit = {
-		executeHttpCall("post",uri, additionalHeaders, Some(Left(bytes)), callback)
+		executeHttpCall("post",uri, additionalHeaders, Some(Left(bytes)), callback,timeout)
 	}
   override def postForm(uri: String,
                         postItemList: List[(String, String)],
                         additionalHeaders: List[(String, String)] =
                           List.empty[(String, String)],
-												callback: Array[Byte]=>Unit):Unit = {
+												callback: Array[Byte]=>Unit,timeout:Option[Long]):Unit = {
 		postFormExpectingHTTPResponse(uri, postItemList, additionalHeaders,(hr:HTTPResponse) => {
 			respondToResponse(hr,additionalHeaders,(hr2:HTTPResponse) => {
 				callback(hr2.bytes)
-			})
-		})
+			},timeout)
+		},timeout)
 	}
   override def postFormExpectingHTTPResponse(
       uri: String,
       postItemList: List[(String, String)],
       additionalHeaders: List[(String, String)] = List.empty[(String, String)],
-			callback:HTTPResponse=>Unit):Unit = {
-		executeHttpCall("post", uri, additionalHeaders, Some(Right(postItemList)), callback)
+			callback:HTTPResponse=>Unit,timeout:Option[Long]):Unit = {
+		executeHttpCall("post", uri, additionalHeaders, Some(Right(postItemList)), callback,timeout)
 	}
   override def postUnencodedForm(uri: String,
                                  postItemList: List[(String, String)],
                                  additionalHeaders: List[(String, String)] =
                                    List.empty[(String, String)],
-																	callback: Array[Byte]=>Unit):Unit = {
+																	callback: Array[Byte]=>Unit,timeout:Option[Long]):Unit = {
         postUnencodedFormExpectingHttpResponse(uri, postItemList, additionalHeaders,(hr:HTTPResponse) => {
 					respondToResponse(hr,additionalHeaders,(hr2:HTTPResponse) => {
 						callback(hr2.bytes)
-					})
-				})
+					},timeout)
+				},timeout)
 	}
   override def postUnencodedFormExpectingHttpResponse(
       uri: String,
       postItemList: List[(String, String)],
       additionalHeaders: List[(String, String)] = List.empty[(String, String)],
-			callback:HTTPResponse=>Unit)
+			callback:HTTPResponse=>Unit,timeout:Option[Long])
     : Unit = {
 		val postForm = postItemList
 			.map(postItem => postItem._1 + "=" + postItem._2)
@@ -356,30 +374,30 @@ class CleanAsyncHttpClient(checkCerts:Boolean = false)
 		executeHttpCall("post",uri, additionalHeaders ::: List(
 			Tuple2("Content-Type", """application/x-www-form-urlencoded"""),
 			Tuple2("Content-Length",bytes.length.toString)
-		),Some(Left(bytes)), callback)
+		),Some(Left(bytes)), callback,timeout)
 	}
   override def get(uri: String,
                    additionalHeaders: List[(String, String)] =
                      List.empty[(String, String)],
-									callback:String=>Unit): Unit = {
-      getAsString(uri, additionalHeaders,callback)
+									callback:String=>Unit,timeout:Option[Long]): Unit = {
+      getAsString(uri, additionalHeaders,callback,timeout)
 	}
   override def getAsString(uri: String,
                            additionalHeaders: List[(String, String)] =
                              List.empty[(String, String)],
-													callback:String => Unit): Unit = {
+													callback:String => Unit,timeout:Option[Long]): Unit = {
 		getAsBytes(uri,additionalHeaders,(hr:Array[Byte]) => {
 			callback(IOUtils.toString(hr))
-		})
+		},timeout)
 	}
   override def getAsBytes(uri: String,
                           additionalHeaders: List[(String, String)] =
-                            List.empty[(String, String)],callback: Array[Byte]=>Unit):Unit = {
+                            List.empty[(String, String)],callback: Array[Byte]=>Unit,timeout:Option[Long]):Unit = {
 		getExpectingHTTPResponse(uri, additionalHeaders,0,0,Nil,new Date().getTime(),(hr:HTTPResponse) => {
       respondToResponse(hr,additionalHeaders,(hr2:HTTPResponse) => {
 				callback(hr2.bytes)
-			})
-		})
+			},timeout)
+		},timeout)
 	}
   override def getExpectingHTTPResponse(
       uri: String,
@@ -388,12 +406,12 @@ class CleanAsyncHttpClient(checkCerts:Boolean = false)
       redirectsSoFar: Int = 0,
       exceptions: List[Throwable] = List.empty[Throwable],
       startTime: Long = new Date().getTime,
-			callback:HTTPResponse => Unit): Unit = {
-			doExecuteHttpCall("get",uri,additionalHeaders,None,callback,retriesSoFar,redirectsSoFar,exceptions,startTime)
+			callback:HTTPResponse => Unit,timeout:Option[Long]): Unit = {
+			doExecuteHttpCall("get",uri,additionalHeaders,None,callback,retriesSoFar,redirectsSoFar,exceptions,startTime,timeout)
 	}
   def respondToResponse(response: HTTPResponse,
                         additionalHeaders: List[(String, String)] = List.empty[(String, String)],
-												callback:HTTPResponse=>Unit):Unit = {
+												callback:HTTPResponse=>Unit,timeout:Option[Long]):Unit = {
     val uri = response.requestUrl
     val tempOutput = response.bytes
     response.statusCode match {
@@ -417,7 +435,8 @@ class CleanAsyncHttpClient(checkCerts:Boolean = false)
 							"healthy redirect from %s to %s".format(uri, newLocString),
 							response.exceptions)),
 					response.startMilis,
-					callback
+					callback,
+					timeout
 				)
       }
       case 307 => {
@@ -439,7 +458,8 @@ class CleanAsyncHttpClient(checkCerts:Boolean = false)
                 "healthy redirect from %s to %s".format(uri, newLocString),
                 response.exceptions)),
             response.startMilis,
-						callback
+						callback,
+						timeout
           )
       }
       /*
@@ -478,6 +498,8 @@ class CleanAsyncHttpClient(checkCerts:Boolean = false)
 
 object AsyncHttp {
 	protected val checkCerts = false 
+	val defaultTimeout = 5 * 60 * 1000 // 5 minutes
+	val immediateCancel = true
   def getClient = Stopwatch.time("AsyncHttp.getClient", {
 		new CleanAsyncHttpClient(checkCerts)
 	})
