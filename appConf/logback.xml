@@ -1,0 +1,19 @@
+<configuration debug="false" scan="true" >
+  <logger name="org.apache" level="WARN" />
+  <logger name="httpclient" level="WARN" />
+  <logger name="comet_trace" level="WARN" />
+  <logger name="net.liftweb.util.TimeHelpers" level="WARN" />
+<!--
+	<logger name="org.apache.hc.client5.http.wire" level="TRACE" />
+	<logger name="org.apache.hc" level="TRACE" />
+	<logger name="org.apache.http.wire" level="TRACE" />
+-->
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <Pattern>LOG %d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</Pattern>
+    </encoder>
+  </appender>
+  <root level="WARN">
+    <appender-ref ref="STDOUT"/>
+  </root>
+</configuration>

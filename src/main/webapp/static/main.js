@@ -2,6 +2,8 @@ var defaultExpandedServices = [];
 var defaultExpandedServers = [];
 var defaultExpandedChecks = [];
 var jsonStructure = {};
+pluginSystem.registerCommand('renderCheckHtml',function(){},function(){});
+pluginSystem.registerCommand('retile',function(){},function(){});
 pluginSystem.registerCommand('dataChanged',function(){},function(){});
 pluginSystem.registerCommand('createCheck',function(){
     pluginSystem.suspendCommand('dataChanged');
@@ -16,7 +18,6 @@ pluginSystem.registerCommand('layoutChanged',function(){},function(){});
 $(function (){
     pluginSystem.suspendCommand('dataChanged');
     pluginSystem.suspendCommand('layoutChanged');
-    pluginSystem.subscribe('dataChanged','core.internalUpdateCheck',function(obj){internalUpdateCheck(obj);});
     var getQueryParameters = function(){
         var partString = window.location.search.substr(1);
         var parts = partString.split("&");
@@ -43,7 +44,7 @@ $(function (){
     if (queryParamExpandedChecks !== undefined){
         defaultExpandedChecks = $.map(queryParamExpandedChecks.split(","),function(item){return item.split("+").join(" ");});
     }
-    createChecks();
+    renderChecks();
     pluginSystem.resumeCommand('dataChanged');
     pluginSystem.resumeCommand('layoutChanged');
 });
@@ -53,38 +54,33 @@ var structureByServices = function(structure){
     });
 };
 var paused = false;
-var retile = function() {
-    $('.serviceOuter').masonry({
-      itemSelector: '.checkSummary'
-      // columnWidth: 200
-    });
-//    console.log("Retiled");
-};
 var renderChecks = _.once(function(){
-    var containerRootNode = $("#dashboardServerContainer");
-
-    var redraw = function () {
-      if (!paused){
-        var serviceStructure = structureByServices(jsonStructure);
-        _.forEach(serviceStructure, function(checks,serviceName){
-            var serviceIdOuter = "serviceOuter_" + serviceName;
-            var serviceNode = containerRootNode.find("#"+serviceIdOuter);
-            if (serviceNode[0] === undefined){
-                serviceNode = $("<div/>",{id:serviceIdOuter,class:"serviceOuter"});
-                containerRootNode.append(serviceNode);
-            }
-            renderHtml(serviceNode,checks);
-            retile();
-/*            var thisSvgRootNode = serviceNode.find(".serviceSvg");
-            var serviceIdInner = "service_" + serviceName;
-            // thisSvgRootNode.html(renderSvgRings(checks,serviceIdInner));
-            thisSvgRootNode.html(renderSvgCircles(checks,serviceIdInner));*/
-        });
-        }
-        requestAnimationFrame(redraw);
-    };
+	$(function(){
+		var containerRootNode = $("#dashboardServerContainer");
+		var redraw = function () {
+			if (!paused){
+				var serviceStructure = structureByServices(jsonStructure);
+				_.forEach(serviceStructure, function(checks,serviceName){
+						var serviceIdOuter = "serviceOuter_" + serviceName;
+						var serviceNode = containerRootNode.find("#"+serviceIdOuter);
+						if (serviceNode[0] === undefined){
+								serviceNode = $("<div/>",{id:serviceIdOuter,class:"serviceOuter"});
+								containerRootNode.append(serviceNode);
+						}
+						pluginSystem.fireCommand('renderCheckHtml','core.renderChecks',serviceNode,checks);
+						pluginSystem.fireCommand('retile','core.renderChecks');
+				});
+			}
+			requestAnimationFrame(redraw);
+		};
     requestAnimationFrame(redraw);
+	});
 });
+
+var renderHistoricalChecks = _.once(function(){
+  console.log("render called");
+});
+
 var stripCheckHistory = function(check){
   delete check.history;
   return check;
@@ -108,6 +104,14 @@ function updateCheck(newCheck){
     }
     pluginSystem.fireCommand('dataChanged','core.updateCheck',newCheck);
 }
+function createHistoricalChecks(newChecks){
+  if (_.isArray(newChecks)){
+    _.forEach(newChecks,function(check){
+      createHistoricalCheck(check);
+    });
+  }
+  renderHistoricalChecks();
+}
 function createChecks(newChecks){
     if (_.isArray(newChecks)){
         _.forEach(newChecks,function(check){
@@ -115,6 +119,10 @@ function createChecks(newChecks){
         });
     }
     renderChecks();
+}
+function createHistoricalCheck(newCheck){
+  pluginSystem.fireCommand('createHistoricalCheck','core.createHistoricalCheck',newCheck);
+  console.log('received historical item',newCheck);
 }
 function createCheck(newCheck){
     if ("id" in newCheck) {
@@ -127,39 +135,6 @@ function createCheck(newCheck){
 function removeCheck(checkId){
     delete jsonStructure[checkId];
     pluginSystem.fireCommand('removeCheck','core.removeCheck',checkId);
-}
-function internalUpdateCheck(newCheck,targetNode){
-    var rootNode = targetNode;
-    var id = newCheck["id"];
-    if (rootNode === undefined){
-        rootNode = $("#"+id);
-    }
-    var label = newCheck["label"];
-    var lastChecked = newCheck["now"];
-    var statusCode = newCheck["statusCode"];
-    var truncate = function(inputString,count){ return inputString.substr(0,count);};
-    var statusClasses = newCheck["statusClass"];
-    var why = newCheck["why"];
-    var detail = newCheck["detail"];
-    var tooltip = statusCode +": "+ label + " (@"+lastChecked+") : "+why;
-    rootNode.find(".serviceCapacity").text(label);
-    rootNode.find(".serviceLastChecked").text(newCheck["now"]);
-    var statusNode = rootNode.find(".serviceStatus").attr("title",tooltip).text(statusCode);
-    if (statusClasses["serverError"] === true) {
-        statusNode.addClass("serverError").removeClass("serverUnknown").removeClass("serverOk");
-        rootNode.find(".serviceWhy").text(why);
-        rootNode.find(".serviceDetail").text(detail);
-    } else if (statusClasses["serverOk"] === true) {
-        statusNode.addClass("serverOk").removeClass("serverUnknown").removeClass("serverError");
-        rootNode.find(".serviceWhy").text(truncate(why,500));
-        rootNode.find(".serviceDetail").text(truncate(detail,500));
-    } else {
-        statusNode.addClass("serverUnknown").removeClass("serverOk").removeClass("serverError");
-        rootNode.find(".serviceWhy").text("");
-        rootNode.find(".serviceDetail").text("");
-    }
-    rootNode.find(".serviceLastUp").text(newCheck["lastUp"]);
-    rootNode.find(".serviceClass").text(newCheck["mode"]);
 }
 var isDevMode = false;
 function setDevMode(devMode){
